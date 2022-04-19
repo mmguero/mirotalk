@@ -15,13 +15,13 @@ Free `WebRTC` browser-based video calls, chat, and screen sharing, using google 
 
 Open the app with the following **supported browsers** and many more.
 
-[![browsers](public/images/browsers.png)](https://mirotalk.herokuapp.com/)
+[![browsers](public/images/browsers.png)](https://mirotalk.up.railway.app/)
 
-## https://mirotalk.herokuapp.com/
+## https://mirotalk.up.railway.app/
 
 <br>
 
-[![mirotalk](public/images/mirotalk-header.gif)](https://mirotalk.herokuapp.com/)
+[![mirotalk](public/images/mirotalk-header.gif)](https://mirotalk.up.railway.app/)
 
 ## Features
 
@@ -42,7 +42,7 @@ Open the app with the following **supported browsers** and many more.
 -   Chat with Emoji Picker & Private messages & Save the conversations
 -   Speech recognition to send the speeches
 -   Advance collaborative whiteboard for the teachers
--   Share any YouTube video in real-time
+-   Share any YT Embed video in real-time
 -   Full-Screen Mode on mouse click on the Video element
 -   Possibility to Change UI Themes
 -   Right-click on the Video elements for more options
@@ -154,19 +154,19 @@ If you want `MiroTalk` to be `reachable` from the `outside` of your local networ
 
 ## Live demo
 
+<a target="_blank" href="https://railway.app/new/template/q83EKG?referralCode=mirotalk"><img src="https://railway.app/button.svg" style="width: 220px;"></a>
+
+https://mirotalk.up.railway.app/
+
+[![railway-qr](public/images/mirotalk-railway-qr.png)](https://mirotalk.up.railway.app/)
+
+<br>
+
 <a target="_blank" href="https://www.heroku.com/"><img src="https://www.herokucdn.com/deploy/button.svg" style="width: 220px;"></a>
 
 https://mirotalk.herokuapp.com/
 
 [![heroku-qr](public/images/mirotalk-heroku-qr.png)](https://mirotalk.herokuapp.com/)
-
-<br>
-
-<a target="_blank" href="https://railway.app"><img src="https://railway.app/button.svg" style="width: 220px;"></a>
-
-https://mirotalk.up.railway.app/
-
-[![railway-qr](public/images/mirotalk-railway-qr.png)](https://mirotalk.up.railway.app/)
 
 ---
 
