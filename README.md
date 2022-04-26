@@ -1,31 +1,21 @@
-# MiroTalk P2P
+# <p align="center">MiroTalk P2P</p>
 
-[//]: https://img.shields.io/badge/<LABEL>-<MESSAGE>-<COLOR>
+<p align="center">Free WebRTC - P2P - Simple, Secure, Fast Real-Time Video Conferences Up to 4k and 60fps, compatible with all browsers and platforms.</p>
 
-**`miroslavpejic85`** [![Author](https://img.shields.io/badge/Author-Miroslav-brightgreen.svg)](https://www.linkedin.com/in/miroslav-pejic-976a07101/)
-![License: AGPLv3](https://img.shields.io/badge/License-AGPLv3-blue.svg)
-[![Code style: prettier](https://img.shields.io/badge/Code_style-Prettier-ff69b4.svg?)](https://github.com/prettier/prettier)
-[![Discord](https://img.shields.io/badge/chat-discord-green)](https://discord.gg/rgGYfeYW3N)
+<hr />
 
-<br>
+<p align="center">
+<img src="public/images/mirotalk-header.gif" />
+</p>
 
-**`mmguero`** ![Repo Link](https://img.shields.io/badge/Repo-Link-black.svg) ![Docker Image](https://github.com/mmguero/mirotalk/workflows/mirotalk-build-push-ghcr/badge.svg)
+<hr />
 
-Free `WebRTC` browser-based video calls, chat, and screen sharing, using google Stun and [numb](http://numb.viagenie.ca/) Turn. `MiroTalk` provides video quality and latency not available with traditional technology.
+<details>
+<summary>Features</summary>
 
-Open the app with the following **supported browsers** and many more.
+<br/>
 
-[![browsers](public/images/browsers.png)](https://mirotalk.up.railway.app/)
-
-## https://mirotalk.up.railway.app/
-
-<br>
-
-[![mirotalk](public/images/mirotalk-header.gif)](https://mirotalk.up.railway.app/)
-
-## Features
-
--   Is `100% Free` - `Open Source` - `Self-hosted`
+-   Is `100% Free` - `Open Source` - `Self Hosted`
 -   No download, plug-in, or login required, entirely browser-based
 -   Unlimited number of conference rooms without call time limitation
 -   Possibility to Lock/Unlock the Room for the meeting
@@ -49,20 +39,35 @@ Open the app with the following **supported browsers** and many more.
 -   Direct `peer-to-peer` connection ensures the lowest latency thanks to `WebRTC`
 -   Supports [REST API](app/api/README.md) (Application Programming Interface)
 
-## Presentation
+</details>
 
-https://www.canva.com/design/DAE693uLOIU/view
+<details>
+<summary>Presentation</summary>
 
-## Demo
+<br/>
+
+<a href="https://www.canva.com/design/DAE693uLOIU/view">MiroTalk presentation</a>
+
+</details>
+
+<details>
+<summary>Start videoconference</summary>
+
+<br/>
 
 -   `Open` https://mirotalk.up.railway.app/newcall or https://mirotalk.herokuapp.com/newcall
 -   `Pick` your Room name and Join
 -   `Allow` using the camera and microphone
 -   `Share` the Room URL and Wait for someone to join for the video conference
 
-## Direct join
+</details>
 
--   You can also `join` directly to your `room` by going to:
+<details>
+<summary>Direct Join</summary>
+
+<br/>
+
+-   You can `join` directly to `room` by going to:
 -   https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=0&video=0&notify=0
 -   https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=0&video=0&notify=0
 
@@ -74,7 +79,12 @@ https://www.canva.com/design/DAE693uLOIU/view
     | video  | boolean | enable / disable |
     | notify | boolean | enable / disable |
 
-## Embed a meeting
+</details>
+
+<details>
+<summary>Embed a meeting</summary>
+
+<br/>
 
 Embedding a meeting into a service or app using an iframe.
 
@@ -86,7 +96,12 @@ Embedding a meeting into a service or app using an iframe.
 ></iframe>
 ```
 
-## Quick start
+</details>
+
+<details open>
+<summary>Quick start</summary>
+
+<br/>
 
 -   You will need to have `Node.js` installed, this project has been tested with Node version [12.X](https://nodejs.org/en/blog/release/v12.22.1/) and [14.X](https://nodejs.org/en/blog/release/v14.17.5/)
 
@@ -105,9 +120,16 @@ $ npm start
 
 -   Open http://localhost:3000 in browser
 
----
+</details>
 
-## Docker
+<details open>
+<summary>Docker</summary>
+
+<br/>
+
+![Docker Image](https://github.com/mmguero/mirotalk/workflows/mirotalk-build-push-ghcr/badge.svg)
+
+<br/>
 
 -   Install docker engine: https://docs.docker.com/engine/install/
 -   Install docker compose: https://docs.docker.com/compose/install/
@@ -125,15 +147,21 @@ $ docker-compose down
 
 -   Open http://localhost:3000 in browser
 
----
+</details>
 
-## Setup Turn
+<details>
+<summary>Setup Turn</summary>
+
+<br/>
 
 `Recommended`, for more info about the Turn check out [here](https://webrtc.org/getting-started/turn-server). Just edit [this part](https://github.com/miroslavpejic85/mirotalk/blob/master/.env.template#L9) on your `.env`.
 
----
+</details>
 
-## API
+<details>
+<summary>Rest API</summary>
+
+<br/>
 
 ```bash
 # The response will give you a entrypoint / Room URL for your meeting, where authorization: API_KEY_SECRET.
@@ -146,49 +174,53 @@ $ curl -X POST "https://mirotalk.herokuapp.com/api/v1/meeting" -H "authorization
 
 The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [railway](https://mirotalk.up.railway.app/api/v1/docs) & [heroku](https://mirotalk.herokuapp.com/api/v1/docs).
 
----
+</details>
 
-## HTTPS
+<details>
+<summary>Https</summary>
 
-If you want `MiroTalk` to be `reachable` from the `outside` of your local network, you can use a service like [ngrok](https://ngrok.com/) (by editing the [Ngrok part](https://github.com/miroslavpejic85/mirotalk/blob/master/.env.template#L1) on `.env` file) or expose it directly on [HTTPS](app/ssl/README.md)
+<br/>
 
-## Live demo
+If you want `MiroTalk` to be `reachable` from the `outside` of your local network, you can use a service like [ngrok](https://ngrok.com/) by editing the [Ngrok part](https://github.com/miroslavpejic85/mirotalk/blob/master/.env.template#L1) on `.env` file, or expose it directly on [HTTPS](app/ssl/README.md)
 
-<a target="_blank" href="https://railway.app/new/template/q83EKG?referralCode=mirotalk"><img src="https://railway.app/button.svg" style="width: 220px;"></a>
+</details>
 
-https://mirotalk.up.railway.app/
+<details>
+<summary>Credits</summary>
 
-[![railway-qr](public/images/mirotalk-railway-qr.png)](https://mirotalk.up.railway.app/)
-
-<br>
-
-<a target="_blank" href="https://www.heroku.com/"><img src="https://www.herokucdn.com/deploy/button.svg" style="width: 220px;"></a>
-
-https://mirotalk.herokuapp.com/
-
-[![heroku-qr](public/images/mirotalk-heroku-qr.png)](https://mirotalk.herokuapp.com/)
-
----
-
-## Credits
+<br/>
 
 -   ianramzy (html [template](https://cruip.com/demos/neon/))
 -   vasanthv (webrtc-logic)
 -   fabric.js (whiteboard)
 
-## Contributing
+</details>
+
+<details>
+<summary>Contributing</summary>
+
+<br/>
 
 -   Contributions are welcome and greatly appreciated!
 -   Just run before `npm run lint`
 
-## Discussions
+</details>
 
--   For discussions about the project, join with us on [Discord](https://discord.gg/rgGYfeYW3N)
+<details>
+<summary>Discussions and support</summary>
 
 <br/>
 
-## License
+-   For discussions, help & support, join with us on [Discord](https://discord.gg/rgGYfeYW3N)
+
+</details>
+
+<details>
+<summary>License</summary>
+
+<br/>
 
 [![AGPLv3](public/images/AGPLv3.png)](LICENSE)
 
 MiroTalk is free and can be modified and forked. But the conditions of the AGPLv3 (GNU Affero General Public License v3.0) need to be respected. In particular modifications need to be free as well and made available to the public. Get a quick overview of the license at [Choose an open source license](https://choosealicense.com/licenses/agpl-3.0/).
+

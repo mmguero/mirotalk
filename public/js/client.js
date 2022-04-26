@@ -9,9 +9,9 @@
 /**
  * MiroTalk P2P - Client component
  *
- * @link    https://mirotalk.up.railway.app or https://mirotalk.herokuapp.com
+ * @link    GitHub: https://github.com/mmguero/mirotalk
  * @license For open source use: AGPLv3
- *          For commercial use: https://github.com/miroslavpejic85/mirotalk#commercial-license-or-closed-source
+ * @license For commercial or closed source, contact us at info.mirotalk@gmail.com
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
  * @version 1.0.0
  *
@@ -24,7 +24,7 @@ const signalingServerPort = 3000; // must be the same to server.js PORT
 const signalingServer = getSignalingServer();
 const roomId = getRoomId();
 const peerInfo = getPeerInfo();
-const peerLoockupUrl = 'https://extreme-ip-lookup.com/json/?key=demo2';
+const peerLoockupUrl = 'https://extreme-ip-lookup.com/json/?key=demo2'; // get your API Key at https://extreme-ip-lookup.com
 const avatarApiUrl = 'https://eu.ui-avatars.com/api';
 const surveyURL = 'https://www.questionpro.com/t/AUs7VZq00L';
 const welcomeImg = '../images/image-placeholder.png';
@@ -492,6 +492,7 @@ function getPeerInfo() {
 
 /**
  * Get approximative peer geolocation
+ * Get your API Key at https://extreme-ip-lookup.com
  * @returns json
  */
 function getPeerGeoLocation() {
@@ -500,7 +501,7 @@ function getPeerGeoLocation() {
         .then((outJson) => {
             peerGeo = outJson;
         })
-        .catch((err) => console.error(err));
+        .catch((err) => console.warn(err));
 }
 
 /**
@@ -4214,7 +4215,7 @@ function disablePeer(peer_id, element) {
  * Lock Unlock the room from unauthorized access
  */
 function lockUnlockRoom() {
-    lockUnlockRoomBtn.className = roomLocked ? 'fas fa-lock-open' : 'fas fa-lock';
+    getId('lockUnlockRoomIco').className = roomLocked ? 'fas fa-lock-open' : 'fas fa-lock';
 
     if (roomLocked) {
         roomLocked = false;
@@ -5286,9 +5287,7 @@ function showAbout() {
         html: `
         <br/>
         <div id="about">
-            <b>Open Source</b> project on
-            <a href="https://github.com/mmguero/mirotalk" target="_blank"><br/></br>
-            <img alt="mirotalk github" src="../images/github.png"></a>
+            <b><a href="https://github.com/mmguero/mirotalk" target="_blank">Open Source</a></b> project
         </div>
         `,
         showClass: {
