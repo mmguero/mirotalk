@@ -46,7 +46,7 @@
 
 <br/>
 
-<a href="https://www.canva.com/design/DAE693uLOIU/view">MiroTalk presentation</a>
+<a href="https://www.canva.com/design/DAE693uLOIU/view">MiroTalk presentation </a> - <a href="https://www.youtube.com/watch?v=_IVn2aINYww">video</a>
 
 </details>
 
@@ -68,16 +68,17 @@
 <br/>
 
 -   You can `join` directly to `room` by going to:
--   https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=0&video=0&notify=0
--   https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=0&video=0&notify=0
+-   https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
+-   https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
 
-    | Params | Type    | Description      |
-    | ------ | ------- | ---------------- |
-    | room   | string  | room Id          |
-    | name   | string  | user name        |
-    | audio  | boolean | audio stream     |
-    | video  | boolean | video stream     |
-    | notify | boolean | welcome message  |
+    | Params | Type    | Description     |
+    | ------ | ------- | --------------- |
+    | room   | string  | room Id         |
+    | name   | string  | user name       |
+    | audio  | boolean | audio stream    |
+    | video  | boolean | video stream    |
+    | screen | boolean | screen stream   |
+    | notify | boolean | welcome message |
 
 </details>
 
@@ -150,6 +151,15 @@ $ docker-compose down
 </details>
 
 <details>
+<summary>Https</summary>
+
+<br/>
+
+You can start videoconferencing directly from your Local PC, and be reachable from any device outside your network, simply using a service like [ngrok](https://ngrok.com/) by editing the [Ngrok part](https://github.com/miroslavpejic85/mirotalk/blob/master/.env.template#L1) on `.env` file, or expose it directly on [HTTPS](app/ssl/README.md)
+
+</details>
+
+<details>
 <summary>Setup Turn</summary>
 
 <br/>
@@ -173,15 +183,6 @@ $ curl -X POST "https://mirotalk.herokuapp.com/api/v1/meeting" -H "authorization
 ## API Documentation
 
 The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [railway](https://mirotalk.up.railway.app/api/v1/docs) & [heroku](https://mirotalk.herokuapp.com/api/v1/docs).
-
-</details>
-
-<details>
-<summary>Https</summary>
-
-<br/>
-
-If you want `MiroTalk` to be `reachable` from the `outside` of your local network, you can use a service like [ngrok](https://ngrok.com/) by editing the [Ngrok part](https://github.com/miroslavpejic85/mirotalk/blob/master/.env.template#L1) on `.env` file, or expose it directly on [HTTPS](app/ssl/README.md)
 
 </details>
 

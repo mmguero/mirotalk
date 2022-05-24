@@ -168,17 +168,18 @@ app.get('/join/', (req, res) => {
     if (Object.keys(req.query).length > 0) {
         log.debug('Request Query', req.query);
         /* 
-            http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&notify=1
-            https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&notify=1
-            https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=1&video=1&notify=1
+            http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
+            https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
+            https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
         */
         let roomName = req.query.room;
         let peerName = req.query.name;
         let peerAudio = req.query.audio;
         let peerVideo = req.query.video;
+        let peerScreen = req.query.screen;
         let notify = req.query.notify;
         // all the params are mandatory for the direct room join
-        if (roomName && peerName && peerAudio && peerVideo && notify) {
+        if (roomName && peerName && peerAudio && peerVideo && peerScreen && notify) {
             return res.sendFile(view.client);
         }
     }
@@ -313,7 +314,7 @@ async function ngrokStart() {
             node_version: process.versions.node,
         });
     } catch (err) {
-        console.error('[Error] ngrokStart', err);
+        log.error('[Error] ngrokStart', err.body);
         process.exit(1);
     }
 }
@@ -352,6 +353,7 @@ server.listen(port, null, () => {
 });
 
 /**
+ * On peer connected
  * Users will connect to the signaling server, after which they'll issue a "join"
  * to join a particular channel. The signaling server keeps track of all sockets
  * who are in a channel, and on join will send out 'addPeer' events to each pair
@@ -360,7 +362,6 @@ server.listen(port, null, () => {
  * need to relay ICECandidate information to one another, as well as SessionDescription
  * information. After all of that happens, they'll finally be able to complete
  * the peer connection and will be in streaming audio/video between eachother.
- * On peer connected
  */
 io.sockets.on('connect', (socket) => {
     log.debug('[' + socket.id + '] connection accepted');
@@ -423,11 +424,14 @@ io.sockets.on('connect', (socket) => {
 
         channels[channel][socket.id] = socket;
         socket.channels[channel] = channel;
+
+        // Send some server info to joined peer
+        sendToPeer(socket.id, sockets, 'serverInfo', { peers_count: Object.keys(peers[channel]).length });
     });
 
     /**
-     * Add peers to channel aka room
-     * @param {*} channel
+     * Add peers to channel
+     * @param {string} channel room id
      */
     async function addPeerTo(channel) {
         for (let id in channels[channel]) {
@@ -450,8 +454,8 @@ io.sockets.on('connect', (socket) => {
     }
 
     /**
-     * Remove peers from channel aka room
-     * @param {*} channel
+     * Remove peers from channel
+     * @param {string} channel room id
      */
     async function removePeerFrom(channel) {
         if (!(channel in socket.channels)) {
@@ -703,7 +707,7 @@ io.sockets.on('connect', (socket) => {
             video_action: video_action,
             video_src: video_src,
         };
-        let logme = {
+        let logMe = {
             peer_id: socket.id,
             peer_name: peer_name,
             video_action: video_action,
@@ -713,7 +717,7 @@ io.sockets.on('connect', (socket) => {
         if (peer_id) {
             log.debug(
                 '[' + socket.id + '] emit videoPlayer to [' + peer_id + '] from room_id [' + room_id + ']',
-                logme,
+                logMe,
             );
 
             sendToPeer(peer_id, sockets, 'videoPlayer', sendConfig);
@@ -742,29 +746,31 @@ io.sockets.on('connect', (socket) => {
 
 /**
  * Send async data to all peers in the same room except yourself
- * @param {*} room_id id of the room to send data
- * @param {*} socket_id socket id of peer that send data
- * @param {*} msg message to send to the peers in the same room
- * @param {*} config JSON data to send to the peers in the same room
+ * @param {string} room_id id of the room to send data
+ * @param {string} socket_id socket id of peer that send data
+ * @param {string} msg message to send to the peers in the same room
+ * @param {object} config data to send to the peers in the same room
  */
 async function sendToRoom(room_id, socket_id, msg, config = {}) {
     for (let peer_id in channels[room_id]) {
         // not send data to myself
         if (peer_id != socket_id) {
             await channels[room_id][peer_id].emit(msg, config);
+            //console.log('Send to room', { msg: msg, config: config });
         }
     }
 }
 
 /**
  * Send async data to specified peer
- * @param {*} peer_id id of the peer to send data
- * @param {*} sockets all peers connections
- * @param {*} msg message to send to the peer in the same room
- * @param {*} config JSON data to send to the peer in the same room
+ * @param {string} peer_id id of the peer to send data
+ * @param {object} sockets all peers connections
+ * @param {string} msg message to send to the peer in the same room
+ * @param {object} config data to send to the peer in the same room
  */
 async function sendToPeer(peer_id, sockets, msg, config = {}) {
     if (peer_id in sockets) {
         await sockets[peer_id].emit(msg, config);
+        //console.log('Send to peer', { msg: msg, config: config });
     }
 }
