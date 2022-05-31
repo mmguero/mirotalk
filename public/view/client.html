@@ -200,6 +200,7 @@ access to use this app.
                     <button id="tabBandwidthBtn" class="fas fa-wifi tablinks"></button>
                     <button id="tabRoomBtn" class="fas fa-home tablinks"></button>
                     <button id="tabStylingBtn" class="fas fa-palette tablinks"></button>
+                    <button id="tabLanguagesBtn" class="fas fa-globe tablinks"></button>
                 </div>
 
                 <div id="tabDevices" class="tabcontent">
@@ -273,9 +274,8 @@ access to use this app.
                         <button id="hideEveryoneBtn"><i class="fas fa-video"></i>&nbsp;Hide everyone</button>
                         <br /><br />
                         <label>Security</label><br />
-                        <button id="lockUnlockRoomBtn">
-                            <i id="lockUnlockRoomIco" class="fas fa-lock-open"></i>&nbsp;Lock/unlock room
-                        </button>
+                        <button id="lockRoomBtn"><i class="fas fa-lock-open"></i>&nbsp;Lock room</button>
+                        <button id="unlockRoomBtn" class="hidden"><i class="fas fa-lock"></i>&nbsp;Unlock room</button>
                     </div>
                 </div>
 
@@ -304,6 +304,11 @@ access to use this app.
                         <option value="vertical">🚦 Vertical</option>
                         <option value="horizontal">🚥 Horizontal</option>
                     </select>
+                </div>
+
+                <div id="tabLanguages" class="tabcontent">
+                    <br />
+                    <div id="google_translate_element"></div>
                 </div>
             </main>
         </section>
@@ -415,5 +420,19 @@ access to use this app.
 		the <video> and <audio> tags are all added and removed dynamically
 		in 'onAddStream', 'setupLocalMedia', and 'removePeer'/'disconnect'
 		-->
+
+        <!-- 
+            Start Google Translate 
+            https://www.w3schools.com/howto/howto_google_translate.asp
+        -->
+
+        <script>
+            function googleTranslateElementInit() {
+                new google.translate.TranslateElement({ pageLanguage: 'en' }, 'google_translate_element');
+            }
+        </script>
+        <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+        <!-- End Google Translate -->
     </body>
 </html>

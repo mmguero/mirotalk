@@ -5,7 +5,7 @@
 <hr />
 
 <p align="center">
-<img src="public/images/mirotalk-header.gif" />
+<img src="public/images/mirotalk-header.gif">
 </p>
 
 <hr />
@@ -18,7 +18,7 @@
 -   Is `100% Free` - `Open Source` - `Self Hosted`
 -   No download, plug-in, or login required, entirely browser-based
 -   Unlimited number of conference rooms without call time limitation
--   Possibility to Lock/Unlock the Room for the meeting
+-   Possibility to Password protect the Room for the meeting
 -   Desktop and Mobile compatible
 -   Optimized Room URL Sharing (share it to your participants, wait for them to join)
 -   Webcam Streaming (Front - Rear for mobile)
@@ -35,6 +35,7 @@
 -   Share any YT Embed video in real-time
 -   Full-Screen Mode on mouse click on the Video element
 -   Possibility to Change UI Themes
+-   Translated in all languages thanks to google translate
 -   Right-click on the Video elements for more options
 -   Direct `peer-to-peer` connection ensures the lowest latency thanks to `WebRTC`
 -   Supports [REST API](app/api/README.md) (Application Programming Interface)

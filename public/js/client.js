@@ -67,6 +67,8 @@ const chatInputEmoji = {
     ':+1:': '\uD83D\uDC4D',
 }; // https://github.com/wooorm/gemoji/blob/main/support.md
 
+let thisRoomPassword = null;
+
 let myPeerId; // socket.id
 
 // video cam - screen max frame rate
@@ -182,6 +184,7 @@ let tabDevicesBtn;
 let tabBandwidthBtn;
 let tabRoomBtn;
 let tabStylingBtn;
+let tabLanguagesBtn;
 let mySettingsCloseBtn;
 let myPeerNameSet;
 let myPeerNameSetBtn;
@@ -237,7 +240,8 @@ let wbPop = [];
 // room actions btns
 let muteEveryoneBtn;
 let hideEveryoneBtn;
-let lockUnlockRoomBtn;
+let lockRoomBtn;
+let unlockRoomBtn;
 // file transfer settings
 let fileToSend;
 let fileReader;
@@ -347,6 +351,7 @@ function getHtmlElementsById() {
     tabBandwidthBtn = getId('tabBandwidthBtn');
     tabRoomBtn = getId('tabRoomBtn');
     tabStylingBtn = getId('tabStylingBtn');
+    tabLanguagesBtn = getId('tabLanguagesBtn');
     mySettingsCloseBtn = getId('mySettingsCloseBtn');
     myPeerNameSet = getId('myPeerNameSet');
     myPeerNameSetBtn = getId('myPeerNameSetBtn');
@@ -386,7 +391,8 @@ function getHtmlElementsById() {
     // room actions buttons
     muteEveryoneBtn = getId('muteEveryoneBtn');
     hideEveryoneBtn = getId('hideEveryoneBtn');
-    lockUnlockRoomBtn = getId('lockUnlockRoomBtn');
+    lockRoomBtn = getId('lockRoomBtn');
+    unlockRoomBtn = getId('unlockRoomBtn');
     // file send progress
     sendFileDiv = getId('sendFileDiv');
     sendFileInfo = getId('sendFileInfo');
@@ -416,32 +422,32 @@ function setButtonsToolTip() {
     // not need for mobile
     if (isMobileDevice) return;
     // main buttons
-    setTippy(shareRoomBtn, 'INVITE others to join', 'right-start');
-    setTippy(audioBtn, 'CLICK Audio OFF', 'right-start');
-    setTippy(videoBtn, 'CLICK Video OFF', 'right-start');
-    setTippy(screenShareBtn, 'START screen sharing', 'right-start');
-    setTippy(recordStreamBtn, 'START recording', 'right-start');
-    setTippy(fullScreenBtn, 'VIEW full screen', 'right-start');
-    setTippy(chatRoomBtn, 'OPEN the chat', 'right-start');
-    setTippy(captionBtn, 'OPEN the caption', 'right-start');
-    setTippy(myHandBtn, 'RAISE your hand', 'right-start');
-    setTippy(whiteboardBtn, 'OPEN the whiteboard', 'right-start');
-    setTippy(fileShareBtn, 'SHARE file', 'right-start');
-    setTippy(mySettingsBtn, 'SHOW settings', 'right-start');
-    setTippy(aboutBtn, 'SHOW about', 'right-start');
-    setTippy(leaveRoomBtn, 'LEAVE this room', 'right-start');
+    setTippy(shareRoomBtn, 'Invite others to join', 'right-start');
+    setTippy(audioBtn, 'Stop the audio', 'right-start');
+    setTippy(videoBtn, 'Stop the video', 'right-start');
+    setTippy(screenShareBtn, 'Start screen sharing', 'right-start');
+    setTippy(recordStreamBtn, 'Start recording', 'right-start');
+    setTippy(fullScreenBtn, 'View full screen', 'right-start');
+    setTippy(chatRoomBtn, 'Open the chat', 'right-start');
+    setTippy(captionBtn, 'Open the caption', 'right-start');
+    setTippy(myHandBtn, 'Raise your hand', 'right-start');
+    setTippy(whiteboardBtn, 'Open the whiteboard', 'right-start');
+    setTippy(fileShareBtn, 'Share file', 'right-start');
+    setTippy(mySettingsBtn, 'Open settings', 'right-start');
+    setTippy(aboutBtn, 'About', 'right-start');
+    setTippy(leaveRoomBtn, 'Leave this room', 'right-start');
     // chat room buttons
     setTippy(msgerTheme, 'Ghost theme', 'top');
     setTippy(msgerCPBtn, 'Private messages', 'top');
-    setTippy(msgerClean, 'Clean messages', 'top');
-    setTippy(msgerSaveBtn, 'Save messages', 'top');
+    setTippy(msgerClean, 'Clean the messages', 'top');
+    setTippy(msgerSaveBtn, 'Save the messages', 'top');
     setTippy(msgerClose, 'Close', 'top');
     setTippy(msgerEmojiBtn, 'Emoji', 'top');
     setTippy(msgerSendBtn, 'Send', 'top');
     // caption buttons
     setTippy(captionTheme, 'Ghost theme', 'top');
-    setTippy(captionClean, 'Clean messages', 'top');
-    setTippy(captionSaveBtn, 'Save messages', 'top');
+    setTippy(captionClean, 'Clean the messages', 'top');
+    setTippy(captionSaveBtn, 'Save the messages', 'top');
     // settings
     setTippy(mySettingsCloseBtn, 'Close settings', 'top');
     setTippy(myPeerNameSetBtn, 'Change name', 'top');
@@ -450,29 +456,30 @@ function setButtonsToolTip() {
     setTippy(tabBandwidthBtn, 'Bandwidth', 'top');
     setTippy(tabRoomBtn, 'Room', 'top');
     setTippy(tabStylingBtn, 'Styling', 'top');
+    setTippy(tabLanguagesBtn, 'Languages', 'top');
     // whiteboard btns
-    setTippy(wbDrawingColorEl, 'DRAWING color', 'bottom');
-    setTippy(wbBackgroundColorEl, 'BACKGROUND color', 'bottom');
-    setTippy(whiteboardPencilBtn, 'DRAWING mode', 'bottom');
-    setTippy(whiteboardObjectBtn, 'OBJECT mode', 'bottom');
-    setTippy(whiteboardUndoBtn, 'UNDO the board', 'bottom');
-    setTippy(whiteboardRedoBtn, 'REDO the board', 'bottom');
-    setTippy(whiteboardImgFileBtn, 'ADD image from file', 'bottom');
-    setTippy(whiteboardImgUrlBtn, 'ADD image from URL', 'bottom');
-    setTippy(whiteboardTextBtn, 'ADD the text', 'bottom');
-    setTippy(whiteboardLineBtn, 'ADD the line', 'bottom');
-    setTippy(whiteboardRectBtn, 'ADD the rectangle', 'bottom');
-    setTippy(whiteboardCircleBtn, 'ADD the circle', 'bottom');
-    setTippy(whiteboardSaveBtn, 'SAVE the board', 'bottom');
-    setTippy(whiteboardEraserBtn, 'ERASE the object', 'bottom');
-    setTippy(whiteboardCleanBtn, 'CLEAN the board', 'bottom');
-    setTippy(whiteboardCloseBtn, 'CLOSE the board', 'bottom');
+    setTippy(wbDrawingColorEl, 'Drawing color', 'bottom');
+    setTippy(wbBackgroundColorEl, 'Background color', 'bottom');
+    setTippy(whiteboardPencilBtn, 'Drawing mode', 'bottom');
+    setTippy(whiteboardObjectBtn, 'Object mode', 'bottom');
+    setTippy(whiteboardUndoBtn, 'Undo', 'bottom');
+    setTippy(whiteboardRedoBtn, 'Redo', 'bottom');
+    setTippy(whiteboardImgFileBtn, 'Add image from file', 'bottom');
+    setTippy(whiteboardImgUrlBtn, 'Add image from URL', 'bottom');
+    setTippy(whiteboardTextBtn, 'Add the text', 'bottom');
+    setTippy(whiteboardLineBtn, 'Add the line', 'bottom');
+    setTippy(whiteboardRectBtn, 'Add the rectangle', 'bottom');
+    setTippy(whiteboardCircleBtn, 'Add the circle', 'bottom');
+    setTippy(whiteboardSaveBtn, 'Save the board', 'bottom');
+    setTippy(whiteboardEraserBtn, 'Erase the object', 'bottom');
+    setTippy(whiteboardCleanBtn, 'Clean the board', 'bottom');
+    setTippy(whiteboardCloseBtn, 'Close the board', 'bottom');
     // room actions btn
-    setTippy(muteEveryoneBtn, 'MUTE everyone except yourself', 'top');
-    setTippy(hideEveryoneBtn, 'HIDE everyone except yourself', 'top');
+    setTippy(muteEveryoneBtn, 'Mute everyone except yourself', 'top');
+    setTippy(hideEveryoneBtn, 'Hide everyone except yourself', 'top');
     // Suspend/Hide File transfer btn
-    setTippy(sendAbortBtn, 'ABORT file transfer', 'right-start');
-    setTippy(receiveHideBtn, 'HIDE file transfer', 'right-start');
+    setTippy(sendAbortBtn, 'Abort file transfer', 'right-start');
+    setTippy(receiveHideBtn, 'Hide file transfer', 'right-start');
     // video URL player
     setTippy(videoUrlCloseBtn, 'Close the videoPlayer', 'right-start');
     setTippy(msgerVideoUrlBtn, 'Share YouTube video to all participants', 'right-start');
@@ -638,10 +645,10 @@ function initClientPeer() {
 
     // on receiving data from signaling server...
     signalingSocket.on('connect', handleConnect);
-    signalingSocket.on('serverInfo', handleServerInfo);
-    signalingSocket.on('roomIsLocked', handleRoomLocked);
-    signalingSocket.on('roomStatus', handleRoomStatus);
+    signalingSocket.on('roomIsLocked', handleUnlockTheRoom);
+    signalingSocket.on('roomAction', handleRoomAction);
     signalingSocket.on('addPeer', handleAddPeer);
+    signalingSocket.on('serverInfo', handleServerInfo);
     signalingSocket.on('sessionDescription', handleSessionDescription);
     signalingSocket.on('iceCandidate', handleIceCandidate);
     signalingSocket.on('peerName', handlePeerName);
@@ -758,8 +765,8 @@ function whoAreYou() {
     initAudioBtn = getId('initAudioBtn');
     initVideoBtn = getId('initVideoBtn');
 
-    setTippy(initAudioBtn, 'Click Audio OFF', 'top');
-    setTippy(initVideoBtn, 'Click Video OFF', 'top');
+    setTippy(initAudioBtn, 'Stop the audio', 'top');
+    setTippy(initVideoBtn, 'Stop the video', 'top');
 }
 
 /**
@@ -794,12 +801,13 @@ function whoAreYouJoin() {
 }
 
 /**
- * join to chennel and send some peer info
+ * join to channel and send some peer info
  */
 function joinToChannel() {
     console.log('join to channel', roomId);
     sendToServer('join', {
         channel: roomId,
+        channel_password: thisRoomPassword,
         peer_info: peerInfo,
         peer_geo: peerGeo,
         peer_name: myPeerName,
@@ -1333,9 +1341,9 @@ function loadLocalMedia(stream) {
     if (!isMobileDevice) {
         setTippy(myCountTime, 'Session Time', 'bottom');
         setTippy(myVideoParagraph, 'My name', 'bottom');
-        setTippy(myHandStatusIcon, 'My hand is RAISED', 'bottom');
-        setTippy(myVideoStatusIcon, 'My video is ON', 'bottom');
-        setTippy(myAudioStatusIcon, 'My audio is ON', 'bottom');
+        setTippy(myHandStatusIcon, 'My hand is raised', 'bottom');
+        setTippy(myVideoStatusIcon, 'My video is open', 'bottom');
+        setTippy(myAudioStatusIcon, 'My audio is open', 'bottom');
         setTippy(myVideoToImgBtn, 'Take a snapshot', 'bottom');
         setTippy(myVideoFullScreenBtn, 'Full screen mode', 'bottom');
     }
@@ -1518,9 +1526,9 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     // no mobile devices
     if (!isMobileDevice) {
         setTippy(remoteVideoParagraph, 'Participant name', 'bottom');
-        setTippy(remoteHandStatusIcon, 'Participant hand is RAISED', 'bottom');
-        setTippy(remoteVideoStatusIcon, 'Participant video is ON', 'bottom');
-        setTippy(remoteAudioStatusIcon, 'Participant audio is ON', 'bottom');
+        setTippy(remoteHandStatusIcon, 'Participant hand is raised', 'bottom');
+        setTippy(remoteVideoStatusIcon, 'Participant video is open', 'bottom');
+        setTippy(remoteAudioStatusIcon, 'Participant audio is open', 'bottom');
         setTippy(remoteYoutubeBtnBtn, 'Send YouTube video', 'bottom');
         setTippy(remotePrivateMsgBtn, 'Send private message', 'bottom');
         setTippy(remoteVideoToImgBtn, 'Take a snapshot', 'bottom');
@@ -2034,7 +2042,7 @@ function setFullScreenBtn() {
                 isDocumentOnFullScreen = false;
                 // only for desktop
                 if (!isMobileDevice) {
-                    setTippy(fullScreenBtn, 'VIEW full screen', 'right-start');
+                    setTippy(fullScreenBtn, 'View full screen', 'right-start');
                 }
             }
         });
@@ -2393,6 +2401,9 @@ function setupMySettings() {
     tabStylingBtn.addEventListener('click', (e) => {
         openTab(e, 'tabStyling');
     });
+    tabLanguagesBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabLanguages');
+    });
     // audio - video select box
     selectors = [audioInputSelect, audioOutputSelect, videoSelect];
     audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
@@ -2466,8 +2477,11 @@ function setupMySettings() {
     hideEveryoneBtn.addEventListener('click', (e) => {
         disableAllPeers('video');
     });
-    lockUnlockRoomBtn.addEventListener('click', (e) => {
-        lockUnlockRoom();
+    lockRoomBtn.addEventListener('click', (e) => {
+        handleRoomAction({ action: 'lock' }, true);
+    });
+    unlockRoomBtn.addEventListener('click', (e) => {
+        handleRoomAction({ action: 'unlock' }, true);
     });
 }
 
@@ -2906,7 +2920,7 @@ function handleAudio(e, init, force = null) {
     if (init) {
         audioBtn.className = 'fas fa-microphone' + (myAudioStatus ? '' : '-slash');
         if (!isMobileDevice) {
-            setTippy(initAudioBtn, myAudioStatus ? 'Click Audio OFF' : 'Click Audio ON', 'top');
+            setTippy(initAudioBtn, myAudioStatus ? 'Stop the audio' : 'Start the audio', 'top');
         }
     }
     setMyAudioStatus(myAudioStatus);
@@ -2929,7 +2943,7 @@ function handleVideo(e, init, force = null) {
     if (init) {
         videoBtn.className = 'fas fa-video' + (myVideoStatus ? '' : '-slash');
         if (!isMobileDevice) {
-            setTippy(initVideoBtn, myVideoStatus ? 'Click Video OFF' : 'Click Video ON', 'top');
+            setTippy(initVideoBtn, myVideoStatus ? 'Stop the video' : 'Start the video', 'top');
         }
     }
     setMyVideoStatus(myVideoStatus);
@@ -3020,7 +3034,7 @@ function setScreenSharingStatus(status) {
     screenShareBtn.className = status ? 'fas fa-stop-circle' : 'fas fa-desktop';
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(screenShareBtn, status ? 'STOP screen sharing' : 'START screen sharing', 'right-start');
+        setTippy(screenShareBtn, status ? 'Stop screen sharing' : 'Start screen sharing', 'right-start');
     }
 }
 
@@ -3038,7 +3052,7 @@ function setMyVideoStatusTrue() {
     emitPeerStatus('video', myVideoStatus);
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(videoBtn, 'Click Video OFF', 'right-start');
+        setTippy(videoBtn, 'Stop the video', 'right-start');
     }
 }
 
@@ -3060,7 +3074,7 @@ function toggleFullScreen() {
     }
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(fullScreenBtn, isDocumentOnFullScreen ? 'EXIT full screen' : 'VIEW full screen', 'right-start');
+        setTippy(fullScreenBtn, isDocumentOnFullScreen ? 'Exit full screen' : 'View full screen', 'right-start');
     }
 }
 
@@ -3129,7 +3143,7 @@ function refreshMyLocalStream(stream, localAudioTrackChange = false) {
 
     /**
      * When you stop the screen sharing, on default i turn back to the webcam with video stream ON.
-     * If you want the webcam with video stream OFF, just disable it with the button (Click Video OFF),
+     * If you want the webcam with video stream OFF, just disable it with the button (Stop the video),
      * before to stop the screen sharing.
      */
     if (myVideoStatus === false) localMediaStream.getVideoTracks()[0].enabled = false;
@@ -3261,7 +3275,7 @@ function handleMediaRecorderStart(event) {
     startRecordingTime();
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(recordStreamBtn, 'STOP recording', 'right-start');
+        setTippy(recordStreamBtn, 'Stop recording', 'right-start');
     } else {
         swapCameraBtn.style.display = 'none';
     }
@@ -3298,7 +3312,7 @@ function handleMediaRecorderStop(event) {
     downloadRecordedStream();
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(recordStreamBtn, 'START recording', 'right-start');
+        setTippy(recordStreamBtn, 'Start recording', 'right-start');
     } else {
         swapCameraBtn.style.display = 'block';
     }
@@ -3380,7 +3394,7 @@ function showChatRoomDraggable() {
     isChatRoomVisible = true;
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(chatRoomBtn, 'CLOSE the chat', 'right-start');
+        setTippy(chatRoomBtn, 'Close the chat', 'right-start');
     }
 }
 
@@ -3400,7 +3414,7 @@ function showCaptionDraggable() {
     isCaptionBoxVisible = true;
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(captionBtn, 'CLOSE the caption', 'right-start');
+        setTippy(captionBtn, 'Close the caption', 'right-start');
     }
 }
 /**
@@ -3411,7 +3425,7 @@ function cleanMessages() {
     Swal.fire({
         background: swalBackground,
         position: 'center',
-        title: 'Clean up chat Messages?',
+        title: 'Clean up chat messages?',
         imageUrl: deleteImg,
         showDenyButton: true,
         confirmButtonText: `Yes`,
@@ -3445,7 +3459,7 @@ function cleanCaptions() {
     Swal.fire({
         background: swalBackground,
         position: 'center',
-        title: 'Clean up all caption transcripts ?',
+        title: 'Clean up all caption transcripts?',
         imageUrl: deleteImg,
         showDenyButton: true,
         confirmButtonText: `Yes`,
@@ -3483,7 +3497,7 @@ function hideChatRoomAndEmojiPicker() {
     isChatEmojiVisible = false;
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(chatRoomBtn, 'OPEN the chat', 'right-start');
+        setTippy(chatRoomBtn, 'Open the chat', 'right-start');
     }
 }
 
@@ -3496,7 +3510,7 @@ function hideCaptionBox() {
     isCaptionBoxVisible = false;
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(captionBtn, 'OPEN the caption', 'right-start');
+        setTippy(captionBtn, 'Open the caption', 'right-start');
     }
 }
 
@@ -3947,13 +3961,13 @@ function setMyHandStatus() {
         // Raise hand
         myHandStatus = false;
         if (!isMobileDevice) {
-            setTippy(myHandBtn, 'RAISE your hand', 'right-start');
+            setTippy(myHandBtn, 'Raise your hand', 'right-start');
         }
     } else {
         // Lower hand
         myHandStatus = true;
         if (!isMobileDevice) {
-            setTippy(myHandBtn, 'LOWER your hand', 'right-start');
+            setTippy(myHandBtn, 'Lower your hand', 'right-start');
         }
         playSound('raiseHand');
     }
@@ -3969,11 +3983,11 @@ function setMyAudioStatus(status) {
     myAudioStatusIcon.className = 'fas fa-microphone' + (status ? '' : '-slash');
     // send my audio status to all peers in the room
     emitPeerStatus('audio', status);
-    setTippy(myAudioStatusIcon, status ? 'My audio is ON' : 'My audio is OFF', 'bottom');
+    setTippy(myAudioStatusIcon, status ? 'My audio is open' : 'My audio is closed', 'bottom');
     status ? playSound('on') : playSound('off');
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(audioBtn, status ? 'Click Audio OFF' : 'Click Audio ON', 'right-start');
+        setTippy(audioBtn, status ? 'Stop the audio' : 'Start the audio', 'right-start');
     }
 }
 
@@ -3987,11 +4001,11 @@ function setMyVideoStatus(status) {
     myVideoStatusIcon.className = 'fas fa-video' + (status ? '' : '-slash');
     // send my video status to all peers in the room
     emitPeerStatus('video', status);
-    setTippy(myVideoStatusIcon, status ? 'My video is ON' : 'My video is OFF', 'bottom');
+    setTippy(myVideoStatusIcon, status ? 'My video is open' : 'My video is closed', 'bottom');
     status ? playSound('on') : playSound('off');
     // only for desktop
     if (!isMobileDevice) {
-        setTippy(videoBtn, status ? 'Click Video OFF' : 'Click Video ON', 'right-start');
+        setTippy(videoBtn, status ? 'Stop the video' : 'Start the video', 'right-start');
     }
 }
 
@@ -4043,7 +4057,7 @@ function setPeerAudioStatus(peer_id, status) {
     let peerAudioStatus = getId(peer_id + '_audioStatus');
     if (peerAudioStatus) {
         peerAudioStatus.className = 'fas fa-microphone' + (status ? '' : '-slash');
-        setTippy(peerAudioStatus, status ? 'Participant audio is ON' : 'Participant audio is OFF', 'bottom');
+        setTippy(peerAudioStatus, status ? 'Participant audio is open' : 'Participant audio is closed', 'bottom');
         status ? playSound('on') : playSound('off');
     }
 }
@@ -4132,7 +4146,7 @@ function setPeerVideoStatus(peer_id, status) {
     if (peerVideoAvatarImage) peerVideoAvatarImage.style.display = status ? 'none' : 'block';
     if (peerVideoStatus) {
         peerVideoStatus.className = 'fas fa-video' + (status ? '' : '-slash');
-        setTippy(peerVideoStatus, status ? 'Participant video is ON' : 'Participant video is OFF', 'bottom');
+        setTippy(peerVideoStatus, status ? 'Participant video is open' : 'Participant video is closed', 'bottom');
         status ? playSound('on') : playSound('off');
     }
 }
@@ -4308,59 +4322,100 @@ function disablePeer(peer_id, element) {
 }
 
 /**
- * Lock Unlock the room from unauthorized access
+ * Handle Room action
+ * @param {object} config data
+ * @param {boolean} emit data to signaling server
  */
-function lockUnlockRoom() {
-    getId('lockUnlockRoomIco').className = roomLocked ? 'fas fa-lock-open' : 'fas fa-lock';
+function handleRoomAction(config, emit = false) {
+    if (emit) {
+        let thisConfig = {
+            room_id: roomId,
+            peer_name: myPeerName,
+            action: config.action,
+            password: null,
+        };
+        switch (config.action) {
+            case 'lock':
+                playSound('newMessage');
 
-    if (roomLocked) {
-        roomLocked = false;
-        emitRoomStatus();
+                Swal.fire({
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showDenyButton: true,
+                    background: swalBackground,
+                    imageUrl: roomLockedImg,
+                    input: 'text',
+                    inputPlaceholder: 'Set Room password',
+                    confirmButtonText: `OK`,
+                    denyButtonText: `Cancel`,
+                    showClass: {
+                        popup: 'animate__animated animate__fadeInDown',
+                    },
+                    hideClass: {
+                        popup: 'animate__animated animate__fadeOutUp',
+                    },
+                    inputValidator: (pwd) => {
+                        if (!pwd) return 'Please enter the Room password';
+                        thisRoomPassword = pwd;
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        thisConfig.password = thisRoomPassword;
+                        sendToServer('roomAction', thisConfig);
+                        handleRoomStatus(thisConfig);
+                    }
+                });
+                break;
+            case 'unlock':
+                sendToServer('roomAction', thisConfig);
+                handleRoomStatus(thisConfig);
+                break;
+        }
     } else {
-        roomLocked = true;
-        emitRoomStatus();
-        playSound('locked');
+        // data coming from signaling server
+        handleRoomStatus(config);
     }
 }
 
 /**
- * Refresh Room Status (Locked/Unlocked)
- */
-function emitRoomStatus() {
-    let rStatus = roomLocked ? '🔒 LOCKED the room, no one can access!' : '🔓 UNLOCKED the room';
-    userLog('toast', rStatus);
-
-    sendToServer('roomStatus', {
-        room_id: roomId,
-        room_locked: roomLocked,
-        peer_name: myPeerName,
-    });
-}
-
-/**
- * Handle Room Status (Lock - Unlock)
+ * Handle room status
  * @param {object} config data
  */
 function handleRoomStatus(config) {
+    let action = config.action;
     let peer_name = config.peer_name;
-    let room_locked = config.room_locked;
-    roomLocked = room_locked;
-    lockUnlockRoomBtn.className = roomLocked ? 'fas fa-lock' : 'fas fa-lock-open';
-    userLog('toast', peer_name + ' set room is locked to ' + roomLocked);
+    switch (action) {
+        case 'lock':
+            playSound('locked');
+            userLog('toast', peer_name + ' has 🔒 LOCKED the room by password', 'top-end');
+            hide(lockRoomBtn);
+            show(unlockRoomBtn);
+            break;
+        case 'unlock':
+            userLog('toast', peer_name + ' has 🔓 UNLOCKED the room', 'top-end');
+            hide(unlockRoomBtn);
+            show(lockRoomBtn);
+            break;
+        case 'checkPassword':
+            let password = config.password;
+            password == 'OK' ? joinToChannel() : handleRoomLocked();
+            break;
+    }
 }
 
 /**
- * Room is Locked can't access...
+ * Room is locked you provide a wrong password, can't access!
  */
 function handleRoomLocked() {
     playSound('kickedOut');
 
+    console.log('Room is Locked, try with another one');
     Swal.fire({
         allowOutsideClick: false,
         background: swalBackground,
         position: 'center',
         imageUrl: roomLockedImg,
-        title: 'Oops, Room Locked',
+        title: 'Oops, Wrong Room Password',
         text: 'The room is locked, try with another one.',
         showDenyButton: false,
         confirmButtonText: `Ok`,
@@ -4372,6 +4427,44 @@ function handleRoomLocked() {
         },
     }).then((result) => {
         if (result.isConfirmed) openURL('/newcall');
+    });
+}
+
+/**
+ * Try to unlock the room by providing a valid password
+ */
+function handleUnlockTheRoom() {
+    playSound('alert');
+
+    Swal.fire({
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        background: swalBackground,
+        imageUrl: roomLockedImg,
+        title: 'Oops, Room is Locked',
+        input: 'text',
+        inputPlaceholder: 'Enter the Room password',
+        confirmButtonText: `OK`,
+        showClass: {
+            popup: 'animate__animated animate__fadeInDown',
+        },
+        hideClass: {
+            popup: 'animate__animated animate__fadeOutUp',
+        },
+        inputValidator: (pwd) => {
+            if (!pwd) return 'Please enter the Room password';
+            thisRoomPassword = pwd;
+        },
+    }).then(() => {
+        let config = {
+            room_id: roomId,
+            peer_name: myPeerName,
+            action: 'checkPassword',
+            password: thisRoomPassword,
+        };
+        sendToServer('roomAction', config);
+        hide(lockRoomBtn);
+        show(unlockRoomBtn);
     });
 }
 
@@ -5169,7 +5262,7 @@ function sendVideoUrl(peer_id = null) {
         position: 'center',
         imageUrl: youtubeImg,
         title: 'Share YouTube Video',
-        text: 'Past YouTube video URL',
+        text: 'Paste YouTube video URL',
         input: 'text',
         showCancelButton: true,
         confirmButtonText: `Share`,
@@ -5671,4 +5764,20 @@ function getSl(selector) {
  */
 function getEcN(className) {
     return document.getElementsByClassName(className);
+}
+
+/**
+ * Hide elemnt
+ * @param {object} elem
+ */
+function hide(elem) {
+    elem.className = 'hidden';
+}
+
+/**
+ * Show elemnt
+ * @param {object} elem
+ */
+function show(elem) {
+    elem.className = '';
 }
