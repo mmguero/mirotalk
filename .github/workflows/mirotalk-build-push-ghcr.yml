@@ -13,7 +13,7 @@ env:
   IMAGE_TAG: latest
   IMAGE_PLATFORM: linux/amd64
   REPO_CONTEXT: .
-  REPO_CONTAINERFILE: ./docker/Dockerfile
+  REPO_CONTAINERFILE: ./Dockerfile
 
 jobs:
   buildah:
