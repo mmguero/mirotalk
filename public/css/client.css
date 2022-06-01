@@ -116,6 +116,7 @@ body {
     top: 0 !important;
     width: 100%;
     height: 100%;
+    margin: auto;
     overflow: hidden;
     background: var(--body-bg);
 }
@@ -209,9 +210,8 @@ body {
     transition: all 0.3s ease-in-out;
 }
 
-#buttonsBar #leaveRoomBtn:hover {
+#buttonsBar #leaveRoomBtn {
     color: #ff2d00;
-    transform: var(--btns-hover-scale);
 }
 
 .fa-microphone-slash,
