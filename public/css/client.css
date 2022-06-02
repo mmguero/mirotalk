@@ -122,11 +122,15 @@ body {
 }
 
 /*--------------------------------------------------------------
-# Hide google banner
+# Google Translate
 --------------------------------------------------------------*/
 
 .goog-te-banner-frame.skiptranslate {
     display: none !important;
+}
+
+#google_translate_element select {
+    background: #2c2c2c !important;
 }
 
 /*--------------------------------------------------------------
@@ -952,6 +956,11 @@ progress {
 #webRTCSeo {
     /* just for SEO */
     display: none;
+}
+
+#videoUrlCloseBtn {
+    border: none;
+    border-radius: 10px;
 }
 
 /*--------------------------------------------------------------

@@ -18,11 +18,12 @@
 -   Is `100% Free` - `Open Source` - `Self Hosted`
 -   No download, plug-in, or login required, entirely browser-based
 -   Unlimited number of conference rooms without call time limitation
+-   Translated in 133 languages
 -   Possibility to Password protect the Room for the meeting
 -   Desktop and Mobile compatible
 -   Optimized Room URL Sharing (share it to your participants, wait for them to join)
 -   Webcam Streaming (Front - Rear for mobile)
--   Audio Streaming crystal clear + detect speacking and indicator
+-   Audio Streaming crystal clear with detect speaking and volume indicator
 -   Screen Sharing to present documents, slides, and more...
 -   File Sharing, share any files to your participants in the room
 -   Select Audio Input - Output && Video source
@@ -35,10 +36,10 @@
 -   Share any YT Embed video in real-time
 -   Full-Screen Mode on mouse click on the Video element
 -   Possibility to Change UI Themes
--   Translated in 133 languages thanks to google translate
 -   Right-click on the Video elements for more options
 -   Direct `peer-to-peer` connection ensures the lowest latency thanks to `WebRTC`
 -   Supports [REST API](app/api/README.md) (Application Programming Interface)
+-   [Sentry](https://sentry.io/) error reporting
 
 </details>
 
