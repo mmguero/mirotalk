@@ -1342,8 +1342,8 @@ function loadLocalMedia(stream) {
         setTippy(myCountTime, 'Session Time', 'bottom');
         setTippy(myVideoParagraph, 'My name', 'bottom');
         setTippy(myHandStatusIcon, 'My hand is raised', 'bottom');
-        setTippy(myVideoStatusIcon, 'My video is open', 'bottom');
-        setTippy(myAudioStatusIcon, 'My audio is open', 'bottom');
+        setTippy(myVideoStatusIcon, 'My video is on', 'bottom');
+        setTippy(myAudioStatusIcon, 'My audio is on', 'bottom');
         setTippy(myVideoToImgBtn, 'Take a snapshot', 'bottom');
         setTippy(myVideoFullScreenBtn, 'Full screen mode', 'bottom');
     }
@@ -1409,6 +1409,7 @@ function loadLocalMedia(stream) {
     startCountTime();
     handleBodyOnMouseMove();
     handleVideoPlayerFs('myVideo', 'myVideoFullScreenBtn');
+    handleFileDragAndDrop('myVideo', myPeerId, true);
     handleVideoToImg('myVideo', 'myVideoToImgBtn');
 }
 
@@ -1469,8 +1470,9 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     const remoteHandStatusIcon = document.createElement('button');
     const remoteVideoStatusIcon = document.createElement('button');
     const remoteAudioStatusIcon = document.createElement('button');
-    const remotePrivateMsgBtn = document.createElement('button');
     const remoteYoutubeBtnBtn = document.createElement('button');
+    const remoteFileShareBtn = document.createElement('button');
+    const remotePrivateMsgBtn = document.createElement('button');
     const remotePeerKickOut = document.createElement('button');
     const remoteVideoToImgBtn = document.createElement('button');
     const remoteVideoFullScreenBtn = document.createElement('button');
@@ -1503,13 +1505,17 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     remoteAudioStatusIcon.setAttribute('id', peer_id + '_audioStatus');
     remoteAudioStatusIcon.className = 'fas fa-microphone';
 
-    // remote peer YouTube video
-    remoteYoutubeBtnBtn.setAttribute('id', peer_id + '_youtube');
-    remoteYoutubeBtnBtn.className = 'fab fa-youtube';
-
     // remote private message
     remotePrivateMsgBtn.setAttribute('id', peer_id + '_privateMsg');
     remotePrivateMsgBtn.className = 'fas fa-paper-plane';
+
+    // remote share file
+    remoteFileShareBtn.setAttribute('id', peer_id + '_shareFile');
+    remoteFileShareBtn.className = 'fas fa-upload';
+
+    // remote peer YouTube video
+    remoteYoutubeBtnBtn.setAttribute('id', peer_id + '_youtube');
+    remoteYoutubeBtnBtn.className = 'fab fa-youtube';
 
     // my video to image
     remoteVideoToImgBtn.setAttribute('id', peer_id + '_snapshot');
@@ -1527,10 +1533,11 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     if (!isMobileDevice) {
         setTippy(remoteVideoParagraph, 'Participant name', 'bottom');
         setTippy(remoteHandStatusIcon, 'Participant hand is raised', 'bottom');
-        setTippy(remoteVideoStatusIcon, 'Participant video is open', 'bottom');
-        setTippy(remoteAudioStatusIcon, 'Participant audio is open', 'bottom');
+        setTippy(remoteVideoStatusIcon, 'Participant video is on', 'bottom');
+        setTippy(remoteAudioStatusIcon, 'Participant audio is on', 'bottom');
         setTippy(remoteYoutubeBtnBtn, 'Send YouTube video', 'bottom');
         setTippy(remotePrivateMsgBtn, 'Send private message', 'bottom');
+        setTippy(remoteFileShareBtn, 'Send file', 'bottom');
         setTippy(remoteVideoToImgBtn, 'Take a snapshot', 'bottom');
         setTippy(remotePeerKickOut, 'Kick out', 'bottom');
         setTippy(remoteVideoFullScreenBtn, 'Full screen mode', 'bottom');
@@ -1555,8 +1562,9 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     remoteStatusMenu.appendChild(remoteHandStatusIcon);
     remoteStatusMenu.appendChild(remoteVideoStatusIcon);
     remoteStatusMenu.appendChild(remoteAudioStatusIcon);
-    remoteStatusMenu.appendChild(remoteYoutubeBtnBtn);
     remoteStatusMenu.appendChild(remotePrivateMsgBtn);
+    remoteStatusMenu.appendChild(remoteFileShareBtn);
+    remoteStatusMenu.appendChild(remoteYoutubeBtnBtn);
     remoteStatusMenu.appendChild(remoteVideoToImgBtn);
     remoteStatusMenu.appendChild(remotePeerKickOut);
     remoteStatusMenu.appendChild(remoteVideoFullScreenBtn);
@@ -1589,6 +1597,8 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     handleVideoToImg(peer_id + '_video', peer_id + '_snapshot', peer_id);
     // handle video full screen mode
     handleVideoPlayerFs(peer_id + '_video', peer_id + '_fullScreen', peer_id);
+    // handle file share drag and drop
+    handleFileDragAndDrop(peer_id + '_video', peer_id);
     // handle kick out button event
     handlePeerKickOutBtn(peer_id);
     // refresh remote peers avatar name
@@ -1605,6 +1615,8 @@ function loadRemoteMediaStream(stream, peers, peer_id) {
     handlePeerVideoBtn(peer_id);
     // handle remote private messages
     handlePeerPrivateMsg(peer_id, peer_name);
+    // handle remote send file
+    handlePeerSendFile(peer_id);
     // handle remote youtube video
     handlePeerYouTube(peer_id);
     // show status menu
@@ -1838,6 +1850,51 @@ function handleVideoPlayerFs(videoId, videoFullScreenBtnId, peer_id = null) {
             // console.log("Esc FS isVideoOnFullScreen", isVideoOnFullScreen);
         }
     }
+}
+
+/**
+ * Handle file drag and drop on video element
+ * @param {string} elemId element id
+ * @param {string} peer_id peer id
+ * @param {boolean} itsMe true/false
+ */
+function handleFileDragAndDrop(elemId, peer_id, itsMe = false) {
+    let videoPeer = getId(elemId);
+
+    videoPeer.addEventListener('dragover', function (e) {
+        e.preventDefault();
+    });
+
+    videoPeer.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (itsMe) {
+            userLog('warning', 'You cannot send files to yourself.');
+            return;
+        }
+        if (sendInProgress) {
+            userLog('warning', 'Please wait for the previous file to be sent.');
+            return;
+        }
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 1) {
+            userLog('warning', 'Please drag and drop a single file.');
+            return;
+        }
+        // Use DataTransferItemList interface to access the file(s)
+        if (e.dataTransfer.items) {
+            // If dropped items aren't files, reject them
+            let item = e.dataTransfer.items[0].webkitGetAsEntry();
+            console.log('Drag and drop', item);
+            if (item.isDirectory) {
+                userLog('warning', 'Please drag and drop a single file not a folder.', 'top-end');
+                return;
+            }
+            let file = e.dataTransfer.items[0].getAsFile();
+            sendFileInformations(file, peer_id);
+        } else {
+            // Use DataTransfer interface to access the file(s)
+            sendFileInformations(e.dataTransfer.files[0], peer_id);
+        }
+    });
 }
 
 /**
@@ -2326,7 +2383,7 @@ function setMyFileShareBtn() {
 
     fileShareBtn.addEventListener('click', (e) => {
         //window.open("https://fromsmash.com"); // for Big Data
-        selectFileToShare();
+        selectFileToShare(myPeerId, true);
     });
     sendAbortBtn.addEventListener('click', (e) => {
         abortFileTransfer();
@@ -3983,7 +4040,7 @@ function setMyAudioStatus(status) {
     myAudioStatusIcon.className = 'fas fa-microphone' + (status ? '' : '-slash');
     // send my audio status to all peers in the room
     emitPeerStatus('audio', status);
-    setTippy(myAudioStatusIcon, status ? 'My audio is open' : 'My audio is closed', 'bottom');
+    setTippy(myAudioStatusIcon, status ? 'My audio is on' : 'My audio is off', 'bottom');
     status ? playSound('on') : playSound('off');
     // only for desktop
     if (!isMobileDevice) {
@@ -4001,7 +4058,7 @@ function setMyVideoStatus(status) {
     myVideoStatusIcon.className = 'fas fa-video' + (status ? '' : '-slash');
     // send my video status to all peers in the room
     emitPeerStatus('video', status);
-    setTippy(myVideoStatusIcon, status ? 'My video is open' : 'My video is closed', 'bottom');
+    setTippy(myVideoStatusIcon, status ? 'My video is on' : 'My video is off', 'bottom');
     status ? playSound('on') : playSound('off');
     // only for desktop
     if (!isMobileDevice) {
@@ -4057,7 +4114,7 @@ function setPeerAudioStatus(peer_id, status) {
     let peerAudioStatus = getId(peer_id + '_audioStatus');
     if (peerAudioStatus) {
         peerAudioStatus.className = 'fas fa-microphone' + (status ? '' : '-slash');
-        setTippy(peerAudioStatus, status ? 'Participant audio is open' : 'Participant audio is closed', 'bottom');
+        setTippy(peerAudioStatus, status ? 'Participant audio is on' : 'Participant audio is off', 'bottom');
         status ? playSound('on') : playSound('off');
     }
 }
@@ -4125,6 +4182,17 @@ function handlePeerPrivateMsg(peer_id, toPeerName) {
 }
 
 /**
+ * Handle peer send file
+ * @param {string} peer_id
+ */
+function handlePeerSendFile(peer_id) {
+    let peerFileSendBtn = getId(peer_id + '_shareFile');
+    peerFileSendBtn.onclick = () => {
+        selectFileToShare(peer_id);
+    };
+}
+
+/**
  * Send YouTube video to specific peer
  * @param {string} peer_id socket.id
  */
@@ -4146,7 +4214,7 @@ function setPeerVideoStatus(peer_id, status) {
     if (peerVideoAvatarImage) peerVideoAvatarImage.style.display = status ? 'none' : 'block';
     if (peerVideoStatus) {
         peerVideoStatus.className = 'fas fa-video' + (status ? '' : '-slash');
-        setTippy(peerVideoStatus, status ? 'Participant video is open' : 'Participant video is closed', 'bottom');
+        setTippy(peerVideoStatus, status ? 'Participant video is on' : 'Participant video is off', 'bottom');
         status ? playSound('on') : playSound('off');
     }
 }
@@ -4984,8 +5052,11 @@ function handleDataChannelFileSharing(data) {
  * Send File Data trought datachannel
  * https://webrtc.github.io/samples/src/content/datachannel/filetransfer/
  * https://github.com/webrtc/samples/blob/gh-pages/src/content/datachannel/filetransfer/js/main.js
+ *
+ * @param {string} peer_id peer id
+ * @param {boolean} broadcast sent to all or not
  */
-function sendFileData() {
+function sendFileData(peer_id, broadcast) {
     console.log('Send file ' + fileToSend.name + ' size ' + bytesToSize(fileToSend.size) + ' type ' + fileToSend.type);
 
     sendInProgress = true;
@@ -5012,8 +5083,13 @@ function sendFileData() {
         if (!sendInProgress) return;
 
         // peer to peer over DataChannels
-        sendFSData(e.target.result);
-        offset += e.target.result.byteLength;
+        let data = {
+            peer_id: peer_id,
+            broadcast: broadcast,
+            fileData: e.target.result,
+        };
+        sendFSData(data);
+        offset += data.fileData.byteLength;
 
         sendProgress.value = offset;
         sendFilePercentage.innerHTML = 'Send progress: ' + ((offset / fileToSend.size) * 100).toFixed(2) + '%';
@@ -5036,11 +5112,23 @@ function sendFileData() {
 
 /**
  * Send File through RTC Data Channels
- * @param {object} data fileReader e.target.result
+ * @param {object} data to sent
  */
 function sendFSData(data) {
-    for (let peer_id in fileDataChannels) {
-        if (fileDataChannels[peer_id].readyState === 'open') fileDataChannels[peer_id].send(data);
+    let broadcast = data.broadcast;
+    let peer_id_to_send = data.peer_id;
+    if (broadcast) {
+        // send to all peers
+        for (let peer_id in fileDataChannels) {
+            if (fileDataChannels[peer_id].readyState === 'open') fileDataChannels[peer_id].send(data.fileData);
+        }
+    } else {
+        // send to peer
+        for (let peer_id in fileDataChannels) {
+            if (peer_id_to_send == peer_id && fileDataChannels[peer_id].readyState === 'open') {
+                fileDataChannels[peer_id].send(data.fileData);
+            }
+        }
     }
 }
 
@@ -5081,8 +5169,10 @@ function hideFileTransfer() {
 
 /**
  * Select the File to Share
+ * @param {string} peer_id
+ * @param {boolean} broadcast send to all (default false)
  */
-function selectFileToShare() {
+function selectFileToShare(peer_id, broadcast = false) {
     playSound('newMessage');
 
     Swal.fire({
@@ -5108,32 +5198,46 @@ function selectFileToShare() {
         },
     }).then((result) => {
         if (result.isConfirmed) {
-            fileToSend = result.value;
-            if (fileToSend && fileToSend.size > 0) {
-                // no peers in the room
-                if (!thereIsPeerConnections()) {
-                    userLog('info', 'No participants detected');
-                    return;
-                }
-                // send some metadata about our file to peers in the room
-                sendToServer('fileInfo', {
-                    room_id: roomId,
-                    peer_name: myPeerName,
-                    file: {
-                        fileName: fileToSend.name,
-                        fileSize: fileToSend.size,
-                        fileType: fileToSend.type,
-                    },
-                });
-                // send the File
-                setTimeout(() => {
-                    sendFileData();
-                }, 1000);
-            } else {
-                userLog('error', 'File not selected or empty.');
-            }
+            sendFileInformations(result.value, peer_id, broadcast);
         }
     });
+}
+
+/**
+ * Send file informations
+ * @param {object} file data
+ * @param {string} peer_id
+ * @param {boolean} broadcast send to all (default false)
+ * @returns
+ */
+function sendFileInformations(file, peer_id, broadcast = false) {
+    fileToSend = file;
+    // check if valid
+    if (fileToSend && fileToSend.size > 0) {
+        // no peers in the room
+        if (!thereIsPeerConnections()) {
+            userLog('info', 'No participants detected');
+            return;
+        }
+        // send some metadata about our file to peers in the room
+        sendToServer('fileInfo', {
+            room_id: roomId,
+            broadcast: broadcast,
+            peer_name: myPeerName,
+            peer_id: peer_id,
+            file: {
+                fileName: fileToSend.name,
+                fileSize: fileToSend.size,
+                fileType: fileToSend.type,
+            },
+        });
+        // send the File
+        setTimeout(() => {
+            sendFileData(peer_id, broadcast);
+        }, 1000);
+    } else {
+        userLog('error', 'File dragged not valid or empty.');
+    }
 }
 
 /**

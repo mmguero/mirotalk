@@ -491,14 +491,14 @@ io.sockets.on('connect', (socket) => {
             delete socket.channels[channel];
             delete channels[channel][socket.id];
             delete peers[channel][socket.id]; // delete peer data from the room
+            switch (Object.keys(peers[channel]).length) {
+                case 0: // last peer disconnected from the room without room lock & password set
+                case 2: // last peer disconnected from the room having room lock & password set
+                    delete peers[channel]; // clean lock and password value from the room
+                    break;
+            }
         } catch (err) {
-            log.error(toJson(err));
-        }
-        switch (Object.keys(peers[channel]).length) {
-            case 0: // last peer disconnected from the room without room lock & password set
-            case 2: // last peer disconnected from the room having room lock & password set
-                delete peers[channel]; // clean lock and password value from the room
-                break;
+            log.error('Remove Peer', toJson(err));
         }
         log.debug('connected peers grp by roomId', peers);
 
@@ -706,6 +706,8 @@ io.sockets.on('connect', (socket) => {
     socket.on('fileInfo', (config) => {
         let room_id = config.room_id;
         let peer_name = config.peer_name;
+        let peer_id = config.peer_id;
+        let broadcast = config.broadcast;
         let file = config.file;
 
         function bytesToSize(bytes) {
@@ -722,9 +724,14 @@ io.sockets.on('connect', (socket) => {
             fileName: file.fileName,
             fileSize: bytesToSize(file.fileSize),
             fileType: file.fileType,
+            broadcast: broadcast,
         });
 
-        sendToRoom(room_id, socket.id, 'fileInfo', file);
+        if (broadcast) {
+            sendToRoom(room_id, socket.id, 'fileInfo', file);
+        } else {
+            sendToPeer(peer_id, sockets, 'fileInfo', file);
+        }
     });
 
     /**
