@@ -641,7 +641,21 @@ function initClientPeer() {
     }
 
     console.log('Connecting to signaling server');
-    signalingSocket = io(signalingServer);
+    //signalingSocket = io(signalingServer);
+
+    // Disable the HTTP long-polling transport
+    signalingSocket = io(signalingServer, {
+        transports: ['websocket'],
+    });
+
+    const transport = signalingSocket.io.engine.transport.name; // in most cases, "polling"
+    console.log('Connection transport', transport);
+
+    // Check upgrade transport
+    signalingSocket.io.engine.on('upgrade', () => {
+        const upgradedTransport = signalingSocket.io.engine.transport.name; // in most cases, "websocket"
+        console.log('Connection upgraded transport', upgradedTransport);
+    });
 
     // on receiving data from signaling server...
     signalingSocket.on('connect', handleConnect);
@@ -3076,6 +3090,7 @@ function toggleScreenSharing() {
             refreshMyLocalStream(screenStream);
             myVideo.classList.toggle('mirror');
             setScreenSharingStatus(isScreenStreaming);
+            if (isScreenStreaming) setMyVideoStatusTrue();
         })
         .catch((err) => {
             console.error('[Error] Unable to share the screen', err);
