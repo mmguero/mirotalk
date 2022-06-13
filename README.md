@@ -57,7 +57,7 @@
 
 <br/>
 
--   `Open` https://p2p.mirotalk.org/newcall or
+-   `Open` https://p2p.mirotalk.com/newcall or
 -   https://mirotalk.up.railway.app/newcall or
 -   https://mirotalk.herokuapp.com/newcall
 -   `Pick` your Room name and Join
@@ -72,7 +72,7 @@
 <br/>
 
 -   You can `join` directly to `room` by going to:
--   https://p2p.mirotalk.org/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
+-   https://p2p.mirotalk.com/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
 -   https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
 -   https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
 
@@ -97,7 +97,7 @@ Embedding a meeting into a service or app using an iframe.
 ```html
 <iframe
     allow="camera; microphone; fullscreen; display-capture; autoplay"
-    src="https://p2p.mirotalk.org/newcall"
+    src="https://mirotalk.herokuapp.com/newcall"
     style="height: 100%; width: 100%; border: 0px;"
 ></iframe>
 ```
@@ -181,14 +181,27 @@ You can start videoconferencing directly from your Local PC, and be reachable fr
 ```bash
 # The response will give you a entrypoint / Room URL for your meeting, where authorization: API_KEY_SECRET.
 $ curl -X POST "http://localhost:3000/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
-$ curl -X POST "https://p2p.mirotalk.org/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
+$ curl -X POST "https://p2p.mirotalk.com/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
 $ curl -X POST "https://mirotalk.up.railway.app/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
 $ curl -X POST "https://mirotalk.herokuapp.com/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
 ```
 
 ## API Documentation
 
-The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [live](https://p2p.mirotalk.org/api/v1/docs) & [heroku](https://mirotalk.herokuapp.com/api/v1/docs).
+The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [live](https://p2p.mirotalk.com/api/v1/docs) & [heroku](https://mirotalk.herokuapp.com/api/v1/docs).
+
+</details>
+
+<details open>
+<summary>Hetzner</summary>
+
+<br/>
+
+[![Hetzner](public/sponsors/Hetzner.png)](https://www.hetzner.com)
+
+This application is running for `demonstration purposes` on [Hetzner](https://www.hetzner.com/), one of `the best` [cloud providers](https://www.hetzner.com/cloud) and [dedicated root servers](https://www.hetzner.com/dedicated-rootserver).
+
+If you need help to deploy `MiroTalk P2P` instance on `your dedicated cloud server`, or for other needs, don't hesitate to contact us at p2p.mirotalk@gmail.com
 
 </details>
 

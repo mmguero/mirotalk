@@ -630,6 +630,14 @@ function thereIsPeerConnections() {
 }
 
 /**
+ * Count the peer connections
+ * @returns peer connections count
+ */
+function countPeerConnections() {
+    return Object.keys(peerConnections).length;
+}
+
+/**
  * On body load Get started
  */
 function initClientPeer() {
@@ -3090,7 +3098,16 @@ function toggleScreenSharing() {
             refreshMyLocalStream(screenStream);
             myVideo.classList.toggle('mirror');
             setScreenSharingStatus(isScreenStreaming);
-            if (isScreenStreaming) setMyVideoStatusTrue();
+            if (isScreenStreaming) {
+                setMyVideoStatusTrue();
+                if (countPeerConnections() == 1) {
+                    emitPeersAction('screenStart');
+                    setAspectRatio(2); // 16:9
+                }
+            } else {
+                emitPeersAction('screenStop');
+                adaptAspectRatio();
+            }
         })
         .catch((err) => {
             console.error('[Error] Unable to share the screen', err);
@@ -3596,7 +3613,7 @@ function sendChatMessage() {
         return;
     }
 
-    const msg = msgerInput.value;
+    const msg = checkMsg(msgerInput.value);
     // empity msg or
     if (!msg) return;
 
@@ -3705,8 +3722,6 @@ function appendMessage(from, img, side, msg, privateMsg) {
     // check if i receive a private message
     let msgBubble = privateMsg ? 'private-msg-bubble' : 'msg-bubble';
 
-    // console.log("chatMessages", chatMessages);
-    let cMsg = detectUrl(msg);
     const msgHTML = `
 	<div class="msg ${side}-msg">
 		<div class="msg-img" style="background-image: url('${img}')"></div>
@@ -3715,7 +3730,7 @@ function appendMessage(from, img, side, msg, privateMsg) {
                 <div class="msg-info-name">${from}</div>
                 <div class="msg-info-time">${time}</div>
             </div>
-            <div class="msg-text">${cMsg}</div>
+            <div class="msg-text">${msg}</div>
         </div>
 	</div>
     `;
@@ -3814,8 +3829,11 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput) {
     });
 
     function sendPrivateMessage() {
-        let pMsg = msgerPrivateMsgInput.value;
-        if (!pMsg) return;
+        let pMsg = checkMsg(msgerPrivateMsgInput.value);
+        if (!pMsg) {
+            msgerPrivateMsgInput.value = '';
+            return;
+        }
         let toPeerName = msgerPrivateBtn.value;
         emitMsg(myPeerName, toPeerName, pMsg, true);
         appendMessage(myPeerName, rightChatAvatar, 'right', pMsg + '<br/><hr>Private message to ' + toPeerName, true);
@@ -3825,11 +3843,18 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput) {
 }
 
 /**
- * Detect url from text and make it clickable and if url is a img to create preview of it
+ * Check Message
+ * Detect url from text and make it clickable
+ * If url is a img to create preview of it
+ * Prevent XSS
  * @param {string} text passed text
  * @returns {string} html format
  */
-function detectUrl(text) {
+function checkMsg(text) {
+    if (text.includes('<img')) {
+        msgerInput.value = '';
+        return '';
+    }
     let urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.replace(urlRegex, (url) => {
         if (isImageURL(text)) return '<p><img src="' + url + '" alt="img" width="200" height="auto"/></p>';
@@ -4181,7 +4206,8 @@ function handlePeerPrivateMsg(peer_id, toPeerName) {
             },
         }).then((result) => {
             if (result.value) {
-                let pMsg = result.value;
+                let pMsg = checkMsg(result.value);
+                if (!pMsg) return;
                 emitMsg(myPeerName, toPeerName, pMsg, true);
                 appendMessage(
                     myPeerName,
@@ -4285,6 +4311,12 @@ function handlePeerAction(config) {
             break;
         case 'recStop':
             notifyRecording(peer_name, 'Stopped');
+            break;
+        case 'screenStart':
+            if (!isMobileDevice) setAspectRatio(2); // 16:9
+            break;
+        case 'screenStop':
+            if (!isMobileDevice) adaptAspectRatio();
             break;
     }
 }
