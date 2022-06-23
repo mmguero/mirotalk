@@ -20,7 +20,6 @@
 'use strict'; // https://www.w3schools.com/js/js_strict.asp
 
 const isHttps = false; // must be the same on server.js
-const signalingServerPort = 3000; // must be the same to server.js PORT
 const signalingServer = getSignalingServer();
 const roomId = getRoomId();
 const peerInfo = getPeerInfo();
@@ -290,6 +289,9 @@ const showFileShareBtn = true;
 const showMySettingsBtn = true;
 const showAboutBtn = true;
 
+// force the webCam to max resolution, up to 4k as default
+const forceCamMaxResolution = true;
+
 /**
  * Load all Html elements by Id
  */
@@ -482,7 +484,7 @@ function setButtonsToolTip() {
     setTippy(receiveHideBtn, 'Hide file transfer', 'right-start');
     // video URL player
     setTippy(videoUrlCloseBtn, 'Close the video player', 'right-start');
-    setTippy(msgerVideoUrlBtn, 'Share YouTube video to all participants', 'right-start');
+    setTippy(msgerVideoUrlBtn, 'Share YouTube video to all participants', 'top');
 }
 
 /**
@@ -534,16 +536,9 @@ function getPeerGeoLocation() {
  */
 function getSignalingServer() {
     if (isHttps) {
-        return 'https://' + location.hostname + ':' + signalingServerPort;
-        // if need: change it with YOUR-SERVER-DOMAIN-NAME
+        return 'https://' + location.hostname;
     }
-    return (
-        'http' +
-        (location.hostname == 'localhost' ? '' : 's') +
-        '://' +
-        location.hostname +
-        (location.hostname == 'localhost' ? ':' + signalingServerPort : '')
-    );
+    return 'http' + (location.hostname == 'localhost' ? '' : 's') + '://' + location.hostname;
 }
 
 /**
@@ -641,20 +636,15 @@ function countPeerConnections() {
  * On body load Get started
  */
 function initClientPeer() {
-    setTheme(mirotalkTheme);
-
     if (!isWebRTCSupported) {
         userLog('error', 'This browser seems not supported WebRTC!');
         return;
     }
 
     console.log('Connecting to signaling server');
-    //signalingSocket = io(signalingServer);
 
     // Disable the HTTP long-polling transport
-    signalingSocket = io(signalingServer, {
-        transports: ['websocket'],
-    });
+    signalingSocket = io({ transports: ['websocket'] });
 
     const transport = signalingSocket.io.engine.transport.name; // in most cases, "polling"
     console.log('Connection transport', transport);
@@ -820,6 +810,7 @@ function whoAreYouJoin() {
     setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);
     joinToChannel();
+    setTheme(mirotalkTheme);
 }
 
 /**
@@ -1192,6 +1183,7 @@ function setTheme(theme) {
             document.documentElement.style.setProperty('--left-msg-bg', '#222328');
             document.documentElement.style.setProperty('--private-msg-bg', '#f77070');
             document.documentElement.style.setProperty('--right-msg-bg', '#0a0b0c');
+            document.body.style.background = 'radial-gradient(#393939, #000000)';
             break;
         case 'grey':
             // grey theme
@@ -1204,6 +1196,7 @@ function setTheme(theme) {
             document.documentElement.style.setProperty('--left-msg-bg', '#222328');
             document.documentElement.style.setProperty('--private-msg-bg', '#f77070');
             document.documentElement.style.setProperty('--right-msg-bg', '#0a0b0c');
+            document.body.style.background = 'radial-gradient(#666, #333)';
             break;
         // ...
         default:
@@ -1263,9 +1256,8 @@ function setupLocalMedia(callback, errorback) {
 
     console.log('Supported constraints', navigator.mediaDevices.getSupportedConstraints());
 
-    // default | qvgaVideo | vgaVideo | hdVideo | fhdVideo | 4kVideo |
-    let videoConstraints =
-        myBrowserName === 'Firefox' ? getVideoConstraints('useVideo') : getVideoConstraints('default');
+    // default | qvgaVideo | vgaVideo | hdVideo | fhdVideo | 2kVideo | 4kVideo |
+    let videoConstraints = getVideoConstraints('default');
 
     const constraints = {
         audio: {
@@ -2623,12 +2615,16 @@ function getVideoConstraints(videoQuality) {
     let frameRate = { max: videoMaxFrameRate };
 
     switch (videoQuality) {
-        case 'useVideo':
-            return useVideo;
-        // Firefox not support set frameRate (OverconstrainedError) O.o
         case 'default':
+            if (forceCamMaxResolution) {
+                // This will make the browser use the maximum resolution available as default, `up to 4K`.
+                return {
+                    width: { ideal: 3840 },
+                    height: { ideal: 2160 },
+                    frameRate: frameRate,
+                }; // video cam constraints default
+            }
             return { frameRate: frameRate };
-        // video cam constraints default
         case 'qvgaVideo':
             return {
                 width: { exact: 320 },
@@ -2653,6 +2649,12 @@ function getVideoConstraints(videoQuality) {
                 height: { exact: 1080 },
                 frameRate: frameRate,
             }; // video cam constraints very high bandwidth
+        case '2kVideo':
+            return {
+                width: { exact: 2560 },
+                height: { exact: 1440 },
+                frameRate: frameRate,
+            }; // video cam constraints ultra high bandwidth
         case '4kVideo':
             return {
                 width: { exact: 3840 },
@@ -3976,7 +3978,8 @@ function hideShowMySettings() {
         playSound('newMessage');
         // adapt it for mobile
         if (isMobileDevice) {
-            mySettings.style.setProperty('width', '90%');
+            mySettings.style.setProperty('width', '100%');
+            mySettings.style.setProperty('height', '100%');
             document.documentElement.style.setProperty('--mySettings-select-w', '99%');
         }
         // my current peer name

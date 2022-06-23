@@ -8,11 +8,14 @@ http://patorjk.com/software/taag/#p=display&f=ANSI%20Regular&t=Server
 ███████ ███████ ██   ██   ████   ███████ ██   ██                                           
 
 dependencies: {
+    body-parser             : https://www.npmjs.com/package/body-parser
     compression             : https://www.npmjs.com/package/compression
     cors                    : https://www.npmjs.com/package/cors
+    crypto-js               : https://www.npmjs.com/package/crypto-js
     dotenv                  : https://www.npmjs.com/package/dotenv
     express                 : https://www.npmjs.com/package/express
     ngrok                   : https://www.npmjs.com/package/ngrok
+    qs                      : https://www.npmjs.com/package/qs
     @sentry/node            : https://www.npmjs.com/package/@sentry/node
     @sentry/integrations    : https://www.npmjs.com/package/@sentry/integrations
     socket.io               : https://www.npmjs.com/package/socket.io
@@ -106,6 +109,13 @@ const sentryEnabled = process.env.SENTRY_ENABLED || false;
 const sentryDSN = process.env.SENTRY_DSN;
 const sentryTracesSampleRate = process.env.SENTRY_TRACES_SAMPLE_RATE;
 
+// Slack API
+const CryptoJS = require('crypto-js');
+const qS = require('qs');
+const slackEnabled = process.env.SENTRY_ENABLED || false;
+const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
+const bodyParser = require('body-parser');
+
 // Setup sentry client
 if (sentryEnabled == 'true') {
     Sentry.init({
@@ -129,14 +139,14 @@ const dir = {
     public: path.join(__dirname, '../../', 'public'),
 };
 // html views
-const view = {
-    about: path.join(__dirname, '../../', 'public/view/about.html'),
-    client: path.join(__dirname, '../../', 'public/view/client.html'),
-    landing: path.join(__dirname, '../../', 'public/view/landing.html'),
-    newCall: path.join(__dirname, '../../', 'public/view/newcall.html'),
-    notFound: path.join(__dirname, '../../', 'public/view/404.html'),
-    permission: path.join(__dirname, '../../', 'public/view/permission.html'),
-    privacy: path.join(__dirname, '../../', 'public/view/privacy.html'),
+const views = {
+    about: path.join(__dirname, '../../', 'public/views/about.html'),
+    client: path.join(__dirname, '../../', 'public/views/client.html'),
+    landing: path.join(__dirname, '../../', 'public/views/landing.html'),
+    newCall: path.join(__dirname, '../../', 'public/views/newcall.html'),
+    notFound: path.join(__dirname, '../../', 'public/views/404.html'),
+    permission: path.join(__dirname, '../../', 'public/views/permission.html'),
+    privacy: path.join(__dirname, '../../', 'public/views/privacy.html'),
 };
 
 let channels = {}; // collect channels
@@ -147,6 +157,7 @@ app.use(cors()); // Enable All CORS Requests for all origins
 app.use(compression()); // Compress all HTTP responses using GZip
 app.use(express.json()); // Api parse body data as json
 app.use(express.static(dir.public)); // Use all static files from the public folder
+app.use(bodyParser.urlencoded({ extended: true })); // Need for Slack API body parser
 
 // Remove trailing slashes in url handle bad requests
 app.use((err, req, res, next) => {
@@ -168,27 +179,27 @@ app.use((err, req, res, next) => {
 
 // all start from here
 app.get(['/'], (req, res) => {
-    res.sendFile(view.landing);
+    res.sendFile(views.landing);
 });
 
 // mirotalk about
 app.get(['/about'], (req, res) => {
-    res.sendFile(view.about);
+    res.sendFile(views.about);
 });
 
 // set new room name and join
 app.get(['/newcall'], (req, res) => {
-    res.sendFile(view.newCall);
+    res.sendFile(views.newCall);
 });
 
 // if not allow video/audio
 app.get(['/permission'], (req, res) => {
-    res.sendFile(view.permission);
+    res.sendFile(views.permission);
 });
 
 // privacy policy
 app.get(['/privacy'], (req, res) => {
-    res.sendFile(view.privacy);
+    res.sendFile(views.privacy);
 });
 
 // no room name specified to join
@@ -203,7 +214,7 @@ app.get('/join/', (req, res) => {
         const { room, name, audio, video, screen, notify } = req.query;
         // all the params are mandatory for the direct room join
         if (room && name && audio && video && screen && notify) {
-            return res.sendFile(view.client);
+            return res.sendFile(views.client);
         }
     }
     res.redirect('/');
@@ -211,7 +222,7 @@ app.get('/join/', (req, res) => {
 
 // Join Room *
 app.get('/join/*', (req, res) => {
-    res.sendFile(view.client);
+    res.sendFile(views.client);
 });
 
 /**
@@ -247,6 +258,42 @@ app.post([apiBasePath + '/meeting'], (req, res) => {
     });
 });
 
+/*
+    MiroTalk Slack app v1
+    https://api.slack.com/authentication/verifying-requests-from-slack
+*/
+
+//Slack request meeting room endpoint
+app.post('/slack', (req, res) => {
+    if (slackEnabled != 'true') return res.end('`Under maintenance` - Please check back soon.');
+
+    log.debug('Slack', req.headers);
+
+    if (!slackSigningSecret) return res.end('`Slack Signing Secret is empty!`');
+
+    let slackSignature = req.headers['x-slack-signature'];
+    let requestBody = qS.stringify(req.body, { format: 'RFC1738' });
+    let timeStamp = req.headers['x-slack-request-timestamp'];
+    let time = Math.floor(new Date().getTime() / 1000);
+
+    // The request timestamp is more than five minutes from local time. It could be a replay attack, so let's ignore it.
+    if (Math.abs(time - timeStamp) > 300) return res.end('`Wrong timestamp` - Ignore this request.');
+
+    // Get Signature to compare it later
+    let sigBaseString = 'v0:' + timeStamp + ':' + requestBody;
+    let mySignature = 'v0=' + CryptoJS.HmacSHA256(sigBaseString, slackSigningSecret);
+
+    // Valid Signature return a meetingURL
+    if (mySignature == slackSignature) {
+        let host = req.headers.host;
+        let meetingURL = getMeetingURL(host);
+        log.debug('Slack', { meeting: meetingURL });
+        return res.end(meetingURL);
+    }
+    // Something wrong
+    return res.end('`Wrong signature` - Verification failed!');
+});
+
 /**
  * Request meeting room endpoint
  * @returns  entrypoint / Room URL for your meeting.
@@ -259,7 +306,7 @@ function getMeetingURL(host) {
 
 // not match any of page before, so 404 not found
 app.get('*', function (req, res) {
-    res.sendFile(view.notFound);
+    res.sendFile(views.notFound);
 });
 
 /**

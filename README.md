@@ -39,6 +39,7 @@
 -   Right-click on the Video elements for more options
 -   Direct `peer-to-peer` connection ensures the lowest latency thanks to `WebRTC`
 -   Supports [REST API](app/api/README.md) (Application Programming Interface)
+-   [Slack](https://api.slack.com/apps/) API integration
 -   [Sentry](https://sentry.io/) error reporting
 
 </details>
@@ -156,11 +157,11 @@ $ docker-compose down
 </details>
 
 <details>
-<summary>Https</summary>
+<summary>Ngrok - Https</summary>
 
 <br/>
 
-You can start videoconferencing directly from your Local PC, and be reachable from any device outside your network, simply using a service like [ngrok](https://ngrok.com/) by editing the [Ngrok part](https://github.com/miroslavpejic85/mirotalk/blob/master/.env.template#L1) on `.env` file, or expose it directly on [HTTPS](app/ssl/README.md)
+You can start videoconferencing directly from your Local PC, and be reachable from any device outside your network, simply by following [these documentation](docs/ngrok.md), or expose it directly on [HTTPS](app/ssl/README.md)
 
 </details>
 
