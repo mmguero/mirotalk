@@ -4,7 +4,7 @@
  * Start audio pitch detection
  * @param {object} stream media stream audio
  */
-function startPitchDetection(stream) {
+async function startPitchDetection(stream) {
     pitchDetectionStatus = true;
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     mediaStreamSource = audioContext.createMediaStreamSource(stream);
@@ -63,7 +63,7 @@ function volumeAudioProcess(event) {
     let x;
 
     // Do a root-mean-square on the samples: sum up the squares...
-    for (var i = 0; i < bufLength; i++) {
+    for (let i = 0; i < bufLength; i++) {
         x = buf[i];
         if (Math.abs(x) >= this.clipLevel) {
             this.clipping = true;

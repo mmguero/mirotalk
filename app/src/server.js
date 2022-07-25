@@ -96,6 +96,9 @@ const ngrok = require('ngrok');
 const ngrokEnabled = process.env.NGROK_ENABLED || false;
 const ngrokAuthToken = process.env.NGROK_AUTH_TOKEN;
 
+// Stun config
+const stun = process.env.STUN || 'stun:stun.l.google.com:19302';
+
 // Turn config
 const turnEnabled = process.env.TURN_ENABLED || false;
 const turnUrls = process.env.TURN_URLS;
@@ -147,6 +150,7 @@ const views = {
     notFound: path.join(__dirname, '../../', 'public/views/404.html'),
     permission: path.join(__dirname, '../../', 'public/views/permission.html'),
     privacy: path.join(__dirname, '../../', 'public/views/privacy.html'),
+    stunTurn: path.join(__dirname, '../../', 'public/views/testStunTurn.html'),
 };
 
 let channels = {}; // collect channels
@@ -202,12 +206,27 @@ app.get(['/privacy'], (req, res) => {
     res.sendFile(views.privacy);
 });
 
+// test Stun and Turn connections
+app.get(['/test'], (req, res) => {
+    if (Object.keys(req.query).length > 0) {
+        log.debug('Request Query', req.query);
+    }
+    /*
+        http://localhost:3000/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:numb.viagenie.ca","username":"miroslav.pejic.85@gmail.com","credential":"mirotalkp2p"}]
+        https://p2p.mirotalk.com//test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:numb.viagenie.ca","username":"miroslav.pejic.85@gmail.com","credential":"mirotalkp2p"}]
+        https://mirotalk.up.railway.app/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:numb.viagenie.ca","username":"miroslav.pejic.85@gmail.com","credential":"mirotalkp2p"}]
+        https://mirotalk.herokuapp.com/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:numb.viagenie.ca","username":"miroslav.pejic.85@gmail.com","credential":"mirotalkp2p"}]
+    */
+    res.sendFile(views.stunTurn);
+});
+
 // no room name specified to join
 app.get('/join/', (req, res) => {
     if (Object.keys(req.query).length > 0) {
         log.debug('Request Query', req.query);
         /* 
             http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
+            https://p2p.mirotalk.com/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
             https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
             https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
         */
@@ -322,30 +341,27 @@ app.get('*', function (req, res) {
  */
 const iceServers = [];
 
+// Stun is always needed
+iceServers.push({ urls: stun });
+
 if (turnEnabled == 'true') {
-    iceServers.push(
-        {
-            urls: 'stun:stun.l.google.com:19302',
-        },
-        {
-            urls: turnUrls,
-            username: turnUsername,
-            credential: turnCredential,
-        },
-    );
+    iceServers.push({
+        urls: turnUrls,
+        username: turnUsername,
+        credential: turnCredential,
+    });
 } else {
-    // My own As backup if not configured, please configure your in the .env file
-    iceServers.push(
-        {
-            urls: 'stun:stun.l.google.com:19302',
-        },
-        {
-            urls: 'turn:numb.viagenie.ca',
-            username: 'miroslav.pejic.85@gmail.com',
-            credential: 'mirotalkp2p',
-        },
-    );
+    // As backup if not configured, please configure your own in the .env file
+    // https://www.metered.ca/tools/openrelay/
+    iceServers.push({
+        urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject',
+    });
 }
+
+// Test Stun and Turn connection with query params
+const testStunTurn = host + '/test?iceServers=' + JSON.stringify(iceServers);
 
 /**
  * Expose server to external with https tunnel using ngrok
@@ -369,6 +385,7 @@ async function ngrokStart() {
             },
             server: host,
             server_tunnel: tunnelHttps,
+            test_ice_servers: testStunTurn,
             api_docs: api_docs,
             api_key_secret: api_key_secret,
             sentry_enabled: sentryEnabled,
@@ -406,6 +423,7 @@ server.listen(port, null, () => {
         log.debug('settings', {
             iceServers: iceServers,
             server: host,
+            test_ice_servers: testStunTurn,
             api_docs: api_docs,
             api_key_secret: api_key_secret,
             sentry_enabled: sentryEnabled,
