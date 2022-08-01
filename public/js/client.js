@@ -106,8 +106,8 @@ let camera = 'user'; // user = front-facing camera on a smartphone. | environmen
 let roomLocked = false;
 let myVideoChange = false;
 let myHandStatus = false;
-let myVideoStatus = true;
-let myAudioStatus = true;
+let myVideoStatus = false;
+let myAudioStatus = false;
 let pitchDetectionStatus = false;
 let audioContext;
 let mediaStreamSource;
@@ -870,8 +870,10 @@ async function joinToChannel() {
         peer_name: myPeerName,
         peer_video: useVideo,
         peer_audio: useAudio,
-        peer_hand: myHandStatus,
-        peer_rec: isRecScreenStream,
+        peer_video_status: myVideoStatus,
+        peer_audio_status: myAudioStatus,
+        peer_hand_status: myHandStatus,
+        peer_rec_status: isRecScreenStream,
     });
 }
 
@@ -1670,6 +1672,7 @@ async function loadLocalMedia(stream) {
     handleVideoPlayerFs('myVideo', 'myVideoFullScreenBtn');
     handleFileDragAndDrop('myVideo', myPeerId, true);
     handleVideoToImg('myVideo', 'myVideoToImgBtn');
+    refreshMyVideoAudioStatus(localMediaStream);
 
     if (!useVideo) {
         myVideoAvatarImage.style.display = 'block';
@@ -1718,9 +1721,10 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     // get data from peers obj
     let peer_name = peers[peer_id]['peer_name'];
     let peer_video = peers[peer_id]['peer_video'];
-    let peer_audio = peers[peer_id]['peer_audio'];
-    let peer_hand = peers[peer_id]['peer_hand'];
-    let peer_rec = peers[peer_id]['peer_rec'];
+    let peer_video_status = peers[peer_id]['peer_video_status'];
+    let peer_audio_status = peers[peer_id]['peer_audio_status'];
+    let peer_hand_status = peers[peer_id]['peer_hand_status'];
+    let peer_rec_status = peers[peer_id]['peer_rec_status'];
 
     remoteMediaStream = stream;
 
@@ -1871,11 +1875,11 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     // refresh remote peers avatar name
     setPeerAvatarImgName(peer_id + '_avatar', peer_name);
     // refresh remote peers hand icon status and title
-    setPeerHandStatus(peer_id, peer_name, peer_hand);
+    setPeerHandStatus(peer_id, peer_name, peer_hand_status);
     // refresh remote peers video icon status and title
-    setPeerVideoStatus(peer_id, peer_video);
+    setPeerVideoStatus(peer_id, peer_video_status);
     // refresh remote peers audio icon status and title
-    setPeerAudioStatus(peer_id, peer_audio);
+    setPeerAudioStatus(peer_id, peer_audio_status);
     // handle remote peers audio on-off
     handlePeerAudioBtn(peer_id);
     // handle remote peers video on-off
@@ -1889,7 +1893,13 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     // show status menu
     toggleClassElements('statusMenu', 'inline');
     // notify if peer started to recording own screen + audio
-    if (peer_rec) notifyRecording(peer_name, 'Started');
+    if (peer_rec_status) notifyRecording(peer_name, 'Started');
+
+    // peer not has video at all
+    if (!peer_video) {
+        remoteVideoAvatarImage.style.display = 'block';
+        remoteVideoStatusIcon.className = 'fas fa-video-slash';
+    }
 }
 
 /**
@@ -2245,6 +2255,24 @@ function getTimeToString(time) {
     let formattedMM = mm.toString().padStart(2, '0');
     let formattedSS = ss.toString().padStart(2, '0');
     return `${formattedHH}:${formattedMM}:${formattedSS}`;
+}
+
+/**
+ * Refresh my localMediaStream audio/video status
+ * @param object} localMediaStream
+ */
+function refreshMyVideoAudioStatus(localMediaStream) {
+    // check Track audio/video status
+    localMediaStream.getTracks().forEach((track) => {
+        switch (track.kind) {
+            case 'video':
+                myVideoStatus = track.enabled;
+                break;
+            case 'audio':
+                myAudioStatus = track.enabled;
+                break;
+        }
+    });
 }
 
 /**
@@ -3259,7 +3287,7 @@ function shareRoomByEmail(message) {
  * Handle Audio ON - OFF
  * @param {object} e event
  * @param {boolean} init on join room
- * @param {boolean} force audio off (default false)
+ * @param {null|boolean} force audio off (default null can be true/false)
  */
 function handleAudio(e, init, force = null) {
     if (!useAudio) return;
@@ -3286,7 +3314,7 @@ function handleAudio(e, init, force = null) {
  * Handle Video ON - OFF
  * @param {object} e event
  * @param {boolean} init on join room
- * @param {boolean} force video off (default false)
+ * @param {null|boolean} force video off (default null can be true/false)
  */
 function handleVideo(e, init, force = null) {
     if (!useVideo) return;
@@ -3512,7 +3540,7 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
  * @param {boolean} localAudioTrackChange default false
  */
 async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
-    if (useVideo) stream.getVideoTracks()[0].enabled = true;
+    if (useVideo || isScreenStreaming) stream.getVideoTracks()[0].enabled = true;
 
     // enable audio
     if (localAudioTrackChange && myAudioStatus === false) {
@@ -3560,7 +3588,7 @@ async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
      * If you want the webcam with video stream OFF, just disable it with the button (Stop the video),
      * before to stop the screen sharing.
      */
-    if (myVideoStatus === false) localMediaStream.getVideoTracks()[0].enabled = false;
+    if (useVideo && myVideoStatus === false) localMediaStream.getVideoTracks()[0].enabled = false;
 }
 
 /**
@@ -4485,7 +4513,7 @@ function handlePeerStatus(config) {
  */
 function setPeerHandStatus(peer_id, peer_name, status) {
     let peerHandStatus = getId(peer_id + '_handStatus');
-    peerHandStatus.style.display = status ? 'block' : 'none';
+    peerHandStatus.style.display = status ? 'inline' : 'none';
     if (status) {
         userLog('toast', peer_name + ' has raised the hand');
         playSound('raiseHand');
