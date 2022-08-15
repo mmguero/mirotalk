@@ -42,8 +42,6 @@ const videoAudioShare = '../images/va-share.png';
 const aboutImg = '../images/mirotalk-logo.png';
 // nice free icon: https://www.iconfinder.com
 
-const surveyActive = true; // when leaving the room give a feedback
-const notifyBySound = true; // turn on - off sound notifications
 const fileSharingInput = '*'; // allow all file extensions
 
 const isWebRTCSupported = DetectRTC.isWebRTCSupported;
@@ -83,8 +81,11 @@ const showFileShareBtn = true;
 const showMySettingsBtn = true;
 const showAboutBtn = true;
 
-// This force the webCam to max resolution, up to 4k and 60fps as default (high bandwidth are required)
-const forceCamMaxResolutionAndFps = false;
+const surveyActive = true; // when leaving the room give a feedback, if false will be redirected to newcall page
+
+const notifyBySound = true; // turn on - off sound notifications
+
+const forceCamMaxResolutionAndFps = false; // This force the webCam to max resolution, up to 4k and 60fps (very high bandwidth are required) if false, you can set it from settings
 
 let thisRoomPassword = null;
 
@@ -455,7 +456,7 @@ function setButtonsToolTip() {
     setTippy(whiteboardBtn, 'Open the whiteboard', 'right-start');
     setTippy(fileShareBtn, 'Share file', 'right-start');
     setTippy(mySettingsBtn, 'Open settings', 'right-start');
-    setTippy(aboutBtn, 'Project info', 'right-start');
+    setTippy(aboutBtn, 'About this project', 'right-start');
     setTippy(leaveRoomBtn, 'Leave this room', 'right-start');
     // chat room buttons
     setTippy(msgerTheme, 'Ghost theme', 'top');
@@ -580,8 +581,8 @@ function getRoomId() {
     // if not specified room id, create one random
     if (roomId == '') {
         roomId = makeId(20);
-        const newurl = signalingServer + '/join/' + roomId;
-        window.history.pushState({ url: newurl }, roomId, newurl);
+        const newUrl = signalingServer + '/join/' + roomId;
+        window.history.pushState({ url: newUrl }, roomId, newUrl);
     }
     return roomId;
 }
@@ -784,6 +785,7 @@ async function whoAreYou() {
         imageUrl: welcomeImg,
         title: 'Enter your name',
         input: 'text',
+        inputValue: window.localStorage.peer_name ? window.localStorage.peer_name : '',
         html: `<br>
         <div style="overflow: hidden;">
             <button id="initAudioBtn" class="fas fa-microphone" onclick="handleAudio(event, true)"></button>
@@ -799,6 +801,7 @@ async function whoAreYou() {
         inputValidator: (value) => {
             if (!value) return 'Please enter your name';
             myPeerName = value;
+            window.localStorage.peer_name = myPeerName;
             whoAreYouJoin();
         },
     }).then(() => {
@@ -4409,6 +4412,8 @@ function updateMyPeerName() {
 
     myPeerNameSet.value = '';
     myPeerNameSet.placeholder = myPeerName;
+
+    window.localStorage.peer_name = myPeerName;
 
     setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);

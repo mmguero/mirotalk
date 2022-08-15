@@ -234,11 +234,11 @@ If you need help to deploy `MiroTalk P2P` instance on `your dedicated cloud serv
 </details>
 
 <details>
-<summary>Discussions and support</summary>
+<summary>Questions, Discussions and support</summary>
 
 <br/>
 
--   For discussions, help & support, join with us on [Discord](https://discord.gg/rgGYfeYW3N)
+-   For questions, discussions, help & support, join with us on [Discord](https://discord.gg/rgGYfeYW3N)
 
 </details>
 
