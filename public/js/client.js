@@ -65,21 +65,37 @@ const chatInputEmoji = {
     ':+1:': '\uD83D\uDC4D',
 }; // https://github.com/wooorm/gemoji/blob/main/support.md
 
-// show desired buttons
-const showShareRoomBtn = true;
-const showAudioBtn = true;
-const showVideoBtn = true;
-const showSwapCameraBtn = true;
-const showScreenShareBtn = true;
-const showRecordStreamBtn = true;
-const showFullScreenBtn = true;
-const showChatRoomBtn = true;
-const showCaptionBtn = true;
-const showMyHandBtn = true;
-const showWhiteboardBtn = true;
-const showFileShareBtn = true;
-const showMySettingsBtn = true;
-const showAboutBtn = true;
+// Show desired buttons showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn -> (auto-detected)
+const buttons = {
+    main: {
+        showShareRoomBtn: true,
+        showAudioBtn: true,
+        showVideoBtn: true,
+        showRecordStreamBtn: true,
+        showChatRoomBtn: true,
+        showCaptionBtn: true,
+        showMyHandBtn: true,
+        showWhiteboardBtn: true,
+        showFileShareBtn: true,
+        showMySettingsBtn: true,
+        showAboutBtn: true, // Please keep me always true, Thank you!
+    },
+    settings: {
+        showTabRoomParticipants: true,
+        showTabRoomSecurity: true,
+        showMuteEveryoneBtn: true,
+        showHideEveryoneBtn: true,
+        showLockRoomBtn: true,
+        showUnlockRoomBtn: true,
+    },
+    remote: {
+        audioBtnClickAllowed: true,
+        videoBtnClickAllowed: true,
+        showKickOutBtn: true,
+    },
+};
+
+const isRulesActive = true; // Presenter can do anything, guest is slightly moderate, if false no Rules for the room.
 
 const surveyActive = true; // when leaving the room give a feedback, if false will be redirected to newcall page
 
@@ -88,6 +104,10 @@ const notifyBySound = true; // turn on - off sound notifications
 const forceCamMaxResolutionAndFps = false; // This force the webCam to max resolution, up to 4k and 60fps (very high bandwidth are required) if false, you can set it from settings
 
 let thisRoomPassword = null;
+
+let isRoomLocked = false;
+
+let isPresenter = false; // Who init the room (aka first peer joined)
 
 let myPeerId; // socket.id
 let peerInfo = {}; // Some peer info
@@ -228,6 +248,8 @@ let themeSelect;
 let videoObjFitSelect;
 let btnsBarSelect;
 let selectors;
+let tabRoomParticipants;
+let tabRoomSecurity;
 // my video element
 let myVideo;
 let myVideoWrap;
@@ -382,6 +404,8 @@ function getHtmlElementsById() {
     themeSelect = getId('mirotalkTheme');
     videoObjFitSelect = getId('videoObjFitSelect');
     btnsBarSelect = getId('mirotalkBtnsBar');
+    tabRoomParticipants = getId('tabRoomParticipants');
+    tabRoomSecurity = getId('tabRoomSecurity');
     // my conference name, hand, video - audio status
     myVideoParagraph = getId('myVideoParagraph');
     myHandStatusIcon = getId('myHandStatusIcon');
@@ -755,11 +779,71 @@ async function handleConnect() {
 function handleServerInfo(config) {
     let peers_count = config.peers_count;
     console.log('13. Peers count', peers_count);
+
+    // Let start with some basic rules
+    isPresenter = peers_count == 1 ? true : false;
+    if (isRulesActive) {
+        handleRules(isPresenter);
+    }
+
     if (notify && peers_count == 1) {
         welcomeUser();
     } else {
         checkShareScreen();
     }
+}
+
+/**
+ * Presenter can do anything, for others you can limit
+ * some functions by hidden the buttons etc.
+ *
+ * @param {boolean} isPresenter true/false
+ */
+function handleRules(isPresenter) {
+    console.log('14. Peer isPresenter: ' + isPresenter);
+    if (!isPresenter) {
+        buttons.settings.showTabRoomParticipants = false;
+        buttons.settings.showTabRoomSecurity = false;
+        buttons.remote.audioBtnClickAllowed = false;
+        buttons.remote.videoBtnClickAllowed = false;
+        buttons.remote.showKickOutBtn = false;
+        //...
+    } else {
+        buttons.settings.showTabRoomParticipants = true;
+        buttons.settings.showTabRoomSecurity = true;
+        buttons.settings.showLockRoomBtn = !isRoomLocked;
+        buttons.settings.showUnlockRoomBtn = isRoomLocked;
+        buttons.remote.audioBtnClickAllowed = true;
+        buttons.remote.videoBtnClickAllowed = true;
+        buttons.remote.showKickOutBtn = true;
+    }
+
+    handleButtonsRule();
+}
+
+/**
+ * Hide not desired buttons
+ */
+function handleButtonsRule() {
+    // Main
+    elemDisplay(shareRoomBtn, buttons.main.showShareRoomBtn);
+    elemDisplay(audioBtn, buttons.main.showAudioBtn);
+    elemDisplay(videoBtn, buttons.main.showVideoBtn);
+    elemDisplay(recordStreamBtn, buttons.main.showRecordStreamBtn);
+    elemDisplay(chatRoomBtn, buttons.main.showChatRoomBtn);
+    elemDisplay(captionBtn, buttons.main.showCaptionBtn);
+    elemDisplay(myHandBtn, buttons.main.showMyHandBtn);
+    elemDisplay(whiteboardBtn, buttons.main.showWhiteboardBtn);
+    elemDisplay(fileShareBtn, buttons.main.showFileShareBtn);
+    elemDisplay(mySettingsBtn, buttons.main.showMySettingsBtn);
+    elemDisplay(aboutBtn, buttons.main.showAboutBtn);
+    // Settings
+    elemDisplay(muteEveryoneBtn, buttons.settings.showMuteEveryoneBtn);
+    elemDisplay(hideEveryoneBtn, buttons.settings.showHideEveryoneBtn);
+    elemDisplay(lockRoomBtn, buttons.settings.showLockRoomBtn);
+    elemDisplay(unlockRoomBtn, buttons.settings.showUnlockRoomBtn);
+    elemDisplay(tabRoomParticipants, buttons.settings.showTabRoomParticipants);
+    elemDisplay(tabRoomSecurity, buttons.settings.showTabRoomSecurity);
 }
 
 /**
@@ -1272,6 +1356,12 @@ function handleRemovePeer(config) {
     delete peerMediaElements[peer_id];
     delete allPeers[peer_id];
 
+    isPresenter = !thereIsPeerConnections();
+    if (isRulesActive && isPresenter) {
+        console.log('I am alone in the room, got Presenter Rules');
+        handleRules(isPresenter);
+    }
+
     playSound('removePeer');
 
     console.log('ALL PEERS', allPeers);
@@ -1668,7 +1758,7 @@ async function loadLocalMedia(stream) {
     getHtmlElementsById();
     setButtonsToolTip();
     manageLeftButtons();
-    hideLeftButtons();
+    handleButtonsRule();
     setupMySettings();
     setupVideoUrlPlayer();
     startCountTime();
@@ -1841,7 +1931,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     remoteStatusMenu.appendChild(remoteFileShareBtn);
     remoteStatusMenu.appendChild(remoteVideoAudioUrlBtn);
     remoteStatusMenu.appendChild(remoteVideoToImgBtn);
-    remoteStatusMenu.appendChild(remotePeerKickOut);
+    if (buttons.remote.showKickOutBtn) remoteStatusMenu.appendChild(remotePeerKickOut);
     remoteStatusMenu.appendChild(remoteVideoFullScreenBtn);
 
     remoteMedia.setAttribute('id', peer_id + '_video');
@@ -2299,26 +2389,6 @@ function manageLeftButtons() {
     setMySettingsBtn();
     setAboutBtn();
     setLeaveRoomBtn();
-}
-
-/**
- * Hide not desired buttons
- */
-function hideLeftButtons() {
-    if (!showShareRoomBtn) shareRoomBtn.style.display = 'none';
-    if (!showAudioBtn) audioBtn.style.display = 'none';
-    if (!showVideoBtn) videoBtn.style.display = 'none';
-    if (!showSwapCameraBtn) swapCameraBtn.style.display = 'none';
-    if (!showScreenShareBtn) screenShareBtn.style.display = 'none';
-    if (!showRecordStreamBtn) recordStreamBtn.style.display = 'none';
-    if (!showFullScreenBtn) fullScreenBtn.style.display = 'none';
-    if (!showChatRoomBtn) chatRoomBtn.style.display = 'none';
-    if (!showCaptionBtn) captionBtn.style.display = 'none';
-    if (!showMyHandBtn) myHandBtn.style.display = 'none';
-    if (!showWhiteboardBtn) whiteboardBtn.style.display = 'none';
-    if (!showFileShareBtn) fileShareBtn.style.display = 'none';
-    if (!showMySettingsBtn) mySettingsBtn.style.display = 'none';
-    if (!showAboutBtn) aboutBtn.style.display = 'none';
 }
 
 /**
@@ -4129,6 +4199,7 @@ async function msgerAddPeers(peers) {
             if (!exsistMsgerPrivateDiv) {
                 let msgerPrivateDiv = `
                 <div id="${peer_id}_pMsgDiv" class="msger-peer-inputarea">
+                    <img src='${avatarApiUrl}?name=${peer_name}&size=24&background=random&rounded=true'> 
                     <input
                         id="${peer_id}_pMsgInput"
                         class="msger-input"
@@ -4136,7 +4207,7 @@ async function msgerAddPeers(peers) {
                         placeholder="💬 Enter your message..."
                     />
                     <button id="${peer_id}_pMsgBtn" value="${peer_name}">
-                        &nbsp;${peer_name}<i class="fas fa-paper-plane"></i>
+                        <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
                 `;
@@ -4566,6 +4637,7 @@ function setPeerAudioStatus(peer_id, status) {
  * @param {string} peer_id socket.id
  */
 function handlePeerAudioBtn(peer_id) {
+    if (!buttons.remote.audioBtnClickAllowed) return;
     let peerAudioBtn = getId(peer_id + '_audioStatus');
     peerAudioBtn.onclick = () => {
         if (peerAudioBtn.className === 'fas fa-microphone') disablePeer(peer_id, 'audio');
@@ -4577,7 +4649,7 @@ function handlePeerAudioBtn(peer_id) {
  * @param {string} peer_id socket.id
  */
 function handlePeerVideoBtn(peer_id) {
-    if (!useVideo) return;
+    if (!useVideo || !buttons.remote.videoBtnClickAllowed) return;
     let peerVideoBtn = getId(peer_id + '_videoStatus');
     peerVideoBtn.onclick = () => {
         if (peerVideoBtn.className === 'fas fa-video') disablePeer(peer_id, 'video');
@@ -4966,16 +5038,19 @@ function handleRoomStatus(config) {
         case 'lock':
             playSound('locked');
             userLog('toast', peer_name + ' has 🔒 LOCKED the room by password', 'top-end');
-            hide(lockRoomBtn);
-            show(unlockRoomBtn);
+            elemDisplay(lockRoomBtn, false);
+            elemDisplay(unlockRoomBtn, true);
+            isRoomLocked = true;
             break;
         case 'unlock':
             userLog('toast', peer_name + ' has 🔓 UNLOCKED the room', 'top-end');
-            hide(unlockRoomBtn);
-            show(lockRoomBtn);
+            elemDisplay(unlockRoomBtn, false);
+            elemDisplay(lockRoomBtn, true);
+            isRoomLocked = false;
             break;
         case 'checkPassword':
             let password = config.password;
+            isRoomLocked = true;
             password == 'OK' ? joinToChannel() : handleRoomLocked();
             break;
     }
@@ -5041,8 +5116,8 @@ function handleUnlockTheRoom() {
             password: thisRoomPassword,
         };
         sendToServer('roomAction', config);
-        hide(lockRoomBtn);
-        show(unlockRoomBtn);
+        elemDisplay(lockRoomBtn, false);
+        elemDisplay(unlockRoomBtn, true);
     });
 }
 
@@ -6048,6 +6123,7 @@ function handleVideoPlayer(config) {
  * @param {string} peer_id socket.id
  */
 function handlePeerKickOutBtn(peer_id) {
+    if (!buttons.remote.showKickOutBtn) return;
     let peerKickOutBtn = getId(peer_id + '_kickOut');
     peerKickOutBtn.addEventListener('click', (e) => {
         kickOut(peer_id);
@@ -6445,17 +6521,10 @@ function getEcN(className) {
 }
 
 /**
- * Hide elemnt
+ * Element style display
  * @param {object} elem
+ * @param {boolean} yes true/false
  */
-function hide(elem) {
-    elem.classList.add('hidden');
-}
-
-/**
- * Show elemnt
- * @param {object} elem
- */
-function show(elem) {
-    elem.classList.remove('hidden');
+function elemDisplay(elem, yes) {
+    elem.style.display = yes ? 'block' : 'none';
 }
