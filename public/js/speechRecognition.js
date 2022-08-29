@@ -91,6 +91,7 @@ if (speechRecognition) {
         console.log('Start speech recognition');
         speechRecognitionStart.style.display = 'none';
         speechRecognitionStop.style.display = 'block';
+        setColor(speechRecognitionIcon, 'lime');
     };
 
     // Detect the said words
@@ -119,6 +120,7 @@ if (speechRecognition) {
         // if (recognitionRunning) recognition.start();
         speechRecognitionStop.style.display = 'none';
         speechRecognitionStart.style.display = 'block';
+        setColor(speechRecognitionIcon, 'white');
     };
 
     isWebkitSpeechRecognitionSupported = true;
@@ -127,7 +129,6 @@ if (speechRecognition) {
     console.warn(
         'This browser not supports webkitSpeechRecognition, check out supported browsers: https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility',
     );
-    getId('captionBtn').style.display = 'none';
 }
 
 /**

@@ -65,7 +65,7 @@ const chatInputEmoji = {
     ':+1:': '\uD83D\uDC4D',
 }; // https://github.com/wooorm/gemoji/blob/main/support.md
 
-// Show desired buttons showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn -> (auto-detected)
+// Show desired buttons captionBtn, showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn -> (auto-detected)
 const buttons = {
     main: {
         showShareRoomBtn: true,
@@ -73,7 +73,6 @@ const buttons = {
         showVideoBtn: true,
         showRecordStreamBtn: true,
         showChatRoomBtn: true,
-        showCaptionBtn: true,
         showMyHandBtn: true,
         showWhiteboardBtn: true,
         showFileShareBtn: true,
@@ -124,6 +123,7 @@ let videoQualitySelectedIndex = 0; // default
 
 let leftChatAvatar;
 let rightChatAvatar;
+let chatMessagesId = 0;
 
 let callStartTime;
 let callElapsedTime;
@@ -156,6 +156,7 @@ let isScreenStreaming = false;
 let isChatRoomVisible = false;
 let isCaptionBoxVisible = false;
 let isChatEmojiVisible = false;
+let isChatMarkdownOn = false;
 let isButtonsVisible = false;
 let isMySettingsVisible = false;
 let isVideoOnFullScreen = false;
@@ -163,6 +164,7 @@ let isDocumentOnFullScreen = false;
 let isWhiteboardFs = false;
 let isVideoUrlPlayerOpen = false;
 let isRecScreenStream = false;
+let isChatPasteTxt = false;
 let needToCreateOffer = false; // after session description answer
 let signalingSocket; // socket.io connection to our webserver
 let localMediaStream; // my microphone / webcam
@@ -209,6 +211,7 @@ let msgerSaveBtn;
 let msgerClose;
 let msgerChat;
 let msgerEmojiBtn;
+let msgerMarkdownBtn;
 let msgerInput;
 let msgerSendBtn;
 //caption section
@@ -327,6 +330,7 @@ let videoAudioCloseBtn;
 let videoUrlIframe;
 let videoAudioUrlElement;
 // speech recognition
+let speechRecognitionIcon;
 let speechRecognitionStart;
 let speechRecognitionStop;
 
@@ -366,6 +370,7 @@ function getHtmlElementsById() {
     msgerClose = getId('msgerClose');
     msgerChat = getId('msgerChat');
     msgerEmojiBtn = getId('msgerEmojiBtn');
+    msgerMarkdownBtn = getId('msgerMarkdownBtn');
     msgerInput = getId('msgerInput');
     msgerSendBtn = getId('msgerSendBtn');
     // chat room connected peers
@@ -456,6 +461,7 @@ function getHtmlElementsById() {
     videoUrlIframe = getId('videoUrlIframe');
     videoAudioUrlElement = getId('videoAudioUrlElement');
     // speech recognition
+    speechRecognitionIcon = getId('speechRecognitionIcon');
     speechRecognitionStart = getId('speechRecognitionStart');
     speechRecognitionStop = getId('speechRecognitionStop');
 }
@@ -489,6 +495,7 @@ function setButtonsToolTip() {
     setTippy(msgerSaveBtn, 'Save the messages', 'top');
     setTippy(msgerClose, 'Close', 'top');
     setTippy(msgerEmojiBtn, 'Emoji', 'top');
+    setTippy(msgerMarkdownBtn, 'Markdown', 'top');
     setTippy(msgerSendBtn, 'Send', 'top');
     // caption buttons
     setTippy(captionTheme, 'Ghost theme', 'top');
@@ -831,7 +838,6 @@ function handleButtonsRule() {
     elemDisplay(videoBtn, buttons.main.showVideoBtn);
     elemDisplay(recordStreamBtn, buttons.main.showRecordStreamBtn);
     elemDisplay(chatRoomBtn, buttons.main.showChatRoomBtn);
-    elemDisplay(captionBtn, buttons.main.showCaptionBtn);
     elemDisplay(myHandBtn, buttons.main.showMyHandBtn);
     elemDisplay(whiteboardBtn, buttons.main.showWhiteboardBtn);
     elemDisplay(fileShareBtn, buttons.main.showFileShareBtn);
@@ -2552,6 +2558,12 @@ function setChatRoomBtn() {
         showButtonsBarAndMenu();
     });
 
+    // Markdown on-off
+    msgerMarkdownBtn.addEventListener('click', (e) => {
+        isChatMarkdownOn = !isChatMarkdownOn;
+        setColor(msgerMarkdownBtn, isChatMarkdownOn ? 'lime' : 'white');
+    });
+
     // open Video Url Player
     msgerVideoUrlBtn.addEventListener('click', (e) => {
         sendVideoUrl();
@@ -2560,7 +2572,7 @@ function setChatRoomBtn() {
     // Execute a function when the user releases a key on the keyboard
     msgerInput.addEventListener('keyup', (e) => {
         // Number 13 is the "Enter" key on the keyboard
-        if (e.keyCode === 13) {
+        if (e.keyCode === 13 && (isMobileDevice || !e.shiftKey)) {
             e.preventDefault();
             msgerSendBtn.click();
         }
@@ -2572,6 +2584,10 @@ function setChatRoomBtn() {
             let regex = new RegExp(escapeSpecialChars(i), 'gim');
             this.value = this.value.replace(regex, chatInputEmoji[i]);
         }
+    };
+
+    msgerInput.onpaste = () => {
+        isChatPasteTxt = true;
     };
 
     // chat send msg
@@ -2589,7 +2605,7 @@ function setChatRoomBtn() {
  * Caption room buttons click event
  */
 function setCaptionRoomBtn() {
-    if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+    if (speechRecognition) {
         // open hide caption
         captionBtn.addEventListener('click', (e) => {
             if (!isCaptionBoxVisible) {
@@ -4038,12 +4054,17 @@ function sendChatMessage() {
     if (!thereIsPeerConnections()) {
         userLog('info', "Can't send message, no participants in the room");
         msgerInput.value = '';
+        isChatPasteTxt = false;
         return;
     }
 
     const msg = checkMsg(msgerInput.value);
     // empity msg or
-    if (!msg) return;
+    if (!msg) {
+        msgerInput.value = '';
+        isChatPasteTxt = false;
+        return;
+    }
 
     emitMsg(myPeerName, 'toAll', msg, false, myPeerId);
     appendMessage(myPeerName, rightChatAvatar, 'right', msg, false);
@@ -4175,12 +4196,35 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                 <div class="msg-info-name">${from}</div>
                 <div class="msg-info-time">${time}</div>
             </div>
-            <div class="msg-text">${msg}</div>
+            <div id="${chatMessagesId}" class="msg-text">${msg}
+                <hr/>
+                <button
+                    class="msger-copy-txt" 
+                    onclick="copyToClipboard('${chatMessagesId}')"
+                ><i class="fas fa-copy"></i></button>
+            </div>
         </div>
 	</div>
     `;
     msgerChat.insertAdjacentHTML('beforeend', msgHTML);
     msgerChat.scrollTop += 500;
+    chatMessagesId++;
+}
+
+/**
+ * Copy the element innerText on clipboard
+ * @param {string} id
+ */
+function copyToClipboard(id) {
+    const text = document.getElementById(id).innerText;
+    navigator.clipboard
+        .writeText(text)
+        .then(() => {
+            msgPopup('success', 'Message copied!', 'top-end', 1000);
+        })
+        .catch((err) => {
+            msgPopup('error', err, 'top-end', 2000);
+        });
 }
 
 /**
@@ -4199,13 +4243,14 @@ async function msgerAddPeers(peers) {
             if (!exsistMsgerPrivateDiv) {
                 let msgerPrivateDiv = `
                 <div id="${peer_id}_pMsgDiv" class="msger-peer-inputarea">
-                    <img src='${avatarApiUrl}?name=${peer_name}&size=24&background=random&rounded=true'> 
-                    <input
+                    <img id="${peer_id}_pMsgAvatar" src='${avatarApiUrl}?name=${peer_name}&size=24&background=random&rounded=true'> 
+                    <textarea
+                        rows="1"
+                        cols="1"
                         id="${peer_id}_pMsgInput"
                         class="msger-input"
-                        type="text"
                         placeholder="💬 Enter your message..."
-                    />
+                    ></textarea>
                     <button id="${peer_id}_pMsgBtn" value="${peer_name}">
                         <i class="fas fa-paper-plane"></i>
                     </button>
@@ -4275,15 +4320,20 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
         }
     });
 
+    msgerPrivateMsgInput.onpaste = () => {
+        isChatPasteTxt = true;
+    };
+
     function sendPrivateMessage() {
         let pMsg = checkMsg(msgerPrivateMsgInput.value);
         if (!pMsg) {
             msgerPrivateMsgInput.value = '';
+            isChatPasteTxt = false;
             return;
         }
         let toPeerName = msgerPrivateBtn.value;
         emitMsg(myPeerName, toPeerName, pMsg, true, peerId);
-        appendMessage(myPeerName, rightChatAvatar, 'right', pMsg + '<br/><hr>Private message to ' + toPeerName, true);
+        appendMessage(myPeerName, rightChatAvatar, 'right', pMsg + '<hr>Private message to ' + toPeerName, true);
         msgerPrivateMsgInput.value = '';
         msgerCP.style.display = 'none';
     }
@@ -4298,12 +4348,23 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
  * @returns {string} html format
  */
 function checkMsg(text) {
+    if (text.trim().length == 0) return;
     if (isHtml(text)) return stripHtml(text);
-    let urlRegex = /(https?:\/\/[^\s]+)/g;
-    return text.replace(urlRegex, (url) => {
-        if (isImageURL(text)) return '<p><img src="' + url + '" alt="img" width="200" height="auto"/></p>';
-        return '<a id="chat-msg-a" href="' + url + '" target="_blank">' + url + '</a>';
-    });
+    if (isValidHttpURL(text)) {
+        if (isImageURL(text)) return '<img src="' + text + '" alt="img" width="180" height="auto"/>';
+        return '<a href="' + text + '" target="_blank">' + text + '</a>';
+    }
+    if (isChatMarkdownOn) return marked.parse(text);
+    let pre = '<pre>' + text + '</pre>';
+    if (isChatPasteTxt) {
+        isChatPasteTxt = false;
+        return pre;
+    }
+    let numberOfLineBreaks = (text.match(/\n/g) || []).length;
+    if (numberOfLineBreaks > 1) {
+        return pre;
+    }
+    return text;
 }
 
 /**
@@ -4329,6 +4390,21 @@ function isHtml(str) {
         if (c[i].nodeType == 1) return true;
     }
     return false;
+}
+
+/**
+ * Check if valid URL
+ * @param {string} str to check
+ * @returns boolean true/false
+ */
+function isValidHttpURL(str) {
+    let url;
+    try {
+        url = new URL(str);
+    } catch (_) {
+        return false;
+    }
+    return url.protocol === 'http:' || url.protocol === 'https:';
 }
 
 /**
@@ -4500,12 +4576,12 @@ function handlePeerName(config) {
     let peer_name = config.peer_name;
     let videoName = getId(peer_id + '_name');
     if (videoName) videoName.innerHTML = peer_name;
-    // change also btn value - name on chat lists....
+    // change also avatar and btn value - name on chat lists....
     let msgerPeerName = getId(peer_id + '_pMsgBtn');
-    if (msgerPeerName) {
-        msgerPeerName.innerHTML = `&nbsp;${peer_name}`;
-        msgerPeerName.value = peer_name;
-    }
+    let msgerPeerAvatar = getId(peer_id + '_pMsgAvatar');
+    if (msgerPeerName) msgerPeerName.value = peer_name;
+    if (msgerPeerAvatar)
+        msgerPeerAvatar.src = `${avatarApiUrl}?name=${peer_name}&size=24&background=random&rounded=true`;
     // refresh also peer video avatar name
     setPeerAvatarImgName(peer_id + '_avatar', peer_name);
 }
@@ -4692,7 +4768,10 @@ function sendPrivateMsgToPeer(toPeerId, toPeerName) {
     }).then((result) => {
         if (result.value) {
             let pMsg = checkMsg(result.value);
-            if (!pMsg) return;
+            if (!pMsg) {
+                isChatPasteTxt = false;
+                return;
+            }
             emitMsg(myPeerName, toPeerName, pMsg, true, toPeerId);
             appendMessage(
                 myPeerName,
@@ -5624,8 +5703,8 @@ function handleDataChannelFileSharing(data) {
     receivedSize += data.byteLength;
     receiveProgress.value = receivedSize;
     receiveFilePercentage.innerHTML =
-        'Receive progress: ' + ((receivedSize / incomingFileInfo.fileSize) * 100).toFixed(2) + '%';
-    if (receivedSize === incomingFileInfo.fileSize) {
+        'Receive progress: ' + ((receivedSize / incomingFileInfo.file.fileSize) * 100).toFixed(2) + '%';
+    if (receivedSize === incomingFileInfo.file.fileSize) {
         receiveFileDiv.style.display = 'none';
         incomingFileData = receiveBuffer;
         receiveBuffer = [];
@@ -5804,8 +5883,7 @@ function sendFileInformations(file, peer_id, broadcast = false) {
             userLog('info', 'No participants detected');
             return;
         }
-        // send some metadata about our file to peers in the room
-        sendToServer('fileInfo', {
+        let fileInfo = {
             room_id: roomId,
             broadcast: broadcast,
             peer_name: myPeerName,
@@ -5815,7 +5893,11 @@ function sendFileInformations(file, peer_id, broadcast = false) {
                 fileSize: fileToSend.size,
                 fileType: fileToSend.type,
             },
-        });
+        };
+        // keep trace of sent file in chat
+        appendMessage(myPeerName, rightChatAvatar, 'right', 'Send file: \n' + toHtmlJson(fileInfo), false);
+        // send some metadata about our file to peers in the room
+        sendToServer('fileInfo', fileInfo);
         // send the File
         setTimeout(() => {
             sendFileData(peer_id, broadcast);
@@ -5823,6 +5905,15 @@ function sendFileInformations(file, peer_id, broadcast = false) {
     } else {
         userLog('error', 'File dragged not valid or empty.');
     }
+}
+
+/**
+ * Html Json pretty print
+ * @param {object} obj
+ * @returns html pre json
+ */
+function toHtmlJson(obj) {
+    return '<pre>' + JSON.stringify(obj, null, 4) + '</pre>';
 }
 
 /**
@@ -5836,20 +5927,29 @@ function handleFileInfo(config) {
     receivedSize = 0;
     let fileToReceiveInfo =
         'From: ' +
-        incomingFileInfo.peerName +
+        incomingFileInfo.peer_name +
         '<br />' +
         ' Incoming file: ' +
-        incomingFileInfo.fileName +
+        incomingFileInfo.file.fileName +
         '<br />' +
         ' File size: ' +
-        bytesToSize(incomingFileInfo.fileSize) +
+        bytesToSize(incomingFileInfo.file.fileSize) +
         '<br />' +
         ' File type: ' +
-        incomingFileInfo.fileType;
+        incomingFileInfo.file.fileType;
     console.log(fileToReceiveInfo);
+    // keep track of received file on chat
+    appendMessage(
+        incomingFileInfo.peer_name,
+        leftChatAvatar,
+        'left',
+        'Receive file: \n' + toHtmlJson(incomingFileInfo),
+        !incomingFileInfo.broadcast,
+        incomingFileInfo.peer_id,
+    );
     receiveFileInfo.innerHTML = fileToReceiveInfo;
     receiveFileDiv.style.display = 'inline';
-    receiveProgress.max = incomingFileInfo.fileSize;
+    receiveProgress.max = incomingFileInfo.file.fileSize;
     receiveInProgress = true;
     userLog('toast', fileToReceiveInfo);
 }
@@ -5863,12 +5963,12 @@ function endDownload() {
 
     // save received file into Blob
     const blob = new Blob(incomingFileData);
-    const file = incomingFileInfo.fileName;
+    const file = incomingFileInfo.file.fileName;
 
     incomingFileData = [];
 
     // if file is image, show the preview
-    if (isImageURL(incomingFileInfo.fileName)) {
+    if (isImageURL(incomingFileInfo.file.fileName)) {
         const reader = new FileReader();
         reader.onload = (e) => {
             Swal.fire({
@@ -5876,7 +5976,7 @@ function endDownload() {
                 background: swalBackground,
                 position: 'center',
                 title: 'Received file',
-                text: incomingFileInfo.fileName + ' size ' + bytesToSize(incomingFileInfo.fileSize),
+                text: incomingFileInfo.file.fileName + ' size ' + bytesToSize(incomingFileInfo.file.fileSize),
                 imageUrl: e.target.result,
                 imageAlt: 'mirotalk-file-img-download',
                 showDenyButton: true,
@@ -5903,7 +6003,7 @@ function endDownload() {
             imageUrl: fileSharingImg,
             position: 'center',
             title: 'Received file',
-            text: incomingFileInfo.fileName + ' size ' + bytesToSize(incomingFileInfo.fileSize),
+            text: incomingFileInfo.file.fileName + ' size ' + bytesToSize(incomingFileInfo.file.fileSize),
             showDenyButton: true,
             confirmButtonText: `Save`,
             denyButtonText: `Cancel`,
@@ -6433,6 +6533,27 @@ function userLog(type, message) {
         default:
             alert(message);
     }
+}
+
+/**
+ * Message popup
+ * @param {string} icon info, success, warning, error
+ * @param {string} message to show
+ * @param {string} position of the toast
+ * @param {integer} timer ms before to hide
+ */
+function msgPopup(icon, message, position, timer = 1000) {
+    const Toast = Swal.mixin({
+        background: swalBackground,
+        toast: true,
+        position: position,
+        showConfirmButton: false,
+        timer: timer,
+    });
+    Toast.fire({
+        icon: icon,
+        title: message,
+    });
 }
 
 /**

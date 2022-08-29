@@ -45,11 +45,11 @@
 </details>
 
 <details>
-<summary>Presentation</summary>
+<summary>About</summary>
 
-<br/>
+-   [Presentation](https://www.canva.com/design/DAE693uLOIU/view)
 
-<a href="https://www.canva.com/design/DAE693uLOIU/view">MiroTalk presentation </a> - <a href="https://www.youtube.com/watch?v=_IVn2aINYww">video</a>
+-   [Video](https://www.youtube.com/watch?v=_IVn2aINYww)
 
 </details>
 
@@ -148,7 +148,7 @@ $ cp .env.template .env
 $ docker-compose build
 # create and start containers
 $ docker-compose up # -d
-# stop and remove resources
+# to stop and remove resources
 $ docker-compose down
 ```
 
@@ -213,6 +213,7 @@ If you need help to deploy `MiroTalk P2P` instance on `your dedicated cloud serv
 </details>
 
 <details>
+
 <summary>Credits</summary>
 
 <br/>

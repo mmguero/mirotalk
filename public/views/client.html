@@ -120,8 +120,15 @@ access to use this app.
                 <!-- End emoji picker -->
 
                 <div class="msger-inputarea">
-                    <input id="msgerInput" class="msger-input" type="text" placeholder="💬 Enter your message..." />
+                    <textarea
+                        rows="1"
+                        cols="1"
+                        id="msgerInput"
+                        class="msger-input"
+                        placeholder="💬 Enter your message..."
+                    ></textarea>
                     <button id="msgerEmojiBtn" class="fas fa-smile"></button>
+                    <button id="msgerMarkdownBtn" class="fab fa-markdown"></button>
                     <button id="msgerVideoUrlBtn" class="fab fa-youtube"></button>
                     <button id="msgerCPBtn" class="fas fa-users"></button>
                     <button id="msgerSendBtn" class="fas fa-paper-plane"></button>
@@ -176,7 +183,7 @@ access to use this app.
 
                 <main id="captionChat" class="msger-chat"></main>
                 <div class="msger-inputarea">
-                    <i class="fas fa-microphone-alt"></i>
+                    <button id="speechRecognitionIcon" class="fas fa-microphone-alt"></button>
                     <select id="recognitionLanguage"></select>
                     <select id="recognitionDialect"></select>
                     <button type="button" id="speechRecognitionStart"><i class="fas fa-play"></i>&nbsp;Start</button>
@@ -416,6 +423,7 @@ access to use this app.
         <!-- Js scripts https://cdn.jsdelivr.net -->
 
         <script defer src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/detectrtc@1.4.1/DetectRTC.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.23"></script>
         <script defer type="module" src="https://unpkg.com/emoji-picker-element@1"></script>
