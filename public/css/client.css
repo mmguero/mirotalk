@@ -286,7 +286,7 @@ body {
 .msger-header-title button,
 .msger-header-options button {
     border: none;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     background: rgb(0, 0, 0);
     color: #fff;
     border-radius: 5px;
@@ -310,7 +310,6 @@ body {
     overflow-y: auto;
     padding: 10px;
     background: var(--msger-bg);
-    max-width: 97%;
 }
 
 .msger-chat::-webkit-scrollbar {
@@ -356,7 +355,7 @@ body {
     background: var(--left-msg-bg);
     border-bottom-left-radius: 0;
     color: #fff;
-    width: 90%; /* caption */
+    width: 78%; /* caption */
 }
 
 .left-msg .msg-img {
@@ -473,29 +472,59 @@ button:hover {
 
 .msger-input {
     flex: 1;
-    height: 30px;
+    padding: 5px;
+    height: 25px;
     resize: none;
-    background: rgb(0, 0, 0);
+    font-size: 14px !important;
+    background: rgb(7, 7, 7);
+    border-top-left-radius: 10px;
+    -webkit-transition: height 1s;
+    -moz-transition: height 1s;
+    -ms-transition: height 1s;
+    -o-transition: height 1s;
+    transition: height 1s;
+    border: var(--border);
 }
 
-#msgerVideoUrlBtn,
-#msgerEmojiBtn,
-#msgerMarkdownBtn,
-#msgerCPBtn,
-#msgerSendBtn {
-    background: rgb(0, 0, 0);
+.msger-input::-webkit-scrollbar {
+    width: 5px;
+}
+
+.msger-input::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.msger-input::-webkit-scrollbar-thumb {
+    background: #404040;
+}
+
+/*--------------------------------------------------------------
+# Chat room buttons area
+--------------------------------------------------------------*/
+
+.msger-input-buttons {
+    padding: 10px;
+    background: var(--msger-bg);
+}
+
+.msger-input-buttons button {
+    padding: 5px;
+    border: none;
+    border-radius: 3px;
+    font-size: 1.1rem;
     color: #fff;
+    background: var(--msger-bg);
     transition: background 0.23s;
 }
 
-#msgerVideoUrlBtn:hover,
-#msgerEmojiBtn:hover,
-#msgerMarkdownBtn:hover,
-#msgerCPBtn:hover,
-#msgerSendBtn:hover {
+.msger-input-buttons button:hover {
     color: var(--hover-color);
     transform: var(--btns-hover-scale);
     transition: all 0.3s ease-in-out;
+}
+
+#msgerSendBtn {
+    float: right;
 }
 
 /*--------------------------------------------------------------
@@ -571,7 +600,7 @@ button:hover {
 emoji-picker {
     z-index: 12;
     position: absolute;
-    bottom: 55px;
+    bottom: 105px;
     width: 100%;
     height: 50%;
     --background: #16171b;
@@ -1015,13 +1044,6 @@ button {
     cursor: pointer;
 }
 
-.cButtons {
-    font-size: 0.9rem;
-    padding: 5px;
-    border-radius: 5px;
-    border: none;
-}
-
 .hidden {
     display: none;
 }
@@ -1060,14 +1082,14 @@ button {
 
 /*
 z-index
-7 statusMenu -----
+7 video avatar img
+8 statusMenu -----
 - peer name
 - hand status
 - video status
 - audio status
 - kick out
 ------------------
-8 video avatar img
 9 speech bar
 10 left buttons
 11 whiteboard

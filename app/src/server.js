@@ -10,6 +10,7 @@ http://patorjk.com/software/taag/#p=display&f=ANSI%20Regular&t=Server
 dependencies: {
     body-parser             : https://www.npmjs.com/package/body-parser
     compression             : https://www.npmjs.com/package/compression
+    colors                  : https://www.npmjs.com/package/colors
     cors                    : https://www.npmjs.com/package/cors
     crypto-js               : https://www.npmjs.com/package/crypto-js
     dotenv                  : https://www.npmjs.com/package/dotenv
@@ -489,8 +490,7 @@ io.sockets.on('connect', async (socket) => {
         let peer_rec_status = config.peer_rec_status;
 
         if (channel in socket.channels) {
-            log.debug('[' + socket.id + '] [Warning] already joined', channel);
-            return;
+            return log.debug('[' + socket.id + '] [Warning] already joined', channel);
         }
         // no channel aka room in channels init
         if (!(channel in channels)) channels[channel] = {};
@@ -501,8 +501,7 @@ io.sockets.on('connect', async (socket) => {
         // room locked by the participants can't join
         if (peers[channel]['lock'] === true && peers[channel]['password'] != channel_password) {
             log.debug('[' + socket.id + '] [Warning] Room Is Locked', channel);
-            socket.emit('roomIsLocked');
-            return;
+            return socket.emit('roomIsLocked');
         }
 
         // collect peers info grp by channels
@@ -556,8 +555,7 @@ io.sockets.on('connect', async (socket) => {
      */
     async function removePeerFrom(channel) {
         if (!(channel in socket.channels)) {
-            log.debug('[' + socket.id + '] [Warning] not in ', channel);
-            return;
+            return log.debug('[' + socket.id + '] [Warning] not in ', channel);
         }
         try {
             delete socket.channels[channel];
