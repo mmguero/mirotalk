@@ -164,10 +164,15 @@ app.use(express.json()); // Api parse body data as json
 app.use(express.static(dir.public)); // Use all static files from the public folder
 app.use(bodyParser.urlencoded({ extended: true })); // Need for Slack API body parser
 
+// all start from here
+app.get('*', function (next) {
+    next();
+});
+
 // Remove trailing slashes in url handle bad requests
 app.use((err, req, res, next) => {
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        log.debug('Request Error', {
+    if (err instanceof SyntaxError || err.status === 400 || 'body' in err) {
+        log.error('Request Error', {
             header: req.headers,
             body: req.body,
             error: err.message,
@@ -182,7 +187,7 @@ app.use((err, req, res, next) => {
     }
 });
 
-// all start from here
+// main page
 app.get(['/'], (req, res) => {
     res.sendFile(views.landing);
 });
@@ -486,6 +491,7 @@ io.sockets.on('connect', async (socket) => {
         let peer_audio = config.peer_audio;
         let peer_video_status = config.peer_video_status;
         let peer_audio_status = config.peer_audio_status;
+        let peer_screen_status = config.peer_screen_status;
         let peer_hand_status = config.peer_hand_status;
         let peer_rec_status = config.peer_rec_status;
 
@@ -511,6 +517,7 @@ io.sockets.on('connect', async (socket) => {
             peer_audio: peer_audio,
             peer_video_status: peer_video_status,
             peer_audio_status: peer_audio_status,
+            peer_screen_status: peer_screen_status,
             peer_hand_status: peer_hand_status,
             peer_rec_status: peer_rec_status,
         };
@@ -711,6 +718,9 @@ io.sockets.on('connect', async (socket) => {
                             break;
                         case 'audio':
                             peers[room_id][peer_id]['peer_audio_status'] = status;
+                            break;
+                        case 'screen':
+                            peers[room_id][peer_id]['peer_screen_status'] = status;
                             break;
                         case 'hand':
                             peers[room_id][peer_id]['peer_hand_status'] = status;

@@ -40,6 +40,7 @@ const kickedOutImg = '../images/leave-room.png';
 const audioGif = '../images/audio.gif';
 const videoAudioShare = '../images/va-share.png';
 const aboutImg = '../images/mirotalk-logo.png';
+const imgFeedback = '../images/feedback.png';
 // nice free icon: https://www.iconfinder.com
 
 const fileSharingInput = '*'; // allow all file extensions
@@ -98,15 +99,17 @@ const isRulesActive = true; // Presenter can do anything, guest is slightly mode
 
 const surveyActive = true; // when leaving the room give a feedback, if false will be redirected to newcall page
 
-const notifyBySound = true; // turn on - off sound notifications
-
 const forceCamMaxResolutionAndFps = false; // This force the webCam to max resolution, up to 4k and 60fps (very high bandwidth are required) if false, you can set it from settings
+
+let notifyBySound = true; // turn on - off sound notifications
 
 let thisRoomPassword = null;
 
 let isRoomLocked = false;
 
 let isPresenter = false; // Who init the room (aka first peer joined)
+
+let needToEnableMyAudio = false; // On screen sharing end, check if need to enable my audio
 
 let myPeerId; // socket.id
 let peerInfo = {}; // Some peer info
@@ -148,6 +151,7 @@ let myVideoChange = false;
 let myHandStatus = false;
 let myVideoStatus = false;
 let myAudioStatus = false;
+let myScreenStatus = false;
 let pitchDetectionStatus = false;
 let audioContext;
 let mediaStreamSource;
@@ -158,6 +162,7 @@ let isCaptionBoxVisible = false;
 let isChatEmojiVisible = false;
 let isChatMarkdownOn = false;
 let isButtonsVisible = false;
+let isButtonsBarOver = false;
 let isMySettingsVisible = false;
 let isVideoOnFullScreen = false;
 let isDocumentOnFullScreen = false;
@@ -245,6 +250,7 @@ let tabLanguagesBtn;
 let mySettingsCloseBtn;
 let myPeerNameSet;
 let myPeerNameSetBtn;
+let switchSounds;
 let audioInputSelect;
 let audioOutputSelect;
 let videoSelect;
@@ -406,6 +412,7 @@ function getHtmlElementsById() {
     mySettingsCloseBtn = getId('mySettingsCloseBtn');
     myPeerNameSet = getId('myPeerNameSet');
     myPeerNameSetBtn = getId('myPeerNameSetBtn');
+    switchSounds = getId('switchSounds');
     audioInputSelect = getId('audioSource');
     audioOutputSelect = getId('audioOutput');
     videoSelect = getId('videoSource');
@@ -974,6 +981,7 @@ async function joinToChannel() {
         peer_audio: useAudio,
         peer_video_status: myVideoStatus,
         peer_audio_status: myAudioStatus,
+        peer_screen_status: myScreenStatus,
         peer_hand_status: myHandStatus,
         peer_rec_status: isRecScreenStream,
     });
@@ -1838,6 +1846,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     let peer_video = peers[peer_id]['peer_video'];
     let peer_video_status = peers[peer_id]['peer_video_status'];
     let peer_audio_status = peers[peer_id]['peer_audio_status'];
+    let peer_screen_status = peers[peer_id]['peer_screen_status'];
     let peer_hand_status = peers[peer_id]['peer_hand_status'];
     let peer_rec_status = peers[peer_id]['peer_rec_status'];
 
@@ -1964,6 +1973,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     remoteMedia.setAttribute('playsinline', true);
     remoteMedia.autoplay = true;
     isMobileDevice ? (remoteMediaControls = false) : (remoteMediaControls = remoteMediaControls);
+    remoteMedia.style.objectFit = peer_screen_status ? 'contain' : 'var(--video-object-fit)';
     remoteMedia.controls = remoteMediaControls;
 
     remoteVideoWrap.className = 'Camera';
@@ -2330,7 +2340,9 @@ function handleVideoPinUnpin(elemId, pnId, camId) {
                     isVideoPinned = true;
                     return userLog('info', 'Another video seems pinned, unpin it before to pin this one');
                 }
-                videoPlayer.style.objectFit = 'var(--video-object-fit)';
+                if (!isScreenStreaming) {
+                    videoPlayer.style.objectFit = 'var(--video-object-fit)';
+                }
                 videoPinMediaContainer.removeChild(cam);
                 cam.className = 'Camera';
                 videoMediaContainer.style.width = '100%';
@@ -2887,6 +2899,11 @@ function setMySettingsBtn() {
     myPeerNameSetBtn.addEventListener('click', (e) => {
         updateMyPeerName();
     });
+    // Sounds
+    switchSounds.addEventListener('change', (e) => {
+        notifyBySound = e.currentTarget.checked;
+    });
+
     // make chat room draggable for desktop
     if (!isMobileDevice) dragElement(mySettings, mySettingsHeader);
 }
@@ -2916,6 +2933,14 @@ function handleBodyOnMouseMove() {
     document.body.addEventListener('mousemove', (e) => {
         showButtonsBarAndMenu();
     });
+    // detect buttons bar over
+    buttonsBar.addEventListener('mouseover', () => {
+        isButtonsBarOver = true;
+    });
+    buttonsBar.addEventListener('mouseout', () => {
+        isButtonsBarOver = false;
+    });
+    checkButtonsBarAndMenu();
 }
 
 /**
@@ -3323,12 +3348,15 @@ function attachMediaStream(element, stream) {
 }
 
 /**
- * Show left buttons & status menù for 10 seconds on body mousemove
+ * Show left buttons & status
+ * if buttons visible or I'm on hover do nothing return
  * if mobile and chatroom open do nothing return
+ * if mobile and myCaption visible do nothing
  * if mobile and mySettings open do nothing return
  */
 function showButtonsBarAndMenu() {
     if (
+        isButtonsBarOver ||
         isButtonsVisible ||
         (isMobileDevice && isChatRoomVisible) ||
         (isMobileDevice && isCaptionBoxVisible) ||
@@ -3338,10 +3366,19 @@ function showButtonsBarAndMenu() {
     toggleClassElements('statusMenu', 'inline');
     buttonsBar.style.display = 'flex';
     isButtonsVisible = true;
-    setTimeout(() => {
+}
+
+/**
+ * Check every 10 sec if need to hide buttons bar and status menu
+ */
+function checkButtonsBarAndMenu() {
+    if (!isButtonsBarOver) {
         toggleClassElements('statusMenu', 'none');
         buttonsBar.style.display = 'none';
         isButtonsVisible = false;
+    }
+    setTimeout(() => {
+        checkButtonsBarAndMenu();
     }, 10000);
 }
 
@@ -3565,6 +3602,7 @@ function stopLocalAudioTrack() {
 async function toggleScreenSharing() {
     screenMaxFrameRate = parseInt(screenFpsSelect.value);
     const constraints = {
+        audio: true, // enable tab audio
         video: { frameRate: { max: screenMaxFrameRate } },
     }; // true | { frameRate: { max: screenMaxFrameRate } }
 
@@ -3582,14 +3620,13 @@ async function toggleScreenSharing() {
             isScreenStreaming = !isScreenStreaming;
             if (isScreenStreaming) {
                 setMyVideoStatusTrue();
-                if (countPeerConnections() == 1) {
-                    setAspectRatio(2); // 16:9
-                }
                 await emitPeersAction('screenStart');
             } else {
                 await emitPeersAction('screenStop');
                 adaptAspectRatio();
             }
+            myScreenStatus = isScreenStreaming;
+            emitPeerStatus('screen', myScreenStatus);
             await stopLocalVideoTrack();
             await refreshMyLocalStream(screenMediaPromise);
             await refreshMyStreamToPeers(screenMediaPromise);
@@ -3618,7 +3655,7 @@ function setScreenSharingStatus(status) {
  */
 async function setMyVideoStatusTrue() {
     if (myVideoStatus || !useVideo) return;
-    // Put video status alredy ON
+    // Put video status already ON
     localMediaStream.getVideoTracks()[0].enabled = true;
     myVideoStatus = true;
     videoBtn.className = 'fas fa-video';
@@ -3683,17 +3720,35 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
             });
         }
 
-        if (localAudioTrackChange) {
-            // https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/getSenders
-            let audioSender = peerConnections[peer_id]
-                .getSenders()
-                .find((s) => (s.track ? s.track.kind === 'audio' : false));
+        let myAudioTrack; // audio Track to replace to peers
 
-            if (audioSender) {
-                // https://developer.mozilla.org/en-US/docs/Web/API/RTCRtpSender/replaceTrack
-                audioSender.replaceTrack(stream.getAudioTracks()[0]);
-                console.log('REPLACE AUDIO TRACK TO', { peer_id: peer_id, peer_name: peer_name });
-            }
+        if (stream.getAudioTracks()[0] && (localAudioTrackChange || isScreenStreaming)) {
+            myAudioTrack = stream.getAudioTracks()[0];
+        } else {
+            myAudioTrack = localMediaStream.getAudioTracks()[0];
+        }
+        // https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/getSenders
+        let audioSender = peerConnections[peer_id]
+            .getSenders()
+            .find((s) => (s.track ? s.track.kind === 'audio' : false));
+
+        if (audioSender) {
+            // https://developer.mozilla.org/en-US/docs/Web/API/RTCRtpSender/replaceTrack
+            audioSender.replaceTrack(myAudioTrack);
+            console.log('REPLACE AUDIO TRACK TO', { peer_id: peer_id, peer_name: peer_name });
+        }
+
+        // When share a video tab that contain audio, my voice will be turned off
+        if (isScreenStreaming && stream.getAudioTracks()[0]) {
+            setMyAudioOff('you');
+            needToEnableMyAudio = true;
+            audioBtn.disabled = true;
+        }
+        // On end screen sharing enable my audio if need
+        if (!isScreenStreaming && needToEnableMyAudio) {
+            setMyAudioOn('you');
+            needToEnableMyAudio = false;
+            audioBtn.disabled = false;
         }
     }
 }
@@ -3730,6 +3785,9 @@ async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
     }
 
     localMediaStream = newStream;
+
+    // adapt video object fit on screen streaming
+    getId('myVideo').style.objectFit = isScreenStreaming ? 'contain' : 'var(--video-object-fit)';
 
     // log newStream devices
     logStreamSettingsInfo('refreshMyLocalStream', localMediaStream);
@@ -5026,11 +5084,14 @@ function handlePeerAction(config) {
 function handleScreenStart(peer_id) {
     let remoteVideoAvatarImage = getId(peer_id + '_avatar');
     let remoteVideoStatusBtn = getId(peer_id + '_videoStatus');
+    let remoteVideoStream = getId(peer_id + '_video');
     if (remoteVideoStatusBtn) {
         remoteVideoStatusBtn.className = 'fas fa-video';
         setTippy(remoteVideoStatusBtn, 'Participant screen share is on', 'bottom');
     }
-    if (!isMobileDevice && countPeerConnections() == 1) setAspectRatio(2); // 16:9
+    if (remoteVideoStream) {
+        remoteVideoStream.style.objectFit = 'contain';
+    }
     if (remoteVideoAvatarImage) {
         remoteVideoAvatarImage.style.display = 'none';
     }
@@ -5049,7 +5110,10 @@ function handleScreenStop(peer_id, peer_use_video) {
         remoteVideoStatusBtn.className = 'fas fa-video-slash';
         setTippy(remoteVideoStatusBtn, 'Participant screen share is off', 'bottom');
     }
-    if (!isMobileDevice) adaptAspectRatio();
+    if (remoteVideoStream) {
+        remoteVideoStream.style.objectFit = 'var(--video-object-fit)';
+        adaptAspectRatio();
+    }
     if (remoteVideoAvatarImage && remoteVideoStream && !peer_use_video) {
         remoteVideoAvatarImage.style.display = 'block';
         remoteVideoStream.srcObject.getVideoTracks().forEach((track) => {
@@ -5074,6 +5138,20 @@ function setMyAudioOff(peer_name) {
     setMyAudioStatus(myAudioStatus);
     userLog('toast', peer_name + ' has disabled your audio');
     playSound('off');
+}
+
+/**
+ * Set my Audio on and Popup the peer name that performed this action
+ * @param {string} peer_name peer name
+ */
+function setMyAudioOn(peer_name) {
+    if (myAudioStatus === true || !useAudio) return;
+    localMediaStream.getAudioTracks()[0].enabled = true;
+    myAudioStatus = localMediaStream.getAudioTracks()[0].enabled;
+    audioBtn.className = 'fas fa-microphone';
+    setMyAudioStatus(myAudioStatus);
+    userLog('toast', peer_name + ' has enabled your audio');
+    playSound('on');
 }
 
 /**
@@ -6467,10 +6545,39 @@ function showAbout() {
 function leaveRoom() {
     playSound('eject');
     if (surveyActive) {
-        openURL(surveyURL);
+        leaveFeedback();
     } else {
         openURL('/newcall');
     }
+}
+
+/**
+ * Ask for feedback when room exit
+ */
+function leaveFeedback() {
+    Swal.fire({
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showDenyButton: true,
+        background: swalBackground,
+        imageUrl: imgFeedback,
+        title: 'Leave a feedback',
+        text: 'Do you want to rate your MiroTalk experience?',
+        confirmButtonText: `Yes`,
+        denyButtonText: `No`,
+        showClass: {
+            popup: 'animate__animated animate__fadeInDown',
+        },
+        hideClass: {
+            popup: 'animate__animated animate__fadeOutUp',
+        },
+    }).then((result) => {
+        if (result.isConfirmed) {
+            openURL(surveyURL);
+        } else {
+            openURL('/newcall');
+        }
+    });
 }
 
 /**
@@ -6687,6 +6794,7 @@ async function playSound(name) {
     let sound = '../sounds/' + name + '.mp3';
     let audioToPlay = new Audio(sound);
     try {
+        audioToPlay.volume = 0.5;
         await audioToPlay.play();
     } catch (err) {
         // console.error("Cannot play sound", err);
