@@ -4218,8 +4218,9 @@ function sendChatMessage() {
         return userLog('info', "Can't send message, no participants in the room");
     }
 
-    const msg = checkMsg(msgerInput.value);
-    // empity msg or
+    const msg = checkMsg(msgerInput.value.trim());
+
+    // empty msg or
     if (!msg) {
         isChatPasteTxt = false;
         return cleanMessageInput();
@@ -4545,7 +4546,7 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
     };
 
     function sendPrivateMessage() {
-        let pMsg = checkMsg(msgerPrivateMsgInput.value);
+        let pMsg = checkMsg(msgerPrivateMsgInput.value.trim());
         if (!pMsg) {
             msgerPrivateMsgInput.value = '';
             isChatPasteTxt = false;
@@ -4569,7 +4570,7 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
  */
 function checkMsg(text) {
     if (text.trim().length == 0) return;
-    if (isHtml(text)) return stripHtml(text);
+    if (isHtml(text)) return sanitizeHtml(text);
     if (isValidHttpURL(text)) {
         if (isImageURL(text)) return '<img src="' + text + '" alt="img" width="180" height="auto"/>';
         if (isVideoTypeSupported(text)) return getIframe(text);
@@ -4588,14 +4589,15 @@ function checkMsg(text) {
 }
 
 /**
- * Strip Html
+ * Sanitize Html
  * @param {string} html code
- * @returns only text from html
+ * @returns Html as string
  */
-function stripHtml(html) {
-    // return html.replace(/<[^>]+>/g, '');
-    let doc = new DOMParser().parseFromString(html, 'text/html');
-    return doc.body.textContent || '';
+function sanitizeHtml(str) {
+    const tagsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
+    const replaceTag = (tag) => tagsToReplace[tag] || tag;
+    const safe_tags_replace = (str) => str.replace(/[&<>]/g, replaceTag);
+    return safe_tags_replace(str);
 }
 
 /**
@@ -6417,7 +6419,7 @@ function isVideoTypeSupported(url) {
         url.endsWith('.mp3') ||
         url.endsWith('.webm') ||
         url.endsWith('.ogg') ||
-        url.includes('youtube')
+        url.includes('youtube.com')
     )
         return true;
     return false;
