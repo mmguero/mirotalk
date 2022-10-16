@@ -199,19 +199,6 @@ The API documentation uses [swagger](https://swagger.io/) at http://localhost:30
 
 </details>
 
-<details open>
-<summary>Hetzner</summary>
-
-<br/>
-
-[![Hetzner](public/sponsors/Hetzner.png)](https://www.hetzner.com)
-
-This application is running for `demonstration purposes` on [Hetzner](https://www.hetzner.com/), one of `the best` [cloud providers](https://www.hetzner.com/cloud) and [dedicated root servers](https://www.hetzner.com/dedicated-rootserver).
-
-If you need help to deploy `MiroTalk P2P` instance on `your dedicated cloud server`, or for other needs, don't hesitate to contact us at p2p.mirotalk@gmail.com
-
-</details>
-
 <details>
 
 <summary>Credits</summary>
@@ -252,3 +239,4 @@ If you need help to deploy `MiroTalk P2P` instance on `your dedicated cloud serv
 
 MiroTalk is free and can be modified and forked. But the conditions of the AGPLv3 (GNU Affero General Public License v3.0) need to be respected. In particular modifications need to be free as well and made available to the public. Get a quick overview of the license at [Choose an open source license](https://choosealicense.com/licenses/agpl-3.0/).
 
+</details>

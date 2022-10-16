@@ -221,6 +221,7 @@ let msgerClose;
 let msgerChat;
 let msgerEmojiBtn;
 let msgerMarkdownBtn;
+let msgerShareFileBtn;
 let msgerInput;
 let msgerCleanTextBtn;
 let msgerPasteBtn;
@@ -384,6 +385,7 @@ function getHtmlElementsById() {
     msgerChat = getId('msgerChat');
     msgerEmojiBtn = getId('msgerEmojiBtn');
     msgerMarkdownBtn = getId('msgerMarkdownBtn');
+    msgerShareFileBtn = getId('msgerShareFileBtn');
     msgerInput = getId('msgerInput');
     msgerCleanTextBtn = getId('msgerCleanTextBtn');
     msgerPasteBtn = getId('msgerPasteBtn');
@@ -513,6 +515,7 @@ function setButtonsToolTip() {
     setTippy(msgerClose, 'Close', 'right');
     setTippy(msgerEmojiBtn, 'Emoji', 'top');
     setTippy(msgerMarkdownBtn, 'Markdown', 'top');
+    setTippy(msgerShareFileBtn, 'Share file', 'top');
     setTippy(msgerCleanTextBtn, 'Clean', 'top');
     setTippy(msgerPasteBtn, 'Paste', 'top');
     setTippy(msgerSendBtn, 'Send', 'top');
@@ -2686,6 +2689,12 @@ function setChatRoomBtn() {
     msgerMarkdownBtn.addEventListener('click', (e) => {
         isChatMarkdownOn = !isChatMarkdownOn;
         setColor(msgerMarkdownBtn, isChatMarkdownOn ? 'lime' : 'white');
+    });
+
+    // share file from chat
+    msgerShareFileBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectFileToShare(myPeerId, true);
     });
 
     // open Video Url Player
