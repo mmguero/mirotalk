@@ -2,10 +2,11 @@
 
 ## Requirments
 
--   Recommended: [Hetzner](https://www.hetzner.com/cloud) (`CPX11` it's enough, OS: `Ubuntu 20.04`)
--   [Node.js](https://nodejs.org/en/) at least 12x, better `16.15.1 LTS`
--   Set own TURN server (recommended) or use third party STUN/TURN servers (configurable on `.env` file)
--   Your domain example: `your.domain.name` (Set a DNS A record for that domain that point to Your Server public IPv4)
+-   Recommended: [Hetzner](https://www.hetzner.com/cloud) (`CPX11` it's enough, OS: `Ubuntu 20.04`) use [this link](https://hetzner.cloud/?ref=XdRifCzCK3bn) to receive `€⁠20 in cloud credits`.
+-   [Node.js](https://nodejs.org/en/) at least 12x, better `16.15.1 LTS` & npm
+-   Setup your own TURN server like [coturn](https://github.com/coturn/coturn) (recommended) or use third party STUN/TURN servers (configurable on `.env` file)
+-   Your domain name, example: `your.domain.name`
+    -   Set a DNS A record for that domain that point to Your Server public IPv4
 
 ---
 
@@ -45,11 +46,13 @@ Check if is correctly installed: https://your.domain.name:3000
 
 ![pm2](../public/images/pm2.png)
 
-Using [PM2](https://pm2.keymetrics.io) to run it as deamon
+Using [PM2](https://pm2.keymetrics.io) to run it as daemon
 
 ```bash
 $ npm install -g pm2
 $ pm2 start app/src/server.js
+$ pm2 save
+$ pm2 startup
 ```
 
 ---
@@ -172,6 +175,7 @@ Check Your MiroTalk P2P instance: https://your.domain.name
 In order to have always Your MiroTalk P2P updated to latest, we going to create a script
 
 ```bash
+cd
 # Create a file p2pUpdate.sh
 $ vim p2pUpdate.sh
 ```
