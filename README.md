@@ -161,7 +161,7 @@ $ docker-compose down
 
 <br/>
 
-You can start videoconferencing directly from your Local PC, and be reachable from any device outside your network, simply by following [these documentation](docs/ngrok.md), or expose it directly on [HTTPS](app/ssl/README.md)
+You can start videoconferencing directly from your Local PC, and be reachable from any device outside your network, simply by reading [these documentation](docs/ngrok.md), or expose it directly on [HTTPS](app/ssl/README.md)
 
 </details>
 
@@ -196,6 +196,15 @@ $ curl -X POST "https://mirotalk.herokuapp.com/api/v1/meeting" -H "authorization
 ## API Documentation
 
 The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [live](https://p2p.mirotalk.com/api/v1/docs) & [heroku](https://mirotalk.herokuapp.com/api/v1/docs).
+
+</details>
+
+<details>
+<summary>Self Hosting</summary>
+
+<br/>
+
+To `Self-Host MiroTalk P2P` on `Your` dedicated `Server`, read [this documentation](docs/self-hosting.md).
 
 </details>
 
