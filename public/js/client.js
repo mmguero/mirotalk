@@ -11,7 +11,8 @@
  *
  * @link    GitHub: https://github.com/mmguero/mirotalk
  * @license For open source use: AGPLv3
- * @license For commercial or closed source, contact us at info.mirotalk@gmail.com
+ * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or buy directly via CodeCanyon
+ * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
  * @version 1.0.1
  *
@@ -42,6 +43,8 @@ const videoAudioShare = '../images/va-share.png';
 const aboutImg = '../images/mirotalk-logo.png';
 const imgFeedback = '../images/feedback.png';
 const forbiddenImg = '../images/forbidden.png';
+const avatarImg = '../images/mirotalk-logo.png';
+
 // nice free icon: https://www.iconfinder.com
 
 const fileSharingInput = '*'; // allow all file extensions
@@ -121,6 +124,8 @@ const forceCamMaxResolutionAndFps = false; // This force the webCam to max resol
 const userLimitsActive = false; // Limit users per room
 
 const usersCountLimit = 2; // Limit 2 users per room if userLimitsActive true
+
+const useAvatarApi = true; // if false the cam-Off avatar = avatarImg
 
 let notifyBySound = true; // turn on - off sound notifications
 
@@ -304,6 +309,7 @@ let isStreamRecording = false;
 let whiteboard;
 let whiteboardHeader;
 let wbDrawingColorEl;
+let whiteboardGhostButton;
 let wbBackgroundColorEl;
 let whiteboardPencilBtn;
 let whiteboardObjectBtn;
@@ -325,6 +331,7 @@ let wbIsDrawing = false;
 let wbIsOpen = false;
 let wbIsRedoing = false;
 let wbIsEraser = false;
+let wbIsBgTransparent = false;
 let wbPop = [];
 // room actions btns
 let muteEveryoneBtn;
@@ -458,6 +465,7 @@ function getHtmlElementsById() {
     whiteboard = getId('whiteboard');
     whiteboardHeader = getId('whiteboardHeader');
     wbDrawingColorEl = getId('wbDrawingColorEl');
+    whiteboardGhostButton = getId('whiteboardGhostButton');
     wbBackgroundColorEl = getId('wbBackgroundColorEl');
     whiteboardPencilBtn = getId('whiteboardPencilBtn');
     whiteboardObjectBtn = getId('whiteboardObjectBtn');
@@ -556,6 +564,7 @@ function setButtonsToolTip() {
     setTippy(tabLanguagesBtn, 'Languages', 'top');
     // whiteboard btns
     setTippy(wbDrawingColorEl, 'Drawing color', 'bottom');
+    setTippy(whiteboardGhostButton, 'Toggle transparent background', 'bottom');
     setTippy(wbBackgroundColorEl, 'Background color', 'bottom');
     setTippy(whiteboardPencilBtn, 'Drawing mode', 'bottom');
     setTippy(whiteboardObjectBtn, 'Object mode', 'bottom');
@@ -2240,12 +2249,16 @@ function adaptAspectRatio() {
  */
 function setPeerAvatarImgName(videoAvatarImageId, peerName) {
     let videoAvatarImageElement = getId(videoAvatarImageId);
-    // default img size 64 max 512
-    let avatarImgSize = isMobileDevice ? 128 : 256;
-    videoAvatarImageElement.setAttribute(
-        'src',
-        avatarApiUrl + '?name=' + peerName + '&size=' + avatarImgSize + '&background=random&rounded=true',
-    );
+    if (useAvatarApi) {
+        // default img size 64 max 512
+        let avatarImgSize = isMobileDevice ? 128 : 256;
+        videoAvatarImageElement.setAttribute(
+            'src',
+            avatarApiUrl + '?name=' + peerName + '&size=' + avatarImgSize + '&background=random&rounded=true',
+        );
+    } else {
+        videoAvatarImageElement.setAttribute('src', avatarImg);
+    }
 }
 
 /**
@@ -2470,7 +2483,17 @@ function toggleVideoPin(position) {
     const videoMediaContainer = getId('videoMediaContainer');
     const videoPinMediaContainer = getId('videoPinMediaContainer');
     switch (position) {
+        case 'top':
+            videoPinMediaContainer.style.top = '25%';
+            videoPinMediaContainer.style.width = '100%';
+            videoPinMediaContainer.style.height = '70%';
+            videoMediaContainer.style.top = 0;
+            videoMediaContainer.style.width = '100%';
+            videoMediaContainer.style.height = '25%';
+            videoMediaContainer.style.right = 0;
+            break;
         case 'vertical':
+            videoPinMediaContainer.style.top = 0;
             videoPinMediaContainer.style.width = '75%';
             videoPinMediaContainer.style.height = '100%';
             videoMediaContainer.style.top = 0;
@@ -2479,6 +2502,7 @@ function toggleVideoPin(position) {
             videoMediaContainer.style.right = 0;
             break;
         case 'horizontal':
+            videoPinMediaContainer.style.top = 0;
             videoPinMediaContainer.style.width = '100%';
             videoPinMediaContainer.style.height = '75%';
             videoMediaContainer.style.top = '75%';
@@ -3009,13 +3033,12 @@ function setMyWhiteboardBtn() {
         whiteboardIsDrawingMode(true);
     });
     wbBackgroundColorEl.addEventListener('change', (e) => {
-        let config = {
-            room_id: roomId,
-            peer_name: myPeerName,
-            action: 'bgcolor',
-            color: wbBackgroundColorEl.value,
-        };
-        whiteboardAction(config);
+        setWhiteboardBgColor(wbBackgroundColorEl.value);
+    });
+    whiteboardGhostButton.addEventListener('click', (e) => {
+        wbIsBgTransparent = !wbIsBgTransparent;
+        setWhiteboardBgColor(wbIsBgTransparent ? 'rgba(0, 0, 0, 0.100)' : wbBackgroundColorEl.value);
+        //wbIsBgTransparent ? wbCanvasBackgroundColor('rgba(0, 0, 0, 0.100)'): setTheme(mirotalkTheme);
     });
 }
 
@@ -4167,9 +4190,12 @@ function downloadRecordedStream() {
         userLog(
             'success-html',
             `<div style="text-align: left;">
-                🔴 &nbsp; Recording Info <br/>
-                FILE: ${recFileName} <br/>
-                SIZE: ${blobFileSize} <br/>
+                🔴 &nbsp; Recording Info: <br/>
+                <ul>
+                    <li>File: ${recFileName}</li>
+                    <li>Size: ${blobFileSize}</li>
+                </ul>
+                <br/>
                 Please wait to be processed, then will be downloaded to your ${currentDevice} device.
             </div>`,
         );
@@ -5668,6 +5694,20 @@ function setWhiteboardSize(w, h) {
 }
 
 /**
+ * Set whiteboard background color
+ * @param {string} color whiteboard bg
+ */
+function setWhiteboardBgColor(color) {
+    let config = {
+        room_id: roomId,
+        peer_name: myPeerName,
+        action: 'bgcolor',
+        color: color,
+    };
+    whiteboardAction(config);
+}
+
+/**
  * Whiteboard: drawing mode
  * @param {boolean} status of drawing mode
  */
@@ -5716,6 +5756,12 @@ function whiteboardAddObj(type) {
                 input: 'text',
                 showCancelButton: true,
                 confirmButtonText: 'OK',
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown',
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp',
+                },
             }).then((result) => {
                 if (result.isConfirmed) {
                     let wbCanvasImgURL = result.value;
@@ -5743,6 +5789,12 @@ function whiteboardAddObj(type) {
                 showDenyButton: true,
                 confirmButtonText: `OK`,
                 denyButtonText: `Cancel`,
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown',
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp',
+                },
             }).then((result) => {
                 if (result.isConfirmed) {
                     let wbCanvasImg = result.value;
@@ -5771,6 +5823,12 @@ function whiteboardAddObj(type) {
                 input: 'text',
                 showCancelButton: true,
                 confirmButtonText: 'OK',
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown',
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp',
+                },
             }).then((result) => {
                 if (result.isConfirmed) {
                     let wbCanvasText = result.value;
