@@ -542,6 +542,10 @@ button:hover {
     transition: all 0.3s ease-in-out;
 }
 
+.msger-input-buttons input {
+    cursor: pointer;
+}
+
 #msgerSendBtn {
     float: right;
 }
@@ -824,6 +828,10 @@ em-emoji-picker {
     background-color: black !important;
     color: white !important;
     border-radius: 6px !important;
+}
+
+.swal2-timer-progress-bar-container {
+    background: #376df9;
 }
 
 /*--------------------------------------------------------------
