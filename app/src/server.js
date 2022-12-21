@@ -107,8 +107,8 @@ const turnUsername = process.env.TURN_USERNAME;
 const turnCredential = process.env.TURN_PASSWORD;
 
 // Survey URL
-const surveyEnabled = process.env.SURVEY_ENABLED == 'true' ? true : false || true;
-const surveyURL = process.env.SURVEY_URL || 'https://www.questionpro.com/t/AUs7VZq00L';
+const surveyEnabled = process.env.SURVEY_ENABLED == 'true' ? true : false || false;
+const surveyURL = process.env.SURVEY_URL || 'https://example.org';
 
 // Sentry config
 const Sentry = require('@sentry/node');
