@@ -20,12 +20,10 @@
 
 'use strict'; // https://www.w3schools.com/js/js_strict.asp
 
-const isHttps = false; // must be the same on server.js
 const signalingServer = getSignalingServer();
 const roomId = getRoomId();
 const peerLoockupUrl = 'https://extreme-ip-lookup.com/json/?key=demo2'; // get your API Key at https://extreme-ip-lookup.com
 const avatarApiUrl = 'https://eu.ui-avatars.com/api';
-const surveyURL = 'https://www.questionpro.com/t/AUs7VZq00L';
 const welcomeImg = '../images/image-placeholder.png';
 const shareUrlImg = '../images/image-placeholder.png';
 const leaveRoomImg = '../images/leave-room.png';
@@ -151,8 +149,6 @@ const buttons = {
 
 const isRulesActive = true; // Presenter can do anything, guest is slightly moderate, if false no Rules for the room.
 
-const surveyActive = true; // when leaving the room give a feedback, if false will be redirected to newcall page
-
 const forceCamMaxResolutionAndFps = false; // This force the webCam to max resolution, up to 4k and 60fps (very high bandwidth are required) if false, you can set it from settings
 
 const userLimitsActive = false; // Limit users per room
@@ -174,6 +170,10 @@ let needToEnableMyAudio = false; // On screen sharing end, check if need to enab
 let initEnumerateDevicesFailed = false; // Check if user webcam and audio init is failed
 
 let isVideoPrivacyActive = false; // Video circle for privacy
+
+let surveyActive = true; // when leaving the room give a feedback, if false will be redirected to newcall page
+
+let surveyURL = 'https://www.questionpro.com/t/AUs7VZq00L';
 
 let myPeerId; // socket.id
 let peerInfo = {}; // Some peer info
@@ -687,10 +687,8 @@ async function getPeerGeoLocation() {
  * @returns {string} Signaling server URL
  */
 function getSignalingServer() {
-    if (isHttps) {
-        return 'https://' + location.hostname;
-    }
-    return 'http' + (location.hostname == 'localhost' ? '' : 's') + '://' + location.hostname;
+    console.log('00 Location', window.location);
+    return window.location.protocol + '//' + window.location.hostname;
 }
 
 /**
@@ -703,7 +701,7 @@ function getRoomId() {
     let queryRoomId = qs.get('room');
 
     // skip /join/
-    let roomId = queryRoomId ? queryRoomId : location.pathname.substring(6);
+    let roomId = queryRoomId ? queryRoomId : window.location.pathname.substring(6);
 
     // if not specified room id, create one random
     if (roomId == '') {
@@ -885,6 +883,11 @@ async function handleConnect() {
  */
 function handleServerInfo(config) {
     let peers_count = config.peers_count;
+
+    // Get survey settings from server
+    surveyActive = config.survey.active;
+    surveyURL = config.survey.url;
+
     console.log('13. Peers count', peers_count);
 
     // Limit room to n peers

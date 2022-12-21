@@ -53,7 +53,7 @@ const app = express();
 const Logs = require('./logs');
 const log = new Logs('server');
 
-const isHttps = false; // must be the same on client.js
+const isHttps = process.env.HTTPS == 'true' ? true : false || false;
 const port = process.env.PORT || 3000; // must be the same to client.js signalingServerPort
 
 let io, server, host;
@@ -105,6 +105,10 @@ const turnEnabled = process.env.TURN_ENABLED || false;
 const turnUrls = process.env.TURN_URLS;
 const turnUsername = process.env.TURN_USERNAME;
 const turnCredential = process.env.TURN_PASSWORD;
+
+// Survey URL
+const surveyEnabled = process.env.SURVEY_ENABLED == 'true' ? true : false || true;
+const surveyURL = process.env.SURVEY_URL || 'https://www.questionpro.com/t/AUs7VZq00L';
 
 // Sentry config
 const Sentry = require('@sentry/node');
@@ -393,6 +397,8 @@ async function ngrokStart() {
             api_docs: api_docs,
             api_key_secret: api_key_secret,
             sentry_enabled: sentryEnabled,
+            survey_enabled: surveyEnabled,
+            survey_url: surveyURL,
             node_version: process.versions.node,
         });
     } catch (err) {
@@ -431,6 +437,8 @@ server.listen(port, null, () => {
             api_docs: api_docs,
             api_key_secret: api_key_secret,
             sentry_enabled: sentryEnabled,
+            survey_enabled: surveyEnabled,
+            survey_url: surveyURL,
             node_version: process.versions.node,
         });
     }
@@ -529,7 +537,13 @@ io.sockets.on('connect', async (socket) => {
         socket.channels[channel] = channel;
 
         // Send some server info to joined peer
-        await sendToPeer(socket.id, sockets, 'serverInfo', { peers_count: Object.keys(peers[channel]).length });
+        await sendToPeer(socket.id, sockets, 'serverInfo', {
+            peers_count: Object.keys(peers[channel]).length,
+            survey: {
+                active: surveyEnabled,
+                url: surveyURL,
+            },
+        });
     });
 
     /**
