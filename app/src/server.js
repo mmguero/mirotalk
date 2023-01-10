@@ -94,38 +94,38 @@ const api_key_secret = process.env.API_KEY_SECRET || 'mirotalk_default_secret';
 
 // Ngrok config
 const ngrok = require('ngrok');
-const ngrokEnabled = process.env.NGROK_ENABLED || false;
+const ngrokEnabled = process.env.NGROK_ENABLED == 'true' ? true : false;
 const ngrokAuthToken = process.env.NGROK_AUTH_TOKEN;
 
 // Stun config
 const stun = process.env.STUN || 'stun:stun.l.google.com:19302';
 
 // Turn config
-const turnEnabled = process.env.TURN_ENABLED || false;
+const turnEnabled = process.env.TURN_ENABLED == 'true' ? true : false;
 const turnUrls = process.env.TURN_URLS;
 const turnUsername = process.env.TURN_USERNAME;
 const turnCredential = process.env.TURN_PASSWORD;
 
 // Survey URL
-const surveyEnabled = process.env.SURVEY_ENABLED == 'true' ? true : false || false;
+const surveyEnabled = process.env.SURVEY_ENABLED == 'true' ? true : false;
 const surveyURL = process.env.SURVEY_URL || 'https://example.org';
 
 // Sentry config
 const Sentry = require('@sentry/node');
 const { CaptureConsole } = require('@sentry/integrations');
-const sentryEnabled = process.env.SENTRY_ENABLED || false;
+const sentryEnabled = process.env.SENTRY_ENABLED == 'true' ? true : false;
 const sentryDSN = process.env.SENTRY_DSN;
 const sentryTracesSampleRate = process.env.SENTRY_TRACES_SAMPLE_RATE;
 
 // Slack API
 const CryptoJS = require('crypto-js');
 const qS = require('qs');
-const slackEnabled = process.env.SENTRY_ENABLED || false;
+const slackEnabled = process.env.SLACK_ENABLED == 'true' ? true : false;
 const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
 const bodyParser = require('body-parser');
 
 // Setup sentry client
-if (sentryEnabled == 'true') {
+if (sentryEnabled) {
     Sentry.init({
         dsn: sentryDSN,
         integrations: [
@@ -292,7 +292,7 @@ app.post([apiBasePath + '/meeting'], (req, res) => {
 
 //Slack request meeting room endpoint
 app.post('/slack', (req, res) => {
-    if (slackEnabled != 'true') return res.end('`Under maintenance` - Please check back soon.');
+    if (!slackEnabled) return res.end('`Under maintenance` - Please check back soon.');
 
     log.debug('Slack', req.headers);
 
@@ -352,7 +352,7 @@ const iceServers = [];
 // Stun is always needed
 iceServers.push({ urls: stun });
 
-if (turnEnabled == 'true') {
+if (turnEnabled) {
     iceServers.push({
         urls: turnUrls,
         username: turnUsername,
@@ -369,7 +369,8 @@ if (turnEnabled == 'true') {
 }
 
 // Test Stun and Turn connection with query params
-const testStunTurn = host + '/test?iceServers=' + JSON.stringify(iceServers);
+// const testStunTurn = host + '/test?iceServers=' + JSON.stringify(iceServers);
+const testStunTurn = host + '/test';
 
 /**
  * Expose server to external with https tunnel using ngrok
@@ -396,6 +397,8 @@ async function ngrokStart() {
             test_ice_servers: testStunTurn,
             api_docs: api_docs,
             api_key_secret: api_key_secret,
+            own_turn_enabled: turnEnabled,
+            slack_enabled: slackEnabled,
             sentry_enabled: sentryEnabled,
             survey_enabled: surveyEnabled,
             survey_url: surveyURL,
@@ -426,7 +429,7 @@ server.listen(port, null, () => {
     );
 
     // https tunnel
-    if (ngrokEnabled == 'true' && isHttps === false) {
+    if (ngrokEnabled && isHttps === false) {
         ngrokStart();
     } else {
         // server settings
@@ -436,6 +439,8 @@ server.listen(port, null, () => {
             test_ice_servers: testStunTurn,
             api_docs: api_docs,
             api_key_secret: api_key_secret,
+            own_turn_enabled: turnEnabled,
+            slack_enabled: slackEnabled,
             sentry_enabled: sentryEnabled,
             survey_enabled: surveyEnabled,
             survey_url: surveyURL,
