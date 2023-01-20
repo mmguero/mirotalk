@@ -91,6 +91,7 @@ body {
     margin: auto;
     overflow: hidden;
     background: url('../images/bg.svg');
+    /* background: var(--body-bg); */
 }
 
 /*--------------------------------------------------------------
@@ -122,6 +123,39 @@ body {
 #loadingDiv pre {
     padding: 5px;
     font-family: 'Comfortaa';
+}
+
+/*--------------------------------------------------------------
+# Init User
+--------------------------------------------------------------*/
+
+.init-user {
+    display: block;
+    padding: 5px;
+}
+
+.init-user select {
+    display: block;
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    background: #2c2c2c;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.init-user button {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    padding: 4px;
+    width: 40px;
+    background: white;
+    font-size: 1.5rem;
+    border-radius: 5px;
+    color: black;
+    border: none;
+    transition: all 0.3s ease-in-out;
 }
 
 /*--------------------------------------------------------------
@@ -172,18 +206,6 @@ body {
 
 #buttonsBar button:focus {
     outline: none;
-}
-
-#initAudioBtn,
-#initVideoBtn {
-    border: none;
-    border-radius: 5px;
-    width: 40px;
-    background: white;
-    color: black;
-    font-size: 1.5rem;
-    padding: 4px;
-    transition: all 0.3s ease-in-out;
 }
 
 #buttonsBar #leaveRoomBtn {
