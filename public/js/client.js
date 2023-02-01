@@ -11,7 +11,7 @@
  *
  * @link    GitHub: https://github.com/mmguero/mirotalk
  * @license For open source use: AGPLv3
- * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or buy directly via CodeCanyon
+ * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
  * @version 1.0.1
@@ -895,7 +895,6 @@ async function handleConnect() {
     } else {
         await initEnumerateDevices();
         await setupLocalMedia();
-        await whoAreYou();
     }
 }
 
@@ -1027,6 +1026,9 @@ function handleButtonsRule() {
 async function whoAreYou() {
     console.log('11. Who are you?');
 
+    getId('loadingDiv').style.display = 'none';
+    document.body.style.background = 'var(--body-bg)';
+
     if (myPeerName) {
         checkPeerAudioVideo();
         whoAreYouJoin();
@@ -1036,15 +1038,7 @@ async function whoAreYou() {
 
     playSound('newMessage');
 
-    loadLocalStorage();
-
-    // start cam init stream
-
-    if (useVideo && initVideoSelect) {
-        changeCamera(initVideoSelect.value);
-        myVideoChange = true;
-        refreshLocalMedia();
-    }
+    await loadLocalStorage();
 
     const initUser = getId('initUser');
     initUser.classList.toggle('hidden');
@@ -1052,10 +1046,11 @@ async function whoAreYou() {
     Swal.fire({
         allowOutsideClick: false,
         allowEscapeKey: false,
-        background: swalBackground,
+        background: 'radial-gradient(#393939, #000000)', //swalBackground,
         title: 'MiroTalk P2P',
         position: 'center',
         input: 'text',
+        inputPlaceholder: 'Enter your name',
         inputValue: window.localStorage.peer_name ? window.localStorage.peer_name : '',
         html: initUser, // inject html
         confirmButtonText: `Join meeting`,
@@ -1080,9 +1075,9 @@ async function whoAreYou() {
     initVideoSelect.onchange = () => {
         videoSelect.selectedIndex = initVideoSelect.selectedIndex;
         lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, videoSelect.selectedIndex, videoSelect.value);
-        changeCamera(initVideoSelect.value);
         myVideoChange = true;
         refreshLocalMedia();
+        changeCamera(initVideoSelect.value);
     };
     initMicrophoneSelect.onchange = () => {
         audioInputSelect.selectedIndex = initMicrophoneSelect.selectedIndex;
@@ -1095,8 +1090,6 @@ async function whoAreYou() {
         lS.setLocalStorageDevices(lS.MEDIA_TYPE.speaker, audioOutputSelect.selectedIndex, audioOutputSelect.value);
         changeAudioDestination();
     };
-
-    if (isMobileDevice) return;
 
     // init video -audio buttons
 
@@ -1111,6 +1104,7 @@ async function whoAreYou() {
         initAudioBtn.className = className.audioOff;
         setMyAudioStatus(useAudio);
     }
+
     setTippy(initAudioBtn, 'Stop the audio', 'top');
     setTippy(initVideoBtn, 'Stop the video', 'top');
 }
@@ -1118,9 +1112,9 @@ async function whoAreYou() {
 /**
  * Load settings from Local Storage
  */
-function loadLocalStorage() {
+async function loadLocalStorage() {
     const localStorageDevices = lS.getLocalStorageDevices();
-    console.log('04 ----> Get Local Storage Devices before', localStorageDevices);
+    console.log('12. Get Local Storage Devices before', localStorageDevices);
     if (localStorageDevices) {
         //
         initMicrophoneSelect.selectedIndex = localStorageDevices.audio.index;
@@ -1132,7 +1126,7 @@ function loadLocalStorage() {
         videoSelect.selectedIndex = initVideoSelect.selectedIndex;
         //
         if (lS.DEVICES_COUNT.audio != localStorageDevices.audio.count) {
-            console.log('04.1 ----> Audio devices seems changed, use default index 0');
+            console.log('12.1 Audio devices seems changed, use default index 0');
             initMicrophoneSelect.selectedIndex = 0;
             audioInputSelect.selectedIndex = 0;
             lS.setLocalStorageDevices(
@@ -1142,7 +1136,7 @@ function loadLocalStorage() {
             );
         }
         if (lS.DEVICES_COUNT.speaker != localStorageDevices.speaker.count) {
-            console.log('04.2 ----> Speaker devices seems changed, use default index 0');
+            console.log('12.2 Speaker devices seems changed, use default index 0');
             initSpeakerSelect.selectedIndex = 0;
             audioOutputSelect.selectedIndex = 0;
             lS.setLocalStorageDevices(
@@ -1152,15 +1146,20 @@ function loadLocalStorage() {
             );
         }
         if (lS.DEVICES_COUNT.video != localStorageDevices.video.count) {
-            console.log('04.3 ----> Video devices seems changed, use default index 0');
+            console.log('12.3 Video devices seems changed, use default index 0');
             initVideoSelect.selectedIndex = 0;
             videoSelect.selectedIndex = 0;
             lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, initVideoSelect.selectedIndex, initVideoSelect.value);
         }
         //
-        console.log('04.4 ----> Get Local Storage Devices after', lS.getLocalStorageDevices());
+        console.log('12.4 Get Local Storage Devices after', lS.getLocalStorageDevices());
     }
-    if (initVideoSelect.value) changeCamera(initVideoSelect.value);
+    // Start init cam
+    if (useVideo && initVideoSelect.value) {
+        myVideoChange = true;
+        refreshLocalMedia();
+        changeCamera(initVideoSelect.value);
+    }
 }
 
 /**
@@ -1209,6 +1208,7 @@ function checkPeerAudioVideo() {
  * Room and Peer name are ok Join Channel
  */
 async function whoAreYouJoin() {
+    if (isMobileDevice && myVideoStatus && myAudioStatus) refreshLocalMedia();
     myVideoWrap.style.display = 'inline';
     myVideoParagraph.innerHTML = myPeerName + ' (me)';
     setPeerAvatarImgName('myVideoAvatarImage', myPeerName, useAvatarApi);
@@ -1876,7 +1876,7 @@ async function setupLocalMedia() {
         if (stream) {
             await loadLocalMedia(stream);
             await startPitchDetection(stream);
-            getId('loadingDiv').style.display = 'none';
+            await whoAreYou();
         }
     } catch (err) {
         console.error('[Error] - Access denied for audio - video device', err);
@@ -3575,7 +3575,12 @@ function getVideoConstraints(videoQuality) {
                     frameRate: { ideal: 60 },
                 }; // video cam constraints default
             }
-            return { frameRate: frameRate };
+            // This will make the browser use hdVideo and 30fps.
+            return {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                frameRate: { ideal: 30 },
+            }; // on default as hdVideo
         case 'qvgaVideo':
             return {
                 width: { exact: 320 },
@@ -3873,20 +3878,19 @@ function shareRoomMeetingURL(checkScreen = false) {
     Swal.fire({
         background: swalBackground,
         position: 'center',
-        title: 'Share your meeting room',
+        title: 'Share the room',
         html: `
-        <br/>
         <div id="qrRoomContainer">
             <canvas id="qrRoom"></canvas>
         </div>
-        <br/><br/>
+        <br/>
         <p style="color:rgb(8, 189, 89);">Join from your mobile device</p>
-        <p style="color:white;">No need for apps, simply capture the QR code with your mobile camera</p>
-        <p style="color:white;">Or</p>
-        <p style="color:white;">Invite someone else to join by sending them the following URL</p>
+        <p style="background:transparent; color:white;">No need for apps, simply capture the QR code with your mobile camera Or Invite someone else to join by sending them the following URL</p>
         <p style="color:rgb(8, 189, 89);">${myRoomUrl}</p>`,
         showDenyButton: true,
         showCancelButton: true,
+        cancelButtonColor: 'red',
+        denyButtonColor: 'green',
         confirmButtonText: `Copy URL`,
         denyButtonText: `Email invite`,
         cancelButtonText: `Close`,
@@ -4263,7 +4267,7 @@ async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
     startPitchDetection(localMediaStream);
 
     // attachMediaStream is a part of the adapter.js library
-    attachMediaStream(myVideo, localMediaStream); // newstream
+    attachMediaStream(myVideo, localMediaStream); // newStream
 
     // on toggleScreenSharing video stop
     if (useVideo || isScreenStreaming) {
