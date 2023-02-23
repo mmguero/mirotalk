@@ -8,6 +8,8 @@ http://patorjk.com/software/taag/#p=display&f=ANSI%20Regular&t=Server
 ███████ ███████ ██   ██   ████   ███████ ██   ██                                           
 
 dependencies: {
+    @sentry/node            : https://www.npmjs.com/package/@sentry/node
+    @sentry/integrations    : https://www.npmjs.com/package/@sentry/integrations
     body-parser             : https://www.npmjs.com/package/body-parser
     compression             : https://www.npmjs.com/package/compression
     colors                  : https://www.npmjs.com/package/colors
@@ -17,11 +19,10 @@ dependencies: {
     express                 : https://www.npmjs.com/package/express
     ngrok                   : https://www.npmjs.com/package/ngrok
     qs                      : https://www.npmjs.com/package/qs
-    @sentry/node            : https://www.npmjs.com/package/@sentry/node
-    @sentry/integrations    : https://www.npmjs.com/package/@sentry/integrations
     socket.io               : https://www.npmjs.com/package/socket.io
     swagger                 : https://www.npmjs.com/package/swagger-ui-express
     uuid                    : https://www.npmjs.com/package/uuid
+    xss                     : https://www.npmjs.com/package/xss
     yamljs                  : https://www.npmjs.com/package/yamljs
 }
 */
@@ -34,7 +35,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.0.1
+ * @version 1.0.2
  *
  */
 
@@ -49,6 +50,7 @@ const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const checkXSS = require('./xss.js');
 const app = express();
 
 const Logs = require('./logs');
@@ -251,9 +253,15 @@ app.get('/join/', (req, res) => {
     res.redirect('/');
 });
 
-// Join Room *
-app.get('/join/*', (req, res) => {
+// Join Room by id
+app.get('/join/:roomId', function (req, res) {
+    // log.debug('Join to room', { roomId: req.params.roomId });
     res.sendFile(views.client);
+});
+
+// Not specified correctly the room id
+app.get('/join/*', function (req, res) {
+    res.redirect('/');
 });
 
 /**
@@ -495,7 +503,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * On peer join
      */
-    socket.on('join', async (config) => {
+    socket.on('join', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('Join room', config);
         log.debug('[' + socket.id + '] join ', config);
 
@@ -592,7 +602,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Handle Room action
      */
-    socket.on('roomAction', async (config) => {
+    socket.on('roomAction', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         //log.debug('[' + socket.id + '] Room action:', config);
         let room_is_locked = false;
         let room_id = config.room_id;
@@ -637,7 +649,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Relay NAME to peers
      */
-    socket.on('peerName', async (config) => {
+    socket.on('peerName', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('Peer name', config);
         let room_id = config.room_id;
         let peer_name_old = config.peer_name_old;
@@ -667,7 +681,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Relay Audio Video Hand ... Status to peers
      */
-    socket.on('peerStatus', async (config) => {
+    socket.on('peerStatus', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('Peer status', config);
         let room_id = config.room_id;
         let peer_name = config.peer_name;
@@ -720,7 +736,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Relay actions to peers or specific peer in the same room
      */
-    socket.on('peerAction', async (config) => {
+    socket.on('peerAction', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('Peer action', config);
         let room_id = config.room_id;
         let peer_id = config.peer_id;
@@ -758,7 +776,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Relay Kick out peer from room
      */
-    socket.on('kickOut', async (config) => {
+    socket.on('kickOut', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         let room_id = config.room_id;
         let peer_id = config.peer_id;
         let peer_name = config.peer_name;
@@ -773,7 +793,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Relay File info
      */
-    socket.on('fileInfo', async (config) => {
+    socket.on('fileInfo', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('File info', config);
         let room_id = config.room_id;
         let peer_name = config.peer_name;
@@ -806,7 +828,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Abort file sharing
      */
-    socket.on('fileAbort', async (config) => {
+    socket.on('fileAbort', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         let room_id = config.room_id;
         let peer_name = config.peer_name;
 
@@ -817,7 +841,9 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Relay video player action
      */
-    socket.on('videoPlayer', async (config) => {
+    socket.on('videoPlayer', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('Video player', config);
         let room_id = config.room_id;
         let peer_name = config.peer_name;
@@ -854,13 +880,17 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Whiteboard actions for all user in the same room
      */
-    socket.on('wbCanvasToJson', async (config) => {
+    socket.on('wbCanvasToJson', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         // log.debug('Whiteboard send canvas', config);
         let room_id = config.room_id;
         await sendToRoom(room_id, socket.id, 'wbCanvasToJson', config);
     });
 
-    socket.on('whiteboardAction', async (config) => {
+    socket.on('whiteboardAction', async (cfg) => {
+        // Prevent XSS injection
+        const config = checkXSS(cfg);
         log.debug('Whiteboard', config);
         let room_id = config.room_id;
         await sendToRoom(room_id, socket.id, 'whiteboardAction', config);

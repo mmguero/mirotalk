@@ -210,7 +210,7 @@ To `Self-Host MiroTalk P2P` on `Your` dedicated `Server`, read [this documentati
 </details>
 
 <details>
-
+    
 <summary>Credits</summary>
 
 <br/>
