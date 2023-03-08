@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.0.2
+ * @version 1.0.3
  *
  */
 
@@ -264,6 +264,7 @@ let countTime; // conference count time
 // init audio-video
 let initAudioBtn;
 let initVideoBtn;
+let initScreenShareBtn;
 // init Devices select
 let initVideo;
 let initVideoSelect;
@@ -435,6 +436,8 @@ let lS = new LocalStorage();
  */
 function getHtmlElementsById() {
     countTime = getId('countTime');
+    // init buttons
+    initScreenShareBtn = getId('initScreenShareBtn');
     // Init devices select
     initVideo = getId('initVideo');
     initVideoSelect = getId('initVideoSelect');
@@ -581,6 +584,8 @@ function getHtmlElementsById() {
 function setButtonsToolTip() {
     // not need for mobile
     if (isMobileDevice) return;
+    // init buttons
+    setTippy(initScreenShareBtn, 'Toggle screen sharing', 'top');
     // main buttons
     setTippy(shareRoomBtn, 'Invite others to join', 'right-start');
     setTippy(audioBtn, 'Stop the audio', 'right-start');
@@ -2967,10 +2972,14 @@ function setScreenShareBtn() {
         buttons.main.showScreenBtn
     ) {
         isScreenSharingSupported = true;
+        initScreenShareBtn.addEventListener('click', async (e) => {
+            await toggleScreenSharing();
+        });
         screenShareBtn.addEventListener('click', async (e) => {
             await toggleScreenSharing();
         });
     } else {
+        initScreenShareBtn.style.display = 'none';
         screenShareBtn.style.display = 'none';
         elemDisplay(getId('screenFpsDiv'), false);
     }
@@ -4105,6 +4114,16 @@ async function toggleScreenSharing() {
             await stopLocalVideoTrack();
             await refreshMyLocalStream(screenMediaPromise);
             await refreshMyStreamToPeers(screenMediaPromise);
+
+            if (initStream) {
+                stopTracks(initStream);
+                initStream = screenMediaPromise;
+                const newStream = new MediaStream([initStream.getVideoTracks()[0]]);
+                initVideo.style.display = 'block';
+                initVideo.classList.toggle('mirror');
+                initVideo.srcObject = newStream;
+            }
+
             myVideo.classList.toggle('mirror');
             setScreenSharingStatus(isScreenStreaming);
             if (myVideoAvatarImage && !useVideo)
@@ -4124,8 +4143,12 @@ async function toggleScreenSharing() {
  * @param {boolean} status of screen sharing
  */
 function setScreenSharingStatus(status) {
+    initScreenShareBtn.className = status ? className.screenOff : className.screenOn;
     screenShareBtn.className = status ? className.screenOff : className.screenOn;
+    setTippy(initScreenShareBtn, status ? 'Stop screen sharing' : 'Start screen sharing', 'right-start');
     setTippy(screenShareBtn, status ? 'Stop screen sharing' : 'Start screen sharing', 'right-start');
+    disable(initVideoSelect, status);
+    disable(initVideoBtn, status);
 }
 
 /**
@@ -7517,4 +7540,13 @@ function elemDisplay(elem, yes) {
  */
 function sanitizeXSS(src) {
     return JSON.parse(filterXSS(JSON.stringify(src)));
+}
+
+/**
+ * Disable element
+ * @param {object} elem
+ * @param {boolean} disabled
+ */
+function disable(elem, disabled) {
+    elem.disabled = disabled;
 }
