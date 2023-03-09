@@ -10,11 +10,12 @@ services:
         hostname: mirotalk
         volumes:
             - .env:/src/.env:ro
-            - ./app/:/src/app/:ro
-            - ./public/:/src/public/:ro
+            # These volumes are not mandatory, uncomment if you want to use it
+            # - ./app/:/src/app/:ro
+            # - ./public/:/src/public/:ro
         restart: unless-stopped
         ports:
-            - '3000:3000'
+            - '${PORT}:${PORT}'
 # Uncomment below, remove "ports:" section above and configure labels as
 # needed for LetsEncrypt TLS certificates with Traefik.
 # See https://doc.traefik.io/traefik/user-guides/docker-compose/basic-example/
