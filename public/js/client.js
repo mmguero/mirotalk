@@ -2349,7 +2349,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
 
     if (buttons.remote.showZoomInOutBtn) {
         // handle video zoomIn/Out
-        handleVideoZoomInOut(remoteVideoZoomInBtn.id, remoteVideoZoomOutBtn.id, remoteMedia.id);
+        handleVideoZoomInOut(remoteVideoZoomInBtn.id, remoteVideoZoomOutBtn.id, remoteMedia.id, peer_id);
     }
 
     // pin video on screen share detected
@@ -2829,22 +2829,50 @@ function toggleVideoPin(position) {
  * @param {string} zoomInBtnId
  * @param {string} zoomOutBtnId
  * @param {string} mediaId
+ * @param {string} peerId
  */
-function handleVideoZoomInOut(zoomInBtnId, zoomOutBtnId, mediaId) {
+function handleVideoZoomInOut(zoomInBtnId, zoomOutBtnId, mediaId, peerId = null) {
+    const id = peerId ? peerId + '_videoStatus' : 'myVideoStatusIcon';
     const zoomIn = getId(zoomInBtnId);
     const zoomOut = getId(zoomOutBtnId);
     const video = getId(mediaId);
 
     let zoom = 1;
 
+    function setTransform() {
+        if (isVideoOf(id) || isVideoPrivacyMode(video)) return;
+        if (zoom < 1) zoom = 1;
+        video.style.scale = zoom;
+    }
+
+    video.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        let delta = e.wheelDelta ? e.wheelDelta : -e.deltaY;
+        delta > 0 ? (zoom *= 1.2) : (zoom /= 1.2);
+        setTransform();
+    });
+
     zoomIn.addEventListener('click', () => {
+        if (isVideoOf(id)) return userLog('toast', 'Zoom in work when video is on');
+        if (isVideoPrivacyMode(video)) return userLog('toast', 'Zoom in not allowed if video on privacy mode');
         zoom = zoom + 0.1;
-        video.style.scale = zoom;
+        setTransform();
     });
+
     zoomOut.addEventListener('click', () => {
+        if (isVideoOf(id)) return userLog('toast', 'Zoom out work when video is on');
+        if (isVideoPrivacyMode(video)) return userLog('toast', 'Zoom out not allowed if video on privacy mode');
         zoom = zoom - 0.1;
-        video.style.scale = zoom;
+        setTransform();
     });
+
+    function isVideoOf(id) {
+        const videoStatusBtn = getId(id);
+        return videoStatusBtn.className === className.videoOff;
+    }
+    function isVideoPrivacyMode() {
+        return video.classList.contains('videoCircle');
+    }
 }
 
 /**
