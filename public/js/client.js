@@ -231,6 +231,8 @@ let pitchDetectionStatus = false;
 let audioContext;
 let mediaStreamSource;
 let meter;
+let isPushToTalkActive = false;
+let isSpaceDown = false;
 let isScreenStreaming = false;
 let showChatOnMessage = true;
 let isChatRoomVisible = false;
@@ -335,6 +337,7 @@ let mySettingsCloseBtn;
 let myPeerNameSet;
 let myPeerNameSetBtn;
 let switchSounds;
+let switchPushToTalk;
 let audioInputSelect;
 let audioOutputSelect;
 let videoSelect;
@@ -512,6 +515,7 @@ function getHtmlElementsById() {
     myPeerNameSet = getId('myPeerNameSet');
     myPeerNameSetBtn = getId('myPeerNameSetBtn');
     switchSounds = getId('switchSounds');
+    switchPushToTalk = getId('switchPushToTalk');
     audioInputSelect = getId('audioSource');
     audioOutputSelect = getId('audioOutput');
     videoSelect = getId('videoSource');
@@ -628,6 +632,11 @@ function setButtonsToolTip() {
     // settings
     setTippy(mySettingsCloseBtn, 'Close', 'right');
     setTippy(myPeerNameSetBtn, 'Change name', 'top');
+    setTippy(
+        switchPushToTalk,
+        'If Active, When SpaceBar keydown the microphone will be activated, on keyup will be deactivated, like a walkie-talkie.',
+        'right',
+    );
     // tab btns
     setTippy(tabDevicesBtn, 'Devices', 'top');
     setTippy(tabBandwidthBtn, 'Bandwidth', 'top');
@@ -3033,6 +3042,24 @@ function setAudioBtn() {
     audioBtn.addEventListener('click', (e) => {
         handleAudio(e, false);
     });
+
+    document.addEventListener('keydown', (e) => {
+        if (!isPushToTalkActive || isChatRoomVisible) return;
+        if (e.code === 'Space') {
+            if (isSpaceDown) return; // prevent multiple call
+            handleAudio(audioBtn, false, true);
+            isSpaceDown = true;
+            console.log('Push-to-talk: audio ON');
+        }
+    });
+    document.addEventListener('keyup', (e) => {
+        if (!isPushToTalkActive || isChatRoomVisible) return;
+        if (e.code === 'Space') {
+            handleAudio(audioBtn, false, false);
+            isSpaceDown = false;
+            console.log('Push-to-talk: audio OFF');
+        }
+    });
 }
 
 /**
@@ -3463,6 +3490,16 @@ function setMySettingsBtn() {
     switchSounds.addEventListener('change', (e) => {
         notifyBySound = e.currentTarget.checked;
     });
+
+    if (isMobileDevice) {
+        document.getElementById('pushToTalkDiv').style.display = 'none';
+    } else {
+        // Push to talk
+        switchPushToTalk.addEventListener('change', (e) => {
+            isPushToTalkActive = e.currentTarget.checked;
+            userLog('toast', 'Push to talk active - ' + isPushToTalkActive);
+        });
+    }
 
     // make chat room draggable for desktop
     if (!isMobileDevice) dragElement(mySettings, mySettingsHeader);
