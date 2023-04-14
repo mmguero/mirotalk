@@ -8,13 +8,13 @@ const xss = require('xss');
  * @returns sanitized object
  */
 const checkXSS = (cfg) => {
-    if (typeof cfg === 'object' && cfg !== null) {
+    if (typeof cfg === 'object' && Object.keys(cfg).length > 0) {
         // Object to string and remove XSS injection
         const config = xss(JSON.stringify(cfg));
         // String sanitized to object
         return JSON.parse(config);
     }
-    return cfg;
+    return xss(cfg);
 };
 
 module.exports = checkXSS;

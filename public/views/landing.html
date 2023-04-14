@@ -34,6 +34,14 @@
         <meta property="og:image" content="https://p2p.mirotalk.com/images/preview.png" />
         <meta property="og:url" content="https://p2p.mirotalk.com" />
 
+        <!-- xss -->
+
+        <script src="https://rawgit.com/leizongmin/js-xss/master/dist/xss.js"></script>
+
+        <!-- https://cdnjs.com/libraries/font-awesome -->
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+
         <!-- StyleSheet -->
 
         <link rel="stylesheet" href="../css/landing.css" />
@@ -98,6 +106,11 @@
                                             style="border-radius: 6px"
                                         />
                                         <button
+                                            id="genRoomButton"
+                                            class="button button-primary br-6 mr-8 mb-8 fas fa-arrows-rotate"
+                                            onclick="genRoom()"
+                                        ></button>
+                                        <button
                                             id="joinRoomButton"
                                             class="button button-primary br-6 pulse"
                                             onclick="joinRoom()"
@@ -111,9 +124,24 @@
                                                     joinRoom();
                                                 }
                                             };
+                                            function genRoom() {
+                                                document.getElementById('roomName').value = getUUID4();
+                                            }
+                                            function getUUID4() {
+                                                return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
+                                                    (
+                                                        c ^
+                                                        (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+                                                    ).toString(16),
+                                                );
+                                            }
                                             function joinRoom() {
-                                                let roomName = document.getElementById('roomName').value;
-                                                window.location.href = '/join/' + roomName;
+                                                const roomName = filterXSS(document.getElementById('roomName').value);
+                                                if (roomName) {
+                                                    window.location.href = '/join/' + roomName;
+                                                } else {
+                                                    alert('Room name empty!\nPlease pick a room name.');
+                                                }
                                             }
                                         </script>
                                     </div>

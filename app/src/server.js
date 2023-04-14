@@ -174,6 +174,7 @@ const views = {
 let channels = {}; // collect channels
 let sockets = {}; // collect sockets
 let peers = {}; // collect peers info grp by channels
+let presenters = {}; // collect presenters grp by channels
 
 app.use(cors()); // Enable All CORS Requests for all origins
 app.use(compression()); // Compress all HTTP responses using GZip
@@ -218,9 +219,9 @@ app.get(['/'], (req, res) => {
 // handle login on host protected
 app.get(['/login'], (req, res) => {
     if (hostCfg.protected == true) {
-        let ip = getIP(req);
+        const ip = getIP(req);
         log.debug(`Request login to host from: ${ip}`, req.query);
-        const { username, password } = req.query;
+        const { username, password } = checkXSS(req.query);
         if (username == hostCfg.username && password == hostCfg.password) {
             hostCfg.authenticated = true;
             authHost = new Host(ip, true);
@@ -244,7 +245,7 @@ app.get(['/about'], (req, res) => {
 // set new room name and join
 app.get(['/newcall'], (req, res) => {
     if (hostCfg.protected == true) {
-        let ip = getIP(req);
+        const ip = getIP(req);
         if (allowedIP(ip)) {
             res.sendFile(views.newCall);
         } else {
@@ -290,7 +291,7 @@ app.get('/join/', (req, res) => {
             https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
             https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=1&video=1&screen=1&notify=1
         */
-        const { room, name, audio, video, screen, notify } = req.query;
+        const { room, name, audio, video, screen, notify } = checkXSS(req.query);
         // all the params are mandatory for the direct room join
         if (room && name && audio && video && screen && notify) {
             return res.sendFile(views.client);
@@ -322,24 +323,25 @@ app.get('/join/*', function (req, res) {
 // request meeting room endpoint
 app.post([apiBasePath + '/meeting'], (req, res) => {
     // check if user was authorized for the api call
-    let authorization = req.headers.authorization;
+    const { headers, body } = req;
+    const authorization = headers.authorization;
     if (authorization != api_key_secret) {
         log.debug('MiroTalk get meeting - Unauthorized', {
-            header: req.headers,
-            body: req.body,
+            headers: headers,
+            body: body,
         });
         return res.status(403).json({ error: 'Unauthorized!' });
     }
     // setup meeting URL
-    let host = req.headers.host;
-    let meetingURL = getMeetingURL(host);
+    const host = req.headers.host;
+    const meetingURL = getMeetingURL(host);
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ meeting: meetingURL }));
 
     // log.debug the output if all done
     log.debug('MiroTalk get meeting - Authorized', {
-        header: req.headers,
-        body: req.body,
+        headers: headers,
+        body: body,
         meeting: meetingURL,
     });
 });
@@ -357,22 +359,22 @@ app.post('/slack', (req, res) => {
 
     if (!slackSigningSecret) return res.end('`Slack Signing Secret is empty!`');
 
-    let slackSignature = req.headers['x-slack-signature'];
-    let requestBody = qS.stringify(req.body, { format: 'RFC1738' });
-    let timeStamp = req.headers['x-slack-request-timestamp'];
-    let time = Math.floor(new Date().getTime() / 1000);
+    const slackSignature = req.headers['x-slack-signature'];
+    const requestBody = qS.stringify(req.body, { format: 'RFC1738' });
+    const timeStamp = req.headers['x-slack-request-timestamp'];
+    const time = Math.floor(new Date().getTime() / 1000);
 
     // The request timestamp is more than five minutes from local time. It could be a replay attack, so let's ignore it.
     if (Math.abs(time - timeStamp) > 300) return res.end('`Wrong timestamp` - Ignore this request.');
 
     // Get Signature to compare it later
-    let sigBaseString = 'v0:' + timeStamp + ':' + requestBody;
-    let mySignature = 'v0=' + CryptoJS.HmacSHA256(sigBaseString, slackSigningSecret);
+    const sigBaseString = 'v0:' + timeStamp + ':' + requestBody;
+    const mySignature = 'v0=' + CryptoJS.HmacSHA256(sigBaseString, slackSigningSecret);
 
     // Valid Signature return a meetingURL
     if (mySignature == slackSignature) {
-        let host = req.headers.host;
-        let meetingURL = getMeetingURL(host);
+        const host = req.headers.host;
+        const meetingURL = getMeetingURL(host);
         log.debug('Slack', { meeting: meetingURL });
         return res.end(meetingURL);
     }
@@ -529,7 +531,10 @@ server.listen(port, null, () => {
  * the peer connection and will be in streaming audio/video between eachother.
  */
 io.sockets.on('connect', async (socket) => {
-    log.debug('[' + socket.id + '] connection accepted', { host: socket.handshake.headers.host.split(':')[0] });
+    log.debug('[' + socket.id + '] connection accepted', {
+        host: socket.handshake.headers.host.split(':')[0],
+        time: socket.handshake.time,
+    });
 
     socket.channels = {};
     sockets[socket.id] = socket;
@@ -558,6 +563,33 @@ io.sockets.on('connect', async (socket) => {
     });
 
     /**
+     * Handle incoming data, res with a callback
+     */
+    socket.on('data', async (data, cb) => {
+        log.debug('Socket Promise', data);
+        //...
+        const { room_id, peer_id, peer_name, type } = data;
+
+        switch (type) {
+            case 'checkPeerName':
+                log.debug('Check if peer name exists', { peer_name: peer_name, room_id: room_id });
+                for (let id in peers[room_id]) {
+                    if (peer_id != id && peers[room_id][id]['peer_name'] == peer_name) {
+                        log.debug('Peer name found', { peer_name: peer_name, room_id: room_id });
+                        cb(true);
+                        break;
+                    }
+                }
+                break;
+            //....
+            default:
+                cb(false);
+                break;
+        }
+        cb(false);
+    });
+
+    /**
      * On peer join
      */
     socket.on('join', async (cfg) => {
@@ -566,17 +598,21 @@ io.sockets.on('connect', async (socket) => {
         // log.debug('Join room', config);
         log.debug('[' + socket.id + '] join ', config);
 
-        let channel = config.channel;
-        let channel_password = config.channel_password;
-        let peer_name = config.peer_name;
-        let peer_video = config.peer_video;
-        let peer_audio = config.peer_audio;
-        let peer_video_status = config.peer_video_status;
-        let peer_audio_status = config.peer_audio_status;
-        let peer_screen_status = config.peer_screen_status;
-        let peer_hand_status = config.peer_hand_status;
-        let peer_rec_status = config.peer_rec_status;
-        let peer_privacy_status = config.peer_privacy_status;
+        const {
+            channel,
+            channel_password,
+            peer_ip,
+            peer_uuid,
+            peer_name,
+            peer_video,
+            peer_audio,
+            peer_video_status,
+            peer_audio_status,
+            peer_screen_status,
+            peer_hand_status,
+            peer_rec_status,
+            peer_privacy_status,
+        } = config;
 
         if (channel in socket.channels) {
             return log.debug('[' + socket.id + '] [Warning] already joined', channel);
@@ -587,15 +623,37 @@ io.sockets.on('connect', async (socket) => {
         // no channel aka room in peers init
         if (!(channel in peers)) peers[channel] = {};
 
+        // no presenter aka host in presenters init
+        if (!(channel in presenters)) presenters[channel] = {};
+
         // room locked by the participants can't join
         if (peers[channel]['lock'] === true && peers[channel]['password'] != channel_password) {
             log.debug('[' + socket.id + '] [Warning] Room Is Locked', channel);
             return socket.emit('roomIsLocked');
         }
 
+        // collect presenters grp by channels
+        if (Object.keys(presenters[channel]).length === 0) {
+            presenters[channel] = {
+                peer_ip: peer_ip,
+                peer_name: peer_name,
+                peer_uuid: peer_uuid,
+                is_presenter: true,
+            };
+        }
+
+        // If presenter must mach the name - uuid
+        const isPresenter =
+            Object.keys(presenters[channel]).length > 1 &&
+            presenters[channel]['peer_name'] == peer_name &&
+            presenters[channel]['peer_uuid'] == peer_uuid;
+
+        log.debug('[Join] - connected presenters grp by roomId', presenters);
+
         // collect peers info grp by channels
         peers[channel][socket.id] = {
             peer_name: peer_name,
+            peer_presenter: isPresenter,
             peer_video: peer_video,
             peer_audio: peer_audio,
             peer_video_status: peer_video_status,
@@ -612,9 +670,12 @@ io.sockets.on('connect', async (socket) => {
         channels[channel][socket.id] = socket;
         socket.channels[channel] = channel;
 
+        const peerCounts = Object.keys(peers[channel]).length;
+
         // Send some server info to joined peer
         await sendToPeer(socket.id, sockets, 'serverInfo', {
-            peers_count: Object.keys(peers[channel]).length,
+            peers_count: peerCounts,
+            is_presenter: isPresenter,
             survey: {
                 active: surveyEnabled,
                 url: surveyURL,
@@ -626,8 +687,7 @@ io.sockets.on('connect', async (socket) => {
      * Relay ICE to peers
      */
     socket.on('relayICE', async (config) => {
-        let peer_id = config.peer_id;
-        let ice_candidate = config.ice_candidate;
+        const { peer_id, ice_candidate } = config;
 
         // log.debug('[' + socket.id + '] relay ICE-candidate to [' + peer_id + '] ', {
         //     address: config.ice_candidate,
@@ -643,8 +703,7 @@ io.sockets.on('connect', async (socket) => {
      * Relay SDP to peers
      */
     socket.on('relaySDP', async (config) => {
-        let peer_id = config.peer_id;
-        let session_description = config.session_description;
+        const { peer_id, session_description } = config;
 
         log.debug('[' + socket.id + '] relay SessionDescription to [' + peer_id + '] ', {
             type: session_description.type,
@@ -663,11 +722,9 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         //log.debug('[' + socket.id + '] Room action:', config);
+        const { room_id, peer_name, password, action } = config;
+
         let room_is_locked = false;
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let password = config.password;
-        let action = config.action;
         //
         try {
             switch (action) {
@@ -689,12 +746,12 @@ io.sockets.on('connect', async (socket) => {
                     });
                     break;
                 case 'checkPassword':
-                    let config = {
+                    const data = {
                         peer_name: peer_name,
                         action: action,
                         password: password == peers[room_id]['password'] ? 'OK' : 'KO',
                     };
-                    await sendToPeer(socket.id, sockets, 'roomAction', config);
+                    await sendToPeer(socket.id, sockets, 'roomAction', data);
                     break;
             }
         } catch (err) {
@@ -710,28 +767,27 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Peer name', config);
-        let room_id = config.room_id;
-        let peer_name_old = config.peer_name_old;
-        let peer_name_new = config.peer_name_new;
+        const { room_id, peer_name_old, peer_name_new } = config;
+
         let peer_id_to_update = null;
 
         for (let peer_id in peers[room_id]) {
             if (peers[room_id][peer_id]['peer_name'] == peer_name_old) {
                 peers[room_id][peer_id]['peer_name'] = peer_name_new;
+                presenters[room_id]['peer_name'] = peer_name_new;
                 peer_id_to_update = peer_id;
             }
         }
 
-        if (peer_id_to_update) {
-            log.debug('[' + socket.id + '] emit peerName to [room_id: ' + room_id + ']', {
-                peer_id: peer_id_to_update,
-                peer_name: peer_name_new,
-            });
+        const data = {
+            peer_id: peer_id_to_update,
+            peer_name: peer_name_new,
+        };
 
-            await sendToRoom(room_id, socket.id, 'peerName', {
-                peer_id: peer_id_to_update,
-                peer_name: peer_name_new,
-            });
+        if (peer_id_to_update) {
+            log.debug('[' + socket.id + '] emit peerName to [room_id: ' + room_id + ']', data);
+
+            await sendToRoom(room_id, socket.id, 'peerName', data);
         }
     });
 
@@ -742,10 +798,14 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Peer status', config);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let element = config.element;
-        let status = config.status;
+        const { room_id, peer_name, element, status } = config;
+
+        const data = {
+            peer_id: socket.id,
+            peer_name: peer_name,
+            element: element,
+            status: status,
+        };
 
         try {
             for (let peer_id in peers[room_id]) {
@@ -773,18 +833,9 @@ io.sockets.on('connect', async (socket) => {
                 }
             }
 
-            log.debug('[' + socket.id + '] emit peerStatus to [room_id: ' + room_id + ']', {
-                peer_id: socket.id,
-                element: element,
-                status: status,
-            });
+            log.debug('[' + socket.id + '] emit peerStatus to [room_id: ' + room_id + ']', data);
 
-            await sendToRoom(room_id, socket.id, 'peerStatus', {
-                peer_id: socket.id,
-                peer_name: peer_name,
-                element: element,
-                status: status,
-            });
+            await sendToRoom(room_id, socket.id, 'peerStatus', data);
         } catch (err) {
             log.error('Peer Status', toJson(err));
         }
@@ -797,36 +848,23 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Peer action', config);
-        let room_id = config.room_id;
-        let peer_id = config.peer_id;
-        let peer_name = config.peer_name;
-        let peer_use_video = config.peer_use_video;
-        let peer_action = config.peer_action;
-        let send_to_all = config.send_to_all;
+        const { room_id, peer_id, peer_name, peer_use_video, peer_action, send_to_all } = config;
+
+        const data = {
+            peer_id: peer_id,
+            peer_name: peer_name,
+            peer_action: peer_action,
+            peer_use_video: peer_use_video,
+        };
 
         if (send_to_all) {
-            log.debug('[' + socket.id + '] emit peerAction to [room_id: ' + room_id + ']', {
-                peer_id: socket.id,
-                peer_name: peer_name,
-                peer_action: peer_action,
-                peer_use_video: peer_use_video,
-            });
+            log.debug('[' + socket.id + '] emit peerAction to [room_id: ' + room_id + ']', data);
 
-            await sendToRoom(room_id, socket.id, 'peerAction', {
-                peer_id: peer_id,
-                peer_name: peer_name,
-                peer_action: peer_action,
-                peer_use_video: peer_use_video,
-            });
+            await sendToRoom(room_id, socket.id, 'peerAction', data);
         } else {
             log.debug('[' + socket.id + '] emit peerAction to [' + peer_id + '] from room_id [' + room_id + ']');
 
-            await sendToPeer(peer_id, sockets, 'peerAction', {
-                peer_id: peer_id,
-                peer_name: peer_name,
-                peer_action: peer_action,
-                peer_use_video: peer_use_video,
-            });
+            await sendToPeer(peer_id, sockets, 'peerAction', data);
         }
     });
 
@@ -836,9 +874,7 @@ io.sockets.on('connect', async (socket) => {
     socket.on('kickOut', async (cfg) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
-        let room_id = config.room_id;
-        let peer_id = config.peer_id;
-        let peer_name = config.peer_name;
+        const { room_id, peer_id, peer_name } = config;
 
         log.debug('[' + socket.id + '] kick out peer [' + peer_id + '] from room_id [' + room_id + ']');
 
@@ -854,11 +890,7 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('File info', config);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let peer_id = config.peer_id;
-        let broadcast = config.broadcast;
-        let file = config.file;
+        const { room_id, peer_id, peer_name, broadcast, file } = config;
 
         function bytesToSize(bytes) {
             let sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
@@ -888,8 +920,7 @@ io.sockets.on('connect', async (socket) => {
     socket.on('fileAbort', async (cfg) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
+        const { room_id, peer_name } = config;
 
         log.debug('[' + socket.id + '] Peer [' + peer_name + '] send fileAbort to room_id [' + room_id + ']');
         await sendToRoom(room_id, socket.id, 'fileAbort');
@@ -902,18 +933,9 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Video player', config);
-        let room_id = config.room_id;
-        let peer_name = config.peer_name;
-        let video_action = config.video_action;
-        let video_src = config.video_src;
-        let peer_id = config.peer_id;
+        const { room_id, peer_id, peer_name, video_action, video_src } = config;
 
-        let sendConfig = {
-            peer_name: peer_name,
-            video_action: video_action,
-            video_src: video_src,
-        };
-        let logMe = {
+        const data = {
             peer_id: socket.id,
             peer_name: peer_name,
             video_action: video_action,
@@ -921,16 +943,13 @@ io.sockets.on('connect', async (socket) => {
         };
 
         if (peer_id) {
-            log.debug(
-                '[' + socket.id + '] emit videoPlayer to [' + peer_id + '] from room_id [' + room_id + ']',
-                logMe,
-            );
+            log.debug('[' + socket.id + '] emit videoPlayer to [' + peer_id + '] from room_id [' + room_id + ']', data);
 
-            await sendToPeer(peer_id, sockets, 'videoPlayer', sendConfig);
+            await sendToPeer(peer_id, sockets, 'videoPlayer', data);
         } else {
-            log.debug('[' + socket.id + '] emit videoPlayer to [room_id: ' + room_id + ']', logMe);
+            log.debug('[' + socket.id + '] emit videoPlayer to [room_id: ' + room_id + ']', data);
 
-            await sendToRoom(room_id, socket.id, 'videoPlayer', sendConfig);
+            await sendToRoom(room_id, socket.id, 'videoPlayer', data);
         }
     });
 
@@ -941,7 +960,7 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Whiteboard send canvas', config);
-        let room_id = config.room_id;
+        const { room_id } = config;
         await sendToRoom(room_id, socket.id, 'wbCanvasToJson', config);
     });
 
@@ -949,7 +968,7 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         log.debug('Whiteboard', config);
-        let room_id = config.room_id;
+        const { room_id } = config;
         await sendToRoom(room_id, socket.id, 'whiteboardAction', config);
     });
 
@@ -993,10 +1012,12 @@ io.sockets.on('connect', async (socket) => {
             switch (Object.keys(peers[channel]).length) {
                 case 0: // last peer disconnected from the room without room lock & password set
                     delete peers[channel];
+                    delete presenters[channel];
                     break;
                 case 2: // last peer disconnected from the room having room lock & password set
                     if (peers[channel]['lock'] && peers[channel]['password']) {
                         delete peers[channel]; // clean lock and password value from the room
+                        delete presenters[channel]; // clean the presenter from the channel
                     }
                     break;
             }
@@ -1004,6 +1025,7 @@ io.sockets.on('connect', async (socket) => {
             log.error('Remove Peer', toJson(err));
         }
         log.debug('[removePeerFrom] - connected peers grp by roomId', peers);
+        log.debug('[removePeerFrom] - connected presenters grp by roomId', presenters);
 
         for (let id in channels[channel]) {
             await channels[channel][id].emit('removePeer', { peer_id: socket.id });
@@ -1077,7 +1099,7 @@ function allowedIP(ip) {
  */
 function removeIP(socket) {
     if (hostCfg.protected == true) {
-        let ip = socket.handshake.address;
+        const ip = socket.handshake.address;
         if (ip && allowedIP(ip)) {
             authHost.deleteIP(ip);
             hostCfg.authenticated = false;
