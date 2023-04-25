@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.0.3
+ * @version 1.0.5
  *
  */
 
@@ -24,9 +24,6 @@
 
 const signalingServer = getSignalingServer();
 const roomId = getRoomId();
-const peerLoockupUrl = 'https://extreme-ip-lookup.com/json/?key=demo2'; // get your API Key at https://extreme-ip-lookup.com
-const peerIPUrl = 'https://api.ipify.org?format=json';
-const avatarApiUrl = 'https://eu.ui-avatars.com/api';
 const welcomeImg = '../images/image-placeholder.png';
 const shareUrlImg = '../images/image-placeholder.png';
 const leaveRoomImg = '../images/leave-room.png';
@@ -140,13 +137,19 @@ const buttons = {
         showAboutBtn: true, // Please keep me always true, Thank you!
     },
     chat: {
+        showMaxBtn: true,
         showSaveMessageBtn: true,
         showMarkDownBtn: true,
+        showChatGPTBtn: true,
         showFileShareBtn: true,
         showShareVideoAudioBtn: true,
         showParticipantsBtn: true,
     },
+    caption: {
+        showMaxBtn: true,
+    },
     settings: {
+        showTabRoomPeerName: true,
         showTabRoomParticipants: true,
         showTabRoomSecurity: true,
         showMuteEveryoneBtn: true,
@@ -173,8 +176,6 @@ const buttons = {
     },
 };
 
-const backupIceServers = [{ urls: 'stun:stun.l.google.com:19302' }]; // backup iceServers
-
 const isRulesActive = true; // Presenter can do anything, guest is slightly moderate, if false no Rules for the room.
 
 const forceCamMaxResolutionAndFps = false; // This force the webCam to max resolution, up to 4k and 60fps (very high bandwidth are required) if false, you can set it from settings
@@ -183,7 +184,7 @@ const userLimitsActive = false; // Limit users per room
 
 const usersCountLimit = 2; // Limit 2 users per room if userLimitsActive true
 
-const useAvatarApi = true; // if false the cam-Off avatar = avatarImg
+const useAvatarSvg = true; // if false the cam-Off avatar = avatarImg
 
 let isHideMeActive = false; // Hide myself from the meeting view
 
@@ -204,8 +205,6 @@ let isVideoPrivacyActive = false; // Video circle for privacy
 let surveyActive = false; // when leaving the room give a feedback, if false will be redirected to newcall page
 
 let surveyURL = 'https://example.org';
-
-let myWanIP = null;
 
 let myPeerId; // socket.id
 let peerInfo = {}; // Some peer info
@@ -233,7 +232,6 @@ let mirotalkTheme = 'dark'; // dark - grey ...
 let mirotalkBtnsBar = 'vertical'; // vertical - horizontal
 let pinVideoPositionSelect;
 let swalBackground = 'rgba(0, 0, 0, 0.7)'; // black - #16171b - transparent ...
-let peerGeo;
 let myPeerName = getPeerName();
 let myPeerUUID = getUUID();
 let isScreenEnabled = getScreenEnabled();
@@ -265,6 +263,7 @@ let isChatRoomVisible = false;
 let isCaptionBoxVisible = false;
 let isChatEmojiVisible = false;
 let isChatMarkdownOn = false;
+let isChatGPTOn = false;
 let isButtonsVisible = false;
 let isButtonsBarOver = false;
 let isMySettingsVisible = false;
@@ -327,9 +326,12 @@ let msgerCPBtn;
 let msgerClean;
 let msgerSaveBtn;
 let msgerClose;
+let msgerMaxBtn;
+let msgerMinBtn;
 let msgerChat;
 let msgerEmojiBtn;
 let msgerMarkdownBtn;
+let msgerGPTBtn;
 let msgerShareFileBtn;
 let msgerInput;
 let msgerCleanTextBtn;
@@ -340,6 +342,8 @@ let msgerSendBtn;
 let captionDraggable;
 let captionHeader;
 let captionTheme;
+let captionMaxBtn;
+let captionMinBtn;
 let captionClean;
 let captionSaveBtn;
 let captionClose;
@@ -376,6 +380,7 @@ let videoObjFitSelect;
 
 let btnsBarSelect;
 let selectors;
+let tabRoomPeerName;
 let tabRoomParticipants;
 let tabRoomSecurity;
 // my video element
@@ -505,9 +510,12 @@ function getHtmlElementsById() {
     msgerClean = getId('msgerClean');
     msgerSaveBtn = getId('msgerSaveBtn');
     msgerClose = getId('msgerClose');
+    msgerMaxBtn = getId('msgerMaxBtn');
+    msgerMinBtn = getId('msgerMinBtn');
     msgerChat = getId('msgerChat');
     msgerEmojiBtn = getId('msgerEmojiBtn');
     msgerMarkdownBtn = getId('msgerMarkdownBtn');
+    msgerGPTBtn = getId('msgerGPTBtn');
     msgerShareFileBtn = getId('msgerShareFileBtn');
     msgerInput = getId('msgerInput');
     msgerCleanTextBtn = getId('msgerCleanTextBtn');
@@ -525,6 +533,8 @@ function getHtmlElementsById() {
     captionDraggable = getId('captionDraggable');
     captionHeader = getId('captionHeader');
     captionTheme = getId('captionTheme');
+    captionMaxBtn = getId('captionMaxBtn');
+    captionMinBtn = getId('captionMinBtn');
     captionClean = getId('captionClean');
     captionSaveBtn = getId('captionSaveBtn');
     captionClose = getId('captionClose');
@@ -553,6 +563,7 @@ function getHtmlElementsById() {
     videoObjFitSelect = getId('videoObjFitSelect');
     btnsBarSelect = getId('mirotalkBtnsBar');
     pinVideoPositionSelect = getId('pinVideoPositionSelect');
+    tabRoomPeerName = getId('tabRoomPeerName');
     tabRoomParticipants = getId('tabRoomParticipants');
     tabRoomSecurity = getId('tabRoomSecurity');
     // my conference name, hand, video - audio status
@@ -644,8 +655,11 @@ function setButtonsToolTip() {
     setTippy(msgerClean, 'Clean the messages', 'top');
     setTippy(msgerSaveBtn, 'Save the messages', 'top');
     setTippy(msgerClose, 'Close', 'right');
+    setTippy(msgerMaxBtn, 'Maximize', 'right');
+    setTippy(msgerMinBtn, 'Minimize', 'right');
     setTippy(msgerEmojiBtn, 'Emoji', 'top');
     setTippy(msgerMarkdownBtn, 'Markdown', 'top');
+    setTippy(msgerGPTBtn, 'ChatGPT', 'top');
     setTippy(msgerShareFileBtn, 'Share file', 'top');
     setTippy(msgerCleanTextBtn, 'Clean', 'top');
     setTippy(msgerPasteBtn, 'Paste', 'top');
@@ -655,9 +669,13 @@ function setButtonsToolTip() {
     setTippy(msgerCPCloseBtn, 'Close', 'left');
     // caption buttons
     setTippy(captionClose, 'Close', 'right');
+    setTippy(captionMaxBtn, 'Maximize', 'right');
+    setTippy(captionMinBtn, 'Minimize', 'right');
     setTippy(captionTheme, 'Ghost theme', 'top');
     setTippy(captionClean, 'Clean the messages', 'top');
     setTippy(captionSaveBtn, 'Save the messages', 'top');
+    setTippy(speechRecognitionStart, 'Start', 'top');
+    setTippy(speechRecognitionStop, 'Stop', 'top');
     // settings
     setTippy(mySettingsCloseBtn, 'Close', 'right');
     setTippy(myPeerNameSetBtn, 'Change name', 'top');
@@ -737,35 +755,6 @@ function getPeerInfo() {
         browserName: DetectRTC.browser.name,
         browserVersion: DetectRTC.browser.version,
     };
-}
-
-/**
- * Get approximative peer geolocation
- * Get your API Key at https://extreme-ip-lookup.com
- */
-async function getPeerGeoLocation() {
-    console.log('03.1 Get peer geo location');
-    fetch(peerLoockupUrl)
-        .then((res) => res.json())
-        .then((outJson) => {
-            peerGeo = outJson;
-        })
-        .catch((err) => console.warn(err));
-}
-
-/**
- * Get my wanIP
- * https://www.ipify.org/
- */
-async function getMyIP() {
-    console.log('03.2 Get My WanIP');
-    fetch(peerIPUrl)
-        .then((res) => res.json())
-        .then((outJson) => {
-            myWanIP = outJson['ip'];
-            console.log('My Public IPv4 is: ', myWanIP);
-        })
-        .catch((err) => console.warn(err));
 }
 
 /**
@@ -997,8 +986,6 @@ async function handleConnect() {
         await joinToChannel();
     } else {
         await initEnumerateDevices();
-        await getPeerGeoLocation();
-        await getMyIP();
         await setupLocalMedia();
         await whoAreYou();
     }
@@ -1015,7 +1002,7 @@ function handleServerInfo(config) {
     surveyActive = survey.active;
     surveyURL = survey.url;
 
-    console.log('13. Peers count', peers_count);
+    console.log('13. Server info', config);
 
     // Limit room to n peers
     if (userLimitsActive && peers_count > usersCountLimit) {
@@ -1105,24 +1092,29 @@ function handleButtonsRule() {
     //elemDisplay(screenShareBtn, buttons.main.showScreenBtn); // auto-detected
     elemDisplay(recordStreamBtn, buttons.main.showRecordStreamBtn);
     elemDisplay(chatRoomBtn, buttons.main.showChatRoomBtn);
-    //elemDisplay(captionBtn, buttons.main.showCaptionRoomBtn); // auto-detected
+    elemDisplay(captionBtn, buttons.main.showCaptionRoomBtn && speechRecognition); // auto-detected
     elemDisplay(myHandBtn, buttons.main.showMyHandBtn);
     elemDisplay(whiteboardBtn, buttons.main.showWhiteboardBtn);
     elemDisplay(fileShareBtn, buttons.main.showFileShareBtn);
     elemDisplay(mySettingsBtn, buttons.main.showMySettingsBtn);
     elemDisplay(aboutBtn, buttons.main.showAboutBtn);
     // chat
+    elemDisplay(msgerMaxBtn, !isMobileDevice && buttons.chat.showMaxBtn);
     elemDisplay(msgerSaveBtn, buttons.chat.showSaveMessageBtn);
     elemDisplay(msgerMarkdownBtn, buttons.chat.showMarkDownBtn);
+    elemDisplay(msgerGPTBtn, buttons.chat.showChatGPTBtn);
     elemDisplay(msgerShareFileBtn, buttons.chat.showFileShareBtn);
     elemDisplay(msgerVideoUrlBtn, buttons.chat.showShareVideoAudioBtn);
     elemDisplay(msgerCPBtn, buttons.chat.showParticipantsBtn);
+    // caption
+    elemDisplay(captionMaxBtn, !isMobileDevice && buttons.caption.showMaxBtn);
     // Settings
     elemDisplay(muteEveryoneBtn, buttons.settings.showMuteEveryoneBtn);
     elemDisplay(hideEveryoneBtn, buttons.settings.showHideEveryoneBtn);
     elemDisplay(ejectEveryoneBtn, buttons.settings.showEjectEveryoneBtn);
     elemDisplay(lockRoomBtn, buttons.settings.showLockRoomBtn);
     elemDisplay(unlockRoomBtn, buttons.settings.showUnlockRoomBtn);
+    elemDisplay(tabRoomPeerName, buttons.settings.showTabRoomPeerName);
     elemDisplay(tabRoomParticipants, buttons.settings.showTabRoomParticipants);
     elemDisplay(tabRoomSecurity, buttons.settings.showTabRoomSecurity);
 }
@@ -1251,10 +1243,11 @@ async function whoAreYou() {
 async function checkUserName(peer_name = null) {
     return signalingSocket
         .request('data', {
-            type: 'checkPeerName',
             room_id: roomId,
             peer_id: myPeerId,
             peer_name: peer_name ? peer_name : myPeerName,
+            method: 'checkPeerName',
+            params: {},
         })
         .then((response) => response);
 }
@@ -1395,8 +1388,8 @@ function checkPeerAudioVideo() {
 async function whoAreYouJoin() {
     if (isMobileDevice && myVideoStatus && myAudioStatus) await refreshLocalMedia();
     myVideoWrap.style.display = 'inline';
-    myVideoParagraph.innerHTML = myPeerName + ' (me)';
-    setPeerAvatarImgName('myVideoAvatarImage', myPeerName, useAvatarApi);
+    myVideoParagraph.innerText = myPeerName + ' (me)';
+    setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);
     joinToChannel();
     setTheme(mirotalkTheme);
@@ -1412,8 +1405,6 @@ async function joinToChannel() {
         channel: roomId,
         channel_password: thisRoomPassword,
         peer_info: peerInfo,
-        peer_geo: peerGeo,
-        peer_ip: peerGeo.query || myWanIP,
         peer_uuid: myPeerUUID,
         peer_name: myPeerName,
         peer_video: useVideo,
@@ -1450,7 +1441,7 @@ async function handleAddPeer(config) {
     console.log('iceServers', iceServers[0]);
 
     // https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection
-    peerConnection = new RTCPeerConnection({ iceServers: iceServers ? iceServers : backupIceServers });
+    peerConnection = new RTCPeerConnection({ iceServers: iceServers });
     peerConnections[peer_id] = peerConnection;
 
     allPeers = peers;
@@ -2008,13 +1999,13 @@ function addChild(device, els) {
         option.value = deviceId;
         switch (kind) {
             case 'videoinput':
-                option.innerHTML = `📹 ` + label || `📹 camera ${el.length + 1}`;
+                option.innerText = `📹 ` + label || `📹 camera ${el.length + 1}`;
                 break;
             case 'audioinput':
-                option.innerHTML = `🎤 ` + label || `🎤 microphone ${el.length + 1}`;
+                option.innerText = `🎤 ` + label || `🎤 microphone ${el.length + 1}`;
                 break;
             case 'audiooutput':
-                option.innerHTML = `🔈 ` + label || `🔈 speaker ${el.length + 1}`;
+                option.innerText = `🔈 ` + label || `🔈 speaker ${el.length + 1}`;
                 break;
             default:
                 break;
@@ -2529,7 +2520,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     }
 
     // refresh remote peers avatar name
-    setPeerAvatarImgName(remoteVideoAvatarImage.id, peer_name, useAvatarApi);
+    setPeerAvatarImgName(remoteVideoAvatarImage.id, peer_name);
     // refresh remote peers hand icon status and title
     setPeerHandStatus(peer_id, peer_name, peer_hand_status);
     // refresh remote peers video icon status and title
@@ -2656,20 +2647,63 @@ function adaptAspectRatio() {
 }
 
 /**
+ * Create round svg image with first 2 letters of peerName in center
+ * Thank you: https://github.com/phpony
+ *
+ * @param {string} peerName
+ * @param {integer} avatarImgSize width and height in px
+ */
+function genAvatarSvg(peerName, avatarImgSize) {
+    const charCodeRed = peerName.charCodeAt(0);
+    const charCodeGreen = peerName.charCodeAt(1) || charCodeRed;
+    const red = Math.pow(charCodeRed, 7) % 200;
+    const green = Math.pow(charCodeGreen, 7) % 200;
+    const blue = (red + green) % 200;
+    let bgColor = `rgb(${red}, ${green}, ${blue})`;
+    let textColor = '#ffffff';
+    let svg = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    width="${avatarImgSize}px"
+    height="${avatarImgSize}px"
+    viewBox="0 0 ${avatarImgSize} ${avatarImgSize}"
+    version="1.1">
+        <circle
+            fill="${bgColor}"
+            width="${avatarImgSize}"
+            height="${avatarImgSize}"
+            cx="${avatarImgSize / 2}"
+            cy="${avatarImgSize / 2}"
+            r="${avatarImgSize / 2}"/>
+        <text
+            x="50%"
+            y="50%"
+            style="color:${textColor};
+            line-height:1;
+            font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Fira Sans, Droid Sans, Helvetica Neue, sans-serif"
+            alignment-baseline="middle"
+            text-anchor="middle"
+            font-size="${Math.round(avatarImgSize * 0.4)}"
+            font-weight="normal"
+            dy=".1em"
+            dominant-baseline="middle"
+            fill="${textColor}">${peerName.substring(0, 2).toUpperCase()}
+        </text>
+    </svg>`;
+    return 'data:image/svg+xml,' + svg.replace(/#/g, '%23').replace(/"/g, "'").replace(/&/g, '&amp;');
+}
+
+/**
  * Refresh video - chat image avatar on name changes: https://eu.ui-avatars.com/
  * @param {string} videoAvatarImageId element id
  * @param {string} peerName
- * @param {boolean} useAvatar use avatar api for image
  */
-function setPeerAvatarImgName(videoAvatarImageId, peerName, useAvatar) {
+function setPeerAvatarImgName(videoAvatarImageId, peerName) {
     const videoAvatarImageElement = getId(videoAvatarImageId);
-    if (useAvatar) {
-        // default img size 64 max 512
+    if (useAvatarSvg) {
         const avatarImgSize = isMobileDevice ? 128 : 256;
-        videoAvatarImageElement.setAttribute(
-            'src',
-            avatarApiUrl + '?name=' + peerName + '&size=' + avatarImgSize + '&background=random&rounded=true',
-        );
+        const avatarImgSvg = genAvatarSvg(peerName, avatarImgSize);
+        videoAvatarImageElement.setAttribute('src', avatarImgSvg);
     } else {
         videoAvatarImageElement.setAttribute('src', avatarImg);
     }
@@ -2681,7 +2715,7 @@ function setPeerAvatarImgName(videoAvatarImageId, peerName, useAvatar) {
  * @param {string} peerName me or peer name
  */
 function setPeerChatAvatarImgName(avatar, peerName) {
-    const avatarImg = avatarApiUrl + '?name=' + peerName + '&size=32' + '&background=random&rounded=true';
+    const avatarImg = genAvatarSvg(peerName, 32);
 
     switch (avatar) {
         case 'left':
@@ -3110,7 +3144,7 @@ function startCountTime() {
     callStartTime = Date.now();
     setInterval(function printTime() {
         callElapsedTime = Date.now() - callStartTime;
-        countTime.innerHTML = getTimeToString(callElapsedTime);
+        countTime.innerText = getTimeToString(callElapsedTime);
     }, 1000);
 }
 
@@ -3362,14 +3396,30 @@ function setChatRoomBtn() {
 
     // close chat room - show left button and status menu if hide
     msgerClose.addEventListener('click', (e) => {
+        chatMinimize();
         hideChatRoomAndEmojiPicker();
         showButtonsBarAndMenu();
+    });
+
+    // Maximize chat
+    msgerMaxBtn.addEventListener('click', (e) => {
+        chatMaximize();
+    });
+    // minimize chat
+    msgerMinBtn.addEventListener('click', (e) => {
+        chatMinimize();
     });
 
     // Markdown on-off
     msgerMarkdownBtn.addEventListener('click', (e) => {
         isChatMarkdownOn = !isChatMarkdownOn;
         setColor(msgerMarkdownBtn, isChatMarkdownOn ? 'lime' : 'white');
+    });
+
+    // ChatGPT/OpenAI
+    msgerGPTBtn.addEventListener('click', (e) => {
+        isChatGPTOn = !isChatGPTOn;
+        setColor(msgerGPTBtn, isChatGPTOn ? 'lime' : 'white');
     });
 
     // share file from chat
@@ -3418,7 +3468,7 @@ function setChatRoomBtn() {
 
     // chat show on message
     msgerShowChatOnMsg.addEventListener('change', (e) => {
-        playSound('click');
+        playSound('switch');
         showChatOnMessage = e.currentTarget.checked;
         if (showChatOnMessage) {
             msgPopup('info', "Chat will be shown, when I'm receive a new message", 'top-end', 3000);
@@ -3428,10 +3478,10 @@ function setChatRoomBtn() {
     });
 
     // chat send msg
-    msgerSendBtn.addEventListener('click', (e) => {
+    msgerSendBtn.addEventListener('click', async (e) => {
         // prevent refresh page
         e.preventDefault();
-        sendChatMessage();
+        await sendChatMessage();
     });
 
     // adapt input font size 4 mobile
@@ -3450,6 +3500,15 @@ function setCaptionRoomBtn() {
             } else {
                 hideCaptionBox();
             }
+        });
+
+        // Maximize caption
+        captionMaxBtn.addEventListener('click', (e) => {
+            captionMaximize();
+        });
+        // minimize caption
+        captionMinBtn.addEventListener('click', (e) => {
+            captionMinimize();
         });
 
         // ghost theme + undo
@@ -3481,6 +3540,7 @@ function setCaptionRoomBtn() {
 
         // close caption box - show left button and status menu if hide
         captionClose.addEventListener('click', (e) => {
+            captionMinimize();
             hideCaptionBox();
             showButtonsBarAndMenu();
         });
@@ -4662,7 +4722,7 @@ async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
  * on disconnect, remove peer, kick out or leave room, we going to save it
  */
 function checkRecording() {
-    if (isStreamRecording || myVideoParagraph.innerHTML.includes('REC')) {
+    if (isStreamRecording || myVideoParagraph.innerText.includes('REC')) {
         console.log('Going to save recording');
         stopStreamRecording();
     }
@@ -4676,7 +4736,7 @@ function startRecordingTime() {
     let rc = setInterval(function printTime() {
         if (isStreamRecording) {
             recElapsedTime = Date.now() - recStartTime;
-            myVideoParagraph.innerHTML = myPeerName + '&nbsp;&nbsp; 🔴 &nbsp; REC ' + getTimeToString(recElapsedTime);
+            myVideoParagraph.innerText = myPeerName + ' 🔴 REC ' + getTimeToString(recElapsedTime);
             return;
         }
         clearInterval(rc);
@@ -4815,7 +4875,7 @@ function handleMediaRecorderStop(event) {
     console.log('MediaRecorder stopped: ', event);
     console.log('MediaRecorder Blobs: ', recordedBlobs);
     isStreamRecording = false;
-    myVideoParagraph.innerHTML = myPeerName + ' (me)';
+    myVideoParagraph.innerText = myPeerName + ' (me)';
     if (isRecScreenStream) {
         recScreenStream.getTracks().forEach((track) => {
             if (track.kind === 'video') track.stop();
@@ -4881,12 +4941,16 @@ function createChatDataChannel(peer_id) {
 }
 
 /**
- * Set the chat room on full screen mode for mobile
+ * Set the chat room & caption on full screen mode for mobile
  */
 function setChatRoomAndCaptionForMobile() {
     if (isMobileDevice) {
+        // chat full screen
         document.documentElement.style.setProperty('--msger-height', '99%');
         document.documentElement.style.setProperty('--msger-width', '99%');
+        // caption full screen
+        document.documentElement.style.setProperty('--caption-height', '99%');
+        document.documentElement.style.setProperty('--caption-width', '99%');
     } else {
         // make chat room draggable for desktop
         dragElement(msgerDraggable, msgerHeader);
@@ -4923,10 +4987,70 @@ function showCaptionDraggable() {
     }
     captionBtn.className = 'far fa-closed-captioning';
     captionDraggable.style.top = '50%';
-    captionDraggable.style.left = isMobileDevice ? '50' : '75%';
+    captionDraggable.style.left = isMobileDevice ? '50%' : '75%';
     captionDraggable.style.display = 'flex';
     isCaptionBoxVisible = true;
     setTippy(captionBtn, 'Close the caption', 'right-start');
+}
+
+/**
+ * Chat maximize
+ */
+function chatMaximize() {
+    elemDisplay(msgerMaxBtn, false);
+    elemDisplay(msgerMinBtn, true);
+    chatCenter();
+    document.documentElement.style.setProperty('--msger-width', '100%');
+    document.documentElement.style.setProperty('--msger-height', '100%');
+}
+
+/**
+ * Chat minimize
+ */
+function chatMinimize() {
+    elemDisplay(msgerMinBtn, false);
+    elemDisplay(msgerMaxBtn, true);
+    chatCenter();
+    document.documentElement.style.setProperty('--msger-width', '420px');
+    document.documentElement.style.setProperty('--msger-height', '680px');
+}
+
+/**
+ * Set chat position
+ */
+function chatCenter() {
+    msgerDraggable.style.top = '50%';
+    msgerDraggable.style.left = '50%';
+}
+
+/**
+ * Caption maximize
+ */
+function captionMaximize() {
+    elemDisplay(captionMaxBtn, false);
+    elemDisplay(captionMinBtn, true);
+    captionCenter();
+    document.documentElement.style.setProperty('--caption-width', '100%');
+    document.documentElement.style.setProperty('--caption-height', '100%');
+}
+
+/**
+ * Caption minimize
+ */
+function captionMinimize() {
+    elemDisplay(captionMinBtn, false);
+    elemDisplay(captionMaxBtn, true);
+    captionCenter();
+    document.documentElement.style.setProperty('--caption-width', '420px');
+    document.documentElement.style.setProperty('--caption-height', '680px');
+}
+
+/**
+ * Set caption position
+ */
+function captionCenter() {
+    captionDraggable.style.top = '50%';
+    captionDraggable.style.left = '50%';
 }
 
 /**
@@ -5023,14 +5147,15 @@ function hideCaptionBox() {
 /**
  * Send Chat messages to peers in the room
  */
-function sendChatMessage() {
-    if (!thereIsPeerConnections()) {
+async function sendChatMessage() {
+    if (!thereIsPeerConnections() && !isChatGPTOn) {
         cleanMessageInput();
         isChatPasteTxt = false;
         return userLog('info', "Can't send message, no participants in the room");
     }
 
-    const msg = checkMsg(msgerInput.value.trim());
+    msgerInput.value = filterXSS(msgerInput.value.trim());
+    const msg = checkMsg(msgerInput.value);
 
     // empty msg or
     if (!msg) {
@@ -5038,7 +5163,7 @@ function sendChatMessage() {
         return cleanMessageInput();
     }
 
-    emitMsg(myPeerName, 'toAll', msg, false, myPeerId);
+    isChatGPTOn ? await getChatGPTmessage(msg) : emitMsg(myPeerName, 'toAll', msg, false, myPeerId);
     appendMessage(myPeerName, rightChatAvatar, 'right', msg, false);
     cleanMessageInput();
 }
@@ -5050,11 +5175,20 @@ function sendChatMessage() {
 function handleDataChannelChat(dataMessage) {
     if (!dataMessage) return;
 
+    // sanitize all params
     const msgFrom = filterXSS(dataMessage.from);
+    const msgFromId = filterXSS(dataMessage.fromId);
     const msgTo = filterXSS(dataMessage.to);
-    const msg = dataMessage.msg;
-    const msgPrivate = dataMessage.privateMsg;
-    const msgId = dataMessage.id;
+    const msg = filterXSS(dataMessage.msg);
+    const msgPrivate = filterXSS(dataMessage.privateMsg);
+    const msgId = filterXSS(dataMessage.id);
+
+    // We check if the message is from real peer
+    const from_peer_name = allPeers[msgFromId]['peer_name'];
+    if (from_peer_name != msgFrom) {
+        console.log('Fake message detected', { realFrom: from_peer_name, fakeFrom: msgFrom, msg: msg });
+        return;
+    }
 
     // private message but not for me return
     if (msgPrivate && msgTo != myPeerName) return;
@@ -5081,7 +5215,7 @@ function handleDataChannelChat(dataMessage) {
  */
 function cleanMessageInput() {
     msgerInput.value = '';
-    msgerInput.style.height = '25px';
+    msgerInput.style.height = '15px';
 }
 
 /**
@@ -5116,16 +5250,19 @@ function handleSpeechTranscript(config) {
     if (!config) return;
     console.log('Handle speech transcript', config);
 
+    config.text_data = filterXSS(config.text_data);
+    config.peer_name = filterXSS(config.peer_name);
+
     const { peer_name, text_data } = config;
 
     const time_stamp = getFormatDate(new Date());
-    const avatar_image = avatarApiUrl + '?name=' + peer_name + '&size=32' + '&background=random&rounded=true';
+    const avatar_image = genAvatarSvg(peer_name, 32);
 
     if (!isCaptionBoxVisible) showCaptionDraggable();
 
     const msgHTML = `
 	<div class="msg left-msg">
-		<div class="msg-img" style="background-image: url('${avatar_image}')"></div>
+        <img class="msg-img" src="${avatar_image}" />
 		<div class="msg-caption-bubble">
             <div class="msg-info">
                 <div class="msg-info-name">${peer_name} : ${time_stamp}</div>
@@ -5164,36 +5301,44 @@ function escapeSpecialChars(regex) {
 function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
     let time = getFormatDate(new Date());
 
+    // sanitize all params
+    const getFrom = filterXSS(from);
+    const getImg = filterXSS(img);
+    const getSide = filterXSS(side);
+    const getMsg = filterXSS(msg);
+    const getPrivateMsg = filterXSS(privateMsg);
+    const getMsgId = filterXSS(msgId);
+
     // collect chat msges to save it later
     chatMessages.push({
         time: time,
-        from: from,
-        msg: msg,
-        privateMsg: privateMsg,
+        from: getFrom,
+        msg: getMsg,
+        privateMsg: getPrivateMsg,
     });
 
     // check if i receive a private message
-    let msgBubble = privateMsg ? 'private-msg-bubble' : 'msg-bubble';
+    let msgBubble = getPrivateMsg ? 'private-msg-bubble' : 'msg-bubble';
 
     let msgHTML = `
-	<div id="msg-${chatMessagesId}" class="msg ${side}-msg">
-		<div class="msg-img" style="background-image: url('${img}')"></div>
+	<div id="msg-${chatMessagesId}" class="msg ${getSide}-msg">
+        <img class="msg-img" src="${getImg}" />
 		<div class=${msgBubble}>
             <div class="msg-info">
-                <div class="msg-info-name">${from}</div>
+                <div class="msg-info-name">${getFrom}</div>
                 <div class="msg-info-time">${time}</div>
             </div>
-            <div id="${chatMessagesId}" class="msg-text">${msg}
+            <div id="${chatMessagesId}" class="msg-text">${getMsg}
                 <hr/>
     `;
     // add btn direct reply to private message
-    if (privateMsg && msgId != null && msgId != myPeerId) {
+    if (getPrivateMsg && getMsgId != null && getMsgId != myPeerId) {
         msgHTML += `
                 <button 
                     class="${className.msgPrivate}"
                     id="msg-private-reply-${chatMessagesId}"
                     style="color:#fff; border:none; background:transparent;"
-                    onclick="sendPrivateMsgToPeer('${myPeerId}','${from}')"
+                    onclick="sendPrivateMsgToPeer('${myPeerId}','${getFrom}')"
                 ></button>`;
     }
     msgHTML += `
@@ -5280,15 +5425,16 @@ async function msgerAddPeers(peers) {
             let exsistMsgerPrivateDiv = getId(peer_id + '_pMsgDiv');
             // if there isn't add it....
             if (!exsistMsgerPrivateDiv) {
+                let avatarSvg = genAvatarSvg(peer_name, 24);
                 let msgerPrivateDiv = `
                 <div id="${peer_id}_pMsgDiv" class="msger-peer-inputarea">
-                    <img id="${peer_id}_pMsgAvatar" src='${avatarApiUrl}?name=${peer_name}&size=24&background=random&rounded=true'> 
+                <img id="${peer_id}_pMsgAvatar" src="${avatarSvg}">
                     <textarea
                         rows="1"
                         cols="1"
                         id="${peer_id}_pMsgInput"
                         class="msger-input"
-                        placeholder="💬 Enter your message..."
+                        placeholder="Write private message..."
                     ></textarea>
                     <button id="${peer_id}_pMsgBtn" class="${className.msgPrivate}" value="${peer_name}"></button>
                 </div>
@@ -5312,7 +5458,7 @@ function searchPeer() {
     let msgerPeerInputarea = getEcN('msger-peer-inputarea');
     searchPeerBarName = searchPeerBarName.toLowerCase();
     for (let i = 0; i < msgerPeerInputarea.length; i++) {
-        if (!msgerPeerInputarea[i].innerHTML.toLowerCase().includes(searchPeerBarName)) {
+        if (!msgerPeerInputarea[i].innerText.toLowerCase().includes(searchPeerBarName)) {
             msgerPeerInputarea[i].style.display = 'none';
         } else {
             msgerPeerInputarea[i].style.display = 'flex';
@@ -5362,7 +5508,8 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
     };
 
     function sendPrivateMessage() {
-        const pMsg = checkMsg(msgerPrivateMsgInput.value.trim());
+        msgerPrivateMsgInput.value = filterXSS(msgerPrivateMsgInput.value.trim());
+        const pMsg = checkMsg(msgerPrivateMsgInput.value);
         if (!pMsg) {
             msgerPrivateMsgInput.value = '';
             isChatPasteTxt = false;
@@ -5388,42 +5535,43 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
 
 /**
  * Check Message
- * Detect url from text and make it clickable
- * If url is a img to create preview of it
- * Prevent XSS (strip html part)
- * @param {string} text passed text
+ * @param {string} txt passed text
  * @returns {string} html format
  */
-function checkMsg(text) {
+function checkMsg(txt) {
+    const text = filterXSS(txt);
     if (text.trim().length == 0) return;
     if (isHtml(text)) return sanitizeHtml(text);
     if (isValidHttpURL(text)) {
-        if (isImageURL(text)) return '<img src="' + text + '" alt="img" width="180" height="auto"/>';
-        if (isVideoTypeSupported(text)) return getIframe(text);
-        return '<a href="' + text + '" target="_blank" class="msg-a">' + text + '</a>';
+        if (isImageURL(text)) return getImage(text);
+        //if (isVideoTypeSupported(text)) return getIframe(text);
+        return getLink(text);
     }
     if (isChatMarkdownOn) return marked.parse(text);
-    let pre = '<pre>' + text + '</pre>';
-    if (isChatPasteTxt) {
+    if (isChatPasteTxt && getLineBreaks(text) > 1) {
         isChatPasteTxt = false;
-        return pre;
+        return getPre(text);
     }
-    if (getLineBreaks(text) > 1) {
-        return pre;
-    }
+    if (getLineBreaks(text) > 1) return getPre(text);
+    console.log('CheckMsg', text);
     return text;
 }
 
 /**
  * Sanitize Html
- * @param {string} html code
+ * @param {string} input code
  * @returns Html as string
  */
-function sanitizeHtml(str) {
-    const tagsToReplace = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
-    const replaceTag = (tag) => tagsToReplace[tag] || tag;
-    const safe_tags_replace = (str) => str.replace(/[&<>]/g, replaceTag);
-    return safe_tags_replace(str);
+function sanitizeHtml(input) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+        '/': '&#x2F;',
+    };
+    return input.replace(/[&<>"'/]/g, (m) => map[m]);
 }
 
 /**
@@ -5445,14 +5593,17 @@ function isHtml(str) {
  * @param {string} str to check
  * @returns boolean true/false
  */
-function isValidHttpURL(str) {
-    let url;
-    try {
-        url = new URL(str);
-    } catch (_) {
-        return false;
-    }
-    return url.protocol === 'http:' || url.protocol === 'https:';
+function isValidHttpURL(url) {
+    const pattern = new RegExp(
+        '^(https?:\\/\\/)?' + // protocol
+            '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+            '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+            '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+            '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+            '(\\#[-a-z\\d_]*)?$',
+        'i',
+    ); // fragment locator
+    return pattern.test(url);
 }
 
 /**
@@ -5465,22 +5616,78 @@ function isImageURL(url) {
 }
 
 /**
+ * Get image
+ * @param {string} text
+ * @returns img
+ */
+function getImage(text) {
+    const url = filterXSS(text);
+    const div = document.createElement('div');
+    const img = document.createElement('img');
+    img.setAttribute('src', url);
+    img.setAttribute('width', '200px');
+    img.setAttribute('height', 'auto');
+    div.appendChild(img);
+    console.log('GetImg', div.firstChild.outerHTML);
+    return div.firstChild.outerHTML;
+}
+
+/**
+ * Get Link
+ * @param {string} text
+ * @returns a href
+ */
+function getLink(text) {
+    const url = filterXSS(text);
+    const a = document.createElement('a');
+    const div = document.createElement('div');
+    const linkText = document.createTextNode(url);
+    a.setAttribute('href', url);
+    a.setAttribute('target', '_blank');
+    a.appendChild(linkText);
+    div.appendChild(a);
+    console.log('GetLink', div.firstChild.outerHTML);
+    return div.firstChild.outerHTML;
+}
+
+/**
+ * Get pre
+ * @param {string} txt
+ * @returns pre
+ */
+function getPre(txt) {
+    const text = filterXSS(txt);
+    const pre = document.createElement('pre');
+    const div = document.createElement('div');
+    pre.textContent = text;
+    div.appendChild(pre);
+    console.log('GetPre', div.firstChild.outerHTML);
+    return div.firstChild.outerHTML;
+}
+
+/**
  * Get IFrame from URL
- * @param {string} url
+ * @param {string} text
  * @returns html iframe
  */
-function getIframe(url) {
-    let is_youtube = getVideoType(url) == 'na' ? true : false;
-    let video_audio_url = is_youtube ? getYoutubeEmbed(url) : url;
-    return `
-    <iframe
-        title="Chat-IFrame"
-        src="${video_audio_url}"
-        width="auto"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-    ></iframe>`;
+function getIframe(text) {
+    const url = filterXSS(text);
+    const iframe = document.createElement('iframe');
+    const div = document.createElement('div');
+    const is_youtube = getVideoType(url) == 'na' ? true : false;
+    const video_audio_url = is_youtube ? getYoutubeEmbed(url) : url;
+    iframe.setAttribute('title', 'Chat-IFrame');
+    iframe.setAttribute('src', video_audio_url);
+    iframe.setAttribute('width', 'auto');
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute(
+        'allow',
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+    );
+    iframe.setAttribute('allowfullscreen', 'allowfullscreen');
+    div.appendChild(iframe);
+    console.log('GetIFrame', div.firstChild.outerHTML);
+    return div.firstChild.outerHTML;
 }
 
 /**
@@ -5493,11 +5700,11 @@ function getLineBreaks(text) {
 }
 
 /**
- * Check chat input line breaks
+ * Check chat input line breaks and value length
  */
 function checkLineBreaks() {
     msgerInput.style.height = '';
-    if (getLineBreaks(msgerInput.value) > 0) {
+    if (getLineBreaks(msgerInput.value) > 0 || msgerInput.value.length > 50) {
         msgerInput.style.height = '200px';
     }
 }
@@ -5523,16 +5730,57 @@ function getFormatDate(date) {
 function emitMsg(from, to, msg, privateMsg, id) {
     if (!msg) return;
 
+    // sanitize all params
+    const getFrom = filterXSS(from);
+    const getFromId = filterXSS(myPeerId);
+    const getTo = filterXSS(to);
+    const getMsg = filterXSS(msg);
+    const getPrivateMsg = filterXSS(privateMsg);
+    const getId = filterXSS(id);
+
     let chatMessage = {
         type: 'chat',
-        from: from,
-        id: id,
-        to: to,
-        msg: msg,
-        privateMsg: privateMsg,
+        from: getFrom,
+        fromId: getFromId,
+        id: getId,
+        to: getTo,
+        msg: getMsg,
+        privateMsg: getPrivateMsg,
     };
     console.log('Send msg', chatMessage);
     sendToDataChannel(chatMessage);
+}
+
+/**
+ * Read ChatGPT incoming message
+ * https://platform.openai.com/docs/introduction
+ * @param {string} msg
+ */
+async function getChatGPTmessage(msg) {
+    console.log('Send ChatGPT message:', msg);
+    signalingSocket
+        .request('data', {
+            room_id: roomId,
+            peer_id: myPeerId,
+            peer_name: myPeerName,
+            method: 'getChatGPT',
+            params: {
+                time: getDataTimeString(),
+                prompt: msg,
+            },
+        })
+        .then(
+            function (completion) {
+                if (!completion) return;
+                setPeerChatAvatarImgName('left', 'ChatGPT');
+                appendMessage('ChatGPT', leftChatAvatar, 'left', completion, true);
+                cleanMessageInput();
+                playSound('message');
+            }.bind(this),
+        )
+        .catch((err) => {
+            console.log('ChatGPT error:', err);
+        });
 }
 
 /**
@@ -5650,7 +5898,7 @@ async function updateMyPeerName() {
     const myOldPeerName = myPeerName;
 
     myPeerName = myNewPeerName;
-    myVideoParagraph.innerHTML = myPeerName + ' (me)';
+    myVideoParagraph.innerText = myPeerName + ' (me)';
 
     sendToServer('peerName', {
         room_id: roomId,
@@ -5663,7 +5911,7 @@ async function updateMyPeerName() {
 
     window.localStorage.peer_name = myPeerName;
 
-    setPeerAvatarImgName('myVideoAvatarImage', myPeerName, useAvatarApi);
+    setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);
     userLog('toast', 'My name changed to ' + myPeerName);
 }
@@ -5675,15 +5923,14 @@ async function updateMyPeerName() {
 function handlePeerName(config) {
     const { peer_id, peer_name } = config;
     const videoName = getId(peer_id + '_name');
-    if (videoName) videoName.innerHTML = peer_name;
+    if (videoName) videoName.innerText = peer_name;
     // change also avatar and btn value - name on chat lists....
     const msgerPeerName = getId(peer_id + '_pMsgBtn');
     const msgerPeerAvatar = getId(peer_id + '_pMsgAvatar');
     if (msgerPeerName) msgerPeerName.value = peer_name;
-    if (msgerPeerAvatar)
-        msgerPeerAvatar.src = `${avatarApiUrl}?name=${peer_name}&size=24&background=random&rounded=true`;
+    if (msgerPeerAvatar) msgerPeerAvatar.src = genAvatarSvg(peer_name, 32);
     // refresh also peer video avatar name
-    setPeerAvatarImgName(peer_id + '_avatar', peer_name, useAvatarApi);
+    setPeerAvatarImgName(peer_id + '_avatar', peer_name);
 }
 
 /**
@@ -5695,6 +5942,7 @@ async function emitPeerStatus(element, status) {
     sendToServer('peerStatus', {
         room_id: roomId,
         peer_name: myPeerName,
+        peer_id: myPeerId,
         element: element,
         status: status,
     });
@@ -5898,6 +6146,7 @@ function sendPrivateMsgToPeer(toPeerId, toPeerName) {
         },
     }).then((result) => {
         if (result.value) {
+            result.value = filterXSS(result.value);
             let pMsg = checkMsg(result.value);
             if (!pMsg) {
                 isChatPasteTxt = false;
@@ -5965,6 +6214,7 @@ async function emitPeersAction(peerAction) {
         room_id: roomId,
         peer_name: myPeerName,
         peer_id: myPeerId,
+        peer_uuid: myPeerUUID,
         peer_use_video: useVideo,
         peer_action: peerAction,
         send_to_all: true,
@@ -6242,7 +6492,9 @@ function handleRoomAction(config, emit = false) {
     if (emit) {
         const thisConfig = {
             room_id: roomId,
+            peer_id: myPeerId,
             peer_name: myPeerName,
+            peer_uuid: myPeerUUID,
             action: action,
             password: null,
         };
@@ -6913,7 +7165,7 @@ function handleDataChannelFileSharing(data) {
     receiveBuffer.push(data);
     receivedSize += data.byteLength;
     receiveProgress.value = receivedSize;
-    receiveFilePercentage.innerHTML =
+    receiveFilePercentage.innerText =
         'Receive progress: ' + ((receivedSize / incomingFileInfo.file.fileSize) * 100).toFixed(2) + '%';
     if (receivedSize === incomingFileInfo.file.fileSize) {
         receiveFileDiv.style.display = 'none';
@@ -6936,16 +7188,16 @@ function sendFileData(peer_id, broadcast) {
 
     sendInProgress = true;
 
-    sendFileInfo.innerHTML =
+    sendFileInfo.innerText =
         'File name: ' +
         fileToSend.name +
-        '<br>' +
+        '\n' +
         'File type: ' +
         fileToSend.type +
-        '<br>' +
+        '\n' +
         'File size: ' +
         bytesToSize(fileToSend.size) +
-        '<br>';
+        '\n';
 
     sendFileDiv.style.display = 'inline';
     sendProgress.max = fileToSend.size;
@@ -6967,7 +7219,7 @@ function sendFileData(peer_id, broadcast) {
         offset += data.fileData.byteLength;
 
         sendProgress.value = offset;
-        sendFilePercentage.innerHTML = 'Send progress: ' + ((offset / fileToSend.size) * 100).toFixed(2) + '%';
+        sendFilePercentage.innerText = 'Send progress: ' + ((offset / fileToSend.size) * 100).toFixed(2) + '%';
 
         // send file completed
         if (offset === fileToSend.size) {
@@ -7166,13 +7418,13 @@ function handleFileInfo(config) {
     let fileToReceiveInfo =
         'From: ' +
         incomingFileInfo.peer_name +
-        '<br />' +
+        '\n' +
         ' Incoming file: ' +
         incomingFileInfo.file.fileName +
-        '<br />' +
+        '\n' +
         ' File size: ' +
         bytesToSize(incomingFileInfo.file.fileSize) +
-        '<br />' +
+        '\n' +
         ' File type: ' +
         incomingFileInfo.file.fileType;
     console.log(fileToReceiveInfo);
@@ -7193,7 +7445,7 @@ function handleFileInfo(config) {
         !incomingFileInfo.broadcast,
         incomingFileInfo.peer_id,
     );
-    receiveFileInfo.innerHTML = fileToReceiveInfo;
+    receiveFileInfo.innerText = fileToReceiveInfo;
     receiveFileDiv.style.display = 'inline';
     receiveProgress.max = incomingFileInfo.file.fileSize;
     receiveInProgress = true;
@@ -7309,6 +7561,7 @@ function sendVideoUrl(peer_id = null) {
         },
     }).then((result) => {
         if (result.value) {
+            result.value = filterXSS(result.value);
             if (!thereIsPeerConnections()) {
                 return userLog('info', 'No participants detected');
             }
@@ -7478,7 +7731,7 @@ function handlePeerKickOutBtn(peer_id) {
  * @param {string} peer_id socket.id
  */
 function kickOut(peer_id) {
-    let pName = getId(peer_id + '_name').innerHTML;
+    let pName = getId(peer_id + '_name').innerText;
 
     Swal.fire({
         background: swalBackground,
@@ -7501,6 +7754,7 @@ function kickOut(peer_id) {
             sendToServer('kickOut', {
                 room_id: roomId,
                 peer_id: peer_id,
+                peer_uuid: myPeerUUID,
                 peer_name: myPeerName,
             });
         }
@@ -7512,6 +7766,8 @@ function kickOut(peer_id) {
  * @param {object} config data
  */
 function handleKickedOut(config) {
+    signalingSocket.disconnect();
+
     const { peer_name } = config;
 
     playSound('eject');
@@ -7529,7 +7785,7 @@ function handleKickedOut(config) {
             `User ` +
             peer_name +
             `</h2> will kick out you after <b style="color: #FF2D00;"></b> milliseconds.`,
-        timer: 10000,
+        timer: 5000,
         timerProgressBar: true,
         didOpen: () => {
             Swal.showLoading();

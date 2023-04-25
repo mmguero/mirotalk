@@ -32,6 +32,7 @@
 -   Recording your Screen, Audio and Video
 -   Snapshot the video frame and save it as image png
 -   Chat with Emoji Picker to show you feeling, private messages, Markdown support, possibility to Save the conversations, and many more
+-   ChatGPT (openAI), designed to answer users' questions, provide relevant information, and connect them with relevant resources
 -   Speech recognition to send the speeches
 -   Push to talk, like a walkie-talkie.
 -   Advance collaborative whiteboard for the teachers
@@ -113,7 +114,7 @@ Embedding a meeting into a service or app using an iframe.
 
 <br/>
 
--   You will need to have `Node.js` installed, this project has been tested with Node versions [12.X](https://nodejs.org/en/blog/release/v12.22.1/), [14.X](https://nodejs.org/en/blog/release/v14.17.5/) and [16.X](https://nodejs.org/en/blog/release/v16.15.0/).
+-   You will need to have `Node.js` installed, this project has been tested with Node versions [12.X](https://nodejs.org/en/blog/release/v12.22.1/), [14.X](https://nodejs.org/en/blog/release/v14.17.5/), [16.X](https://nodejs.org/en/blog/release/v16.15.1/) and [18.x](https://nodejs.org/en/blog/release/v18.16.0).
 
 ```bash
 # clone this repo
@@ -176,13 +177,7 @@ You can start videoconferencing directly from your Local PC, and be reachable fr
 
 <br/>
 
-You can [Check here](https://p2p.mirotalk.com/test), if you are full covered by the MiroTalk default IceServers ([Stun](https://en.wikipedia.org/wiki/STUN) & [Turn](https://en.wikipedia.org/wiki/TURN)).
-
-`If not`, install your own by following [this steps](./docs/coturn.md), edit the `.env` file and test it by the URL eg:
-
-```html
-https://p2p.mirotalk.com//test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
-```
+Install your own [Stun](https://en.wikipedia.org/wiki/STUN) & [Turn](https://en.wikipedia.org/wiki/TURN) by following [this steps](./docs/coturn.md).
 
 </details>
 
@@ -253,6 +248,24 @@ To `Self-Host MiroTalk P2P` on `Your` dedicated `Server`, read [this documentati
 [![AGPLv3](public/images/AGPLv3.png)](LICENSE)
 
 MiroTalk is free and can be modified and forked. But the conditions of the AGPLv3 (GNU Affero General Public License v3.0) need to be respected. In particular modifications need to be free as well and made available to the public. Get a quick overview of the license at [Choose an open source license](https://choosealicense.com/licenses/agpl-3.0/).
+
+</details>
+
+<details>
+<summary>MiroTalk C2C</summary>
+
+<br>
+
+Try also [MiroTalk C2C](https://github.com/miroslavpejic85/mirotalkc2c) cam 2 cam.
+
+</details>
+
+<details>
+<summary>MiroTalk WEB</summary>
+
+<br>
+
+Try also [MiroTalk WEB](https://github.com/miroslavpejic85/mirotalkwebrtc) rooms scheduler.
 
 </details>
 

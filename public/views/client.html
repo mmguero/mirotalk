@@ -20,7 +20,7 @@
         />
         <meta
             name="keywords"
-            content="webrtc, webrtc stun, webrtc turn, video meeting, video chat, multi video chat, peer to peer, p2p, zoom"
+            content="webrtc, openAI, chatGPT, webrtc stun, webrtc turn, video meeting, video chat, multi video chat, peer to peer, p2p, zoom"
         />
 
         <!-- https://ogp.me -->
@@ -118,7 +118,11 @@ access to use this app.
         <section id="msgerDraggable" class="msger-draggable fadein">
             <section id="msger" class="msger">
                 <header id="msgerHeader" class="msger-header">
-                    <div class="msger-header-title"><button id="msgerClose" class="fas fa-times"></button></div>
+                    <div class="msger-header-title">
+                        <button id="msgerClose" class="fas fa-times"></button>
+                        <button id="msgerMaxBtn" class="fas fa-expand"></button>
+                        <button id="msgerMinBtn" class="fas fa-compress"></button>
+                    </div>
                     <div class="msger-header-options">
                         <button id="msgerTheme" class="fas fa-ghost"></button>
                         <button id="msgerSaveBtn" class="fas fa-save"></button>
@@ -139,13 +143,14 @@ access to use this app.
                         cols="1"
                         id="msgerInput"
                         class="msger-input"
-                        placeholder="💬 Write a message..."
+                        placeholder="Write a message..."
                     ></textarea>
                 </div>
 
                 <div class="msger-input-buttons">
                     <button id="msgerEmojiBtn" class="fas fa-smile"></button>
                     <button id="msgerMarkdownBtn" class="fab fa-markdown"></button>
+                    <button id="msgerGPTBtn" class="fas fa-robot"></button>
                     <button id="msgerShareFileBtn" class="fas fa-paperclip"></button>
                     <button id="msgerVideoUrlBtn" class="fab fa-youtube"></button>
                     <button id="msgerCPBtn" class="fas fa-users"></button>
@@ -192,26 +197,28 @@ access to use this app.
 
         <!-- Start of caption section -->
 
-        <section id="captionDraggable" class="msger-draggable fadein">
-            <section id="caption" class="msger">
-                <header id="captionHeader" class="msger-header">
-                    <div class="msger-header-title">
+        <section id="captionDraggable" class="caption-draggable fadein">
+            <section id="caption" class="caption">
+                <header id="captionHeader" class="caption-header">
+                    <div class="caption-header-title">
                         <button id="captionClose" class="fas fa-times"></button>
+                        <button id="captionMaxBtn" class="fas fa-expand"></button>
+                        <button id="captionMinBtn" class="fas fa-compress"></button>
                     </div>
-                    <div class="msger-header-options">
+                    <div class="caption-header-options">
                         <button id="captionTheme" class="fas fa-ghost"></button>
                         <button id="captionSaveBtn" class="fas fa-save"></button>
                         <button id="captionClean" class="fas fa-trash"></button>
                     </div>
                 </header>
 
-                <main id="captionChat" class="msger-chat"></main>
-                <div class="msger-inputarea">
+                <main id="captionChat" class="caption-chat"></main>
+                <div class="caption-inputarea">
                     <button id="speechRecognitionIcon" class="fas fa-microphone-alt"></button>
                     <select id="recognitionLanguage"></select>
                     <select id="recognitionDialect"></select>
-                    <button type="button" id="speechRecognitionStart"><i class="fas fa-play"></i>&nbsp;Start</button>
-                    <button type="button" id="speechRecognitionStop"><i class="fas fa-stop"></i>&nbsp;Stop</button>
+                    <button id="speechRecognitionStart" class="fas fa-play">&nbsp;Start</button>
+                    <button id="speechRecognitionStop" class="fas fa-stop">&nbsp;Stop</button>
                 </div>
             </section>
         </section>
@@ -308,13 +315,13 @@ access to use this app.
 
                 <div id="tabRoom" class="tabcontent">
                     <br />
-                    <div>
+                    <div id="tabRoomPeerName">
                         <label>My name</label><br />
                         <input id="myPeerNameSet" type="text" placeholder="Change name..." />&nbsp;&nbsp;
                         <button id="myPeerNameSetBtn"><i class="fas fa-user-edit"></i>&nbsp;Change</button>
                     </div>
                     <div id="tabRoomParticipants">
-                        <br />
+                        <br /><br />
                         <label>Participants</label><br />
                         <button id="muteEveryoneBtn"><i class="fas fa-microphone"></i>&nbsp;Mute everyone</button>
                         <button id="hideEveryoneBtn"><i class="fas fa-video"></i>&nbsp;Hide everyone</button>

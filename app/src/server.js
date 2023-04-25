@@ -10,6 +10,7 @@ http://patorjk.com/software/taag/#p=display&f=ANSI%20Regular&t=Server
 dependencies: {
     @sentry/node            : https://www.npmjs.com/package/@sentry/node
     @sentry/integrations    : https://www.npmjs.com/package/@sentry/integrations
+    axios                   : https://www.npmjs.com/package/axios
     body-parser             : https://www.npmjs.com/package/body-parser
     compression             : https://www.npmjs.com/package/compression
     colors                  : https://www.npmjs.com/package/colors
@@ -19,6 +20,7 @@ dependencies: {
     express                 : https://www.npmjs.com/package/express
     ngrok                   : https://www.npmjs.com/package/ngrok
     qs                      : https://www.npmjs.com/package/qs
+    openai                  : https://www.npmjs.com/package/openai
     socket.io               : https://www.npmjs.com/package/socket.io
     swagger                 : https://www.npmjs.com/package/swagger-ui-express
     uuid                    : https://www.npmjs.com/package/uuid
@@ -35,7 +37,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.0.3
+ * @version 1.0.5
  *
  */
 
@@ -50,8 +52,9 @@ const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const checkXSS = require('./xss.js');
+const axios = require('axios');
 const app = express();
+const checkXSS = require('./xss.js');
 const Host = require('./host');
 const Logs = require('./logs');
 const log = new Logs('server');
@@ -85,7 +88,7 @@ io = new Server({
 // console.log(io);
 
 // Host protection (disabled by default)
-const hostProtected = process.env.HOST_PROTECTED == 'true' ? true : false;
+const hostProtected = getEnvBoolean(process.env.HOST_PROTECTED);
 const hostCfg = {
     protected: hostProtected,
     username: process.env.HOST_USERNAME,
@@ -106,33 +109,36 @@ const api_key_secret = process.env.API_KEY_SECRET || 'mirotalk_default_secret';
 
 // Ngrok config
 const ngrok = require('ngrok');
-const ngrokEnabled = process.env.NGROK_ENABLED == 'true' ? true : false;
+const ngrokEnabled = getEnvBoolean(process.env.NGROK_ENABLED);
 const ngrokAuthToken = process.env.NGROK_AUTH_TOKEN;
 
 // Stun config
 const stun = process.env.STUN || 'stun:stun.l.google.com:19302';
 
 // Turn config
-const turnEnabled = process.env.TURN_ENABLED == 'true' ? true : false;
+const turnEnabled = getEnvBoolean(process.env.TURN_ENABLED);
 const turnUrls = process.env.TURN_URLS;
 const turnUsername = process.env.TURN_USERNAME;
 const turnCredential = process.env.TURN_PASSWORD;
 
+// IP Lookup
+const IPLookupEnabled = getEnvBoolean(process.env.IP_LOOKUP_ENABLED);
+
 // Survey URL
-const surveyEnabled = process.env.SURVEY_ENABLED == 'true' ? true : false;
+const surveyEnabled = getEnvBoolean(process.env.SURVEY_ENABLED);
 const surveyURL = process.env.SURVEY_URL || 'https://example.org';
 
 // Sentry config
 const Sentry = require('@sentry/node');
 const { CaptureConsole } = require('@sentry/integrations');
-const sentryEnabled = process.env.SENTRY_ENABLED == 'true' ? true : false;
+const sentryEnabled = getEnvBoolean(process.env.SENTRY_ENABLED);
 const sentryDSN = process.env.SENTRY_DSN;
 const sentryTracesSampleRate = process.env.SENTRY_TRACES_SAMPLE_RATE;
 
 // Slack API
 const CryptoJS = require('crypto-js');
 const qS = require('qs');
-const slackEnabled = process.env.SLACK_ENABLED == 'true' ? true : false;
+const slackEnabled = getEnvBoolean(process.env.SLACK_ENABLED);
 const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
 const bodyParser = require('body-parser');
 
@@ -152,6 +158,27 @@ if (sentryEnabled) {
         // We recommend adjusting this value in production
         tracesSampleRate: sentryTracesSampleRate,
     });
+}
+
+// OpenAI/ChatGPT
+let chatGPT;
+const configChatGPT = {
+    enabled: getEnvBoolean(process.env.CHATGPT_ENABLED),
+    apiKey: process.env.CHATGTP_APIKEY,
+    model: process.env.CHATGTP_MODEL,
+    max_tokens: parseInt(process.env.CHATGPT_MAX_TOKENS),
+    temperature: parseInt(process.env.CHATGPT_TEMPERATURE),
+};
+if (configChatGPT.enabled) {
+    if (configChatGPT.apiKey) {
+        const { Configuration, OpenAIApi } = require('openai');
+        const configuration = new Configuration({
+            apiKey: configChatGPT.apiKey,
+        });
+        chatGPT = new OpenAIApi(configuration);
+    } else {
+        log.warning('ChatGPT seems enabled, but you missing the apiKey!');
+    }
 }
 
 // directory
@@ -272,12 +299,6 @@ app.get(['/test'], (req, res) => {
     if (Object.keys(req.query).length > 0) {
         log.debug('Request Query', req.query);
     }
-    /*
-        http://localhost:3000/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
-        https://p2p.mirotalk.com//test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
-        https://mirotalk.up.railway.app/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
-        https://mirotalk.herokuapp.com/test?iceServers=[{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:openrelay.metered.ca:443","username":"openrelayproject","credential":"openrelayproject"}]
-    */
     res.sendFile(views.stunTurn);
 });
 
@@ -399,20 +420,15 @@ app.get('*', function (req, res) {
 
 /**
  * You should probably use a different stun-turn server
- * doing commercial stuff, also see:
- *
- * https://github.com/coturn/coturn
- * https://gist.github.com/zziuni/3741933
- * https://www.twilio.com/docs/stun-turn
- *
- * Check the functionality of STUN/TURN servers:
- * https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/
+ * doing commercial stuff, check out: https://github.com/coturn/coturn
+ * Installation doc: ../docs/coturn.md
  */
 const iceServers = [];
 
-// Stun is always needed
+// Stun is mandatory
 iceServers.push({ urls: stun });
 
+// Turn is recommended if direct peer to peer connection is not possible
 if (turnEnabled) {
     iceServers.push({
         urls: turnUrls,
@@ -423,9 +439,9 @@ if (turnEnabled) {
     // As backup if not configured, please configure your own in the .env file
     // https://www.metered.ca/tools/openrelay/
     iceServers.push({
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
+        urls: 'turn:a.relay.metered.ca:443',
+        username: 'e8dd65b92c62d3e36cafb807',
+        credential: 'uWdWNmkhvyqTEswO',
     });
 }
 
@@ -464,6 +480,8 @@ async function ngrokStart() {
             api_key_secret: api_key_secret,
             use_self_signed_certificate: isHttps,
             own_turn_enabled: turnEnabled,
+            ip_lookup_enabled: IPLookupEnabled,
+            chatGPT_enabled: configChatGPT.enabled,
             slack_enabled: slackEnabled,
             sentry_enabled: sentryEnabled,
             survey_enabled: surveyEnabled,
@@ -510,6 +528,8 @@ server.listen(port, null, () => {
             api_key_secret: api_key_secret,
             use_self_signed_certificate: isHttps,
             own_turn_enabled: turnEnabled,
+            ip_lookup_enabled: IPLookupEnabled,
+            chatGPT_enabled: configChatGPT.enabled,
             slack_enabled: slackEnabled,
             sentry_enabled: sentryEnabled,
             survey_enabled: surveyEnabled,
@@ -565,12 +585,14 @@ io.sockets.on('connect', async (socket) => {
     /**
      * Handle incoming data, res with a callback
      */
-    socket.on('data', async (data, cb) => {
+    socket.on('data', async (dataObj, cb) => {
+        const data = checkXSS(dataObj);
+
         log.debug('Socket Promise', data);
         //...
-        const { room_id, peer_id, peer_name, type } = data;
+        const { room_id, peer_id, peer_name, method, params } = data;
 
-        switch (type) {
+        switch (method) {
             case 'checkPeerName':
                 log.debug('Check if peer name exists', { peer_name: peer_name, room_id: room_id });
                 for (let id in peers[room_id]) {
@@ -578,6 +600,36 @@ io.sockets.on('connect', async (socket) => {
                         log.debug('Peer name found', { peer_name: peer_name, room_id: room_id });
                         cb(true);
                         break;
+                    }
+                }
+                break;
+            case 'getChatGPT':
+                // https://platform.openai.com/docs/introduction
+                if (!configChatGPT.enabled) return cb('ChatGPT seems disabled, try later!');
+                try {
+                    // https://platform.openai.com/docs/api-reference/completions/create
+                    const completion = await chatGPT.createCompletion({
+                        model: configChatGPT.model || 'text-davinci-003',
+                        prompt: params.prompt,
+                        max_tokens: configChatGPT.max_tokens || 1000,
+                        temperature: configChatGPT.temperature || 0,
+                    });
+                    const response = completion.data.choices[0].text;
+                    log.debug('ChatGPT', {
+                        time: params.time,
+                        room: room_id,
+                        name: peer_name,
+                        prompt: params.prompt,
+                        response: response,
+                    });
+                    cb(response);
+                } catch (error) {
+                    if (error.response) {
+                        log.error('ChatGPT', error.response);
+                        cb(error.response.data.error.message);
+                    } else {
+                        log.error('ChatGPT', error.message);
+                        cb(error.message);
                     }
                 }
                 break;
@@ -593,15 +645,23 @@ io.sockets.on('connect', async (socket) => {
      * On peer join
      */
     socket.on('join', async (cfg) => {
+        // Get peer IPv4 (::1 Its the loopback address in ipv6, equal to 127.0.0.1 in ipv4)
+        const peer_ip = socket.handshake.headers['x-forwarded-for'] || socket.conn.remoteAddress;
+
+        // Get peer Geo Location
+        if (IPLookupEnabled && peer_ip != '::1') {
+            cfg.peer_geo = await getPeerGeoLocation(peer_ip);
+        }
+
         // Prevent XSS injection
         const config = checkXSS(cfg);
+
         // log.debug('Join room', config);
         log.debug('[' + socket.id + '] join ', config);
 
         const {
             channel,
             channel_password,
-            peer_ip,
             peer_uuid,
             peer_name,
             peer_video,
@@ -642,11 +702,8 @@ io.sockets.on('connect', async (socket) => {
             };
         }
 
-        // If presenter must mach the name - uuid
-        const isPresenter =
-            Object.keys(presenters[channel]).length > 1 &&
-            presenters[channel]['peer_name'] == peer_name &&
-            presenters[channel]['peer_uuid'] == peer_uuid;
+        // Check if peer is presenter
+        const isPresenter = await isPeerPresenter(channel, socket.id, peer_name, peer_uuid);
 
         log.debug('[Join] - connected presenters grp by roomId', presenters);
 
@@ -722,13 +779,17 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         //log.debug('[' + socket.id + '] Room action:', config);
-        const { room_id, peer_name, password, action } = config;
+        const { room_id, peer_id, peer_name, peer_uuid, password, action } = config;
+
+        // Check if peer is presenter
+        const isPresenter = await isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
 
         let room_is_locked = false;
         //
         try {
             switch (action) {
                 case 'lock':
+                    if (!isPresenter) return;
                     peers[room_id]['lock'] = true;
                     peers[room_id]['password'] = password;
                     await sendToRoom(room_id, socket.id, 'roomAction', {
@@ -738,6 +799,7 @@ io.sockets.on('connect', async (socket) => {
                     room_is_locked = true;
                     break;
                 case 'unlock':
+                    if (!isPresenter) return;
                     delete peers[room_id]['lock'];
                     delete peers[room_id]['password'];
                     await sendToRoom(room_id, socket.id, 'roomAction', {
@@ -772,19 +834,18 @@ io.sockets.on('connect', async (socket) => {
         let peer_id_to_update = null;
 
         for (let peer_id in peers[room_id]) {
-            if (peers[room_id][peer_id]['peer_name'] == peer_name_old) {
+            if (peers[room_id][peer_id]['peer_name'] == peer_name_old && peer_id == socket.id) {
                 peers[room_id][peer_id]['peer_name'] = peer_name_new;
                 presenters[room_id]['peer_name'] = peer_name_new;
                 peer_id_to_update = peer_id;
             }
         }
 
-        const data = {
-            peer_id: peer_id_to_update,
-            peer_name: peer_name_new,
-        };
-
         if (peer_id_to_update) {
+            const data = {
+                peer_id: peer_id_to_update,
+                peer_name: peer_name_new,
+            };
             log.debug('[' + socket.id + '] emit peerName to [room_id: ' + room_id + ']', data);
 
             await sendToRoom(room_id, socket.id, 'peerName', data);
@@ -798,10 +859,10 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Peer status', config);
-        const { room_id, peer_name, element, status } = config;
+        const { room_id, peer_name, peer_id, element, status } = config;
 
         const data = {
-            peer_id: socket.id,
+            peer_id: peer_id,
             peer_name: peer_name,
             element: element,
             status: status,
@@ -809,7 +870,7 @@ io.sockets.on('connect', async (socket) => {
 
         try {
             for (let peer_id in peers[room_id]) {
-                if (peers[room_id][peer_id]['peer_name'] == peer_name) {
+                if (peers[room_id][peer_id]['peer_name'] == peer_name && peer_id == socket.id) {
                     switch (element) {
                         case 'video':
                             peers[room_id][peer_id]['peer_video_status'] = status;
@@ -848,7 +909,16 @@ io.sockets.on('connect', async (socket) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
         // log.debug('Peer action', config);
-        const { room_id, peer_id, peer_name, peer_use_video, peer_action, send_to_all } = config;
+        const { room_id, peer_id, peer_uuid, peer_name, peer_use_video, peer_action, send_to_all } = config;
+
+        // Only the presenter can do this actions
+        const presenterActions = ['muteAudio', 'hideVideo', 'ejectAll'];
+        if (presenterActions.some((v) => peer_action === v)) {
+            // Check if peer is presenter
+            const isPresenter = await isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
+            // if not presenter do nothing
+            if (!isPresenter) return;
+        }
 
         const data = {
             peer_id: peer_id,
@@ -874,13 +944,19 @@ io.sockets.on('connect', async (socket) => {
     socket.on('kickOut', async (cfg) => {
         // Prevent XSS injection
         const config = checkXSS(cfg);
-        const { room_id, peer_id, peer_name } = config;
+        const { room_id, peer_id, peer_uuid, peer_name } = config;
 
-        log.debug('[' + socket.id + '] kick out peer [' + peer_id + '] from room_id [' + room_id + ']');
+        // Check if peer is presenter
+        const isPresenter = await isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
 
-        await sendToPeer(peer_id, sockets, 'kickOut', {
-            peer_name: peer_name,
-        });
+        // Only the presenter can kickOut others
+        if (isPresenter) {
+            log.debug('[' + socket.id + '] kick out peer [' + peer_id + '] from room_id [' + room_id + ']');
+
+            await sendToPeer(peer_id, sockets, 'kickOut', {
+                peer_name: peer_name,
+            });
+        }
     });
 
     /**
@@ -1074,6 +1150,61 @@ io.sockets.on('connect', async (socket) => {
         }
     }
 }); // end [sockets.on-connect]
+
+/**
+ * Get Env as boolean
+ * @param {string} key
+ * @param {boolean} force_true_if_undefined
+ * @returns boolean
+ */
+function getEnvBoolean(key, force_true_if_undefined = false) {
+    if (key == undefined && force_true_if_undefined) return true;
+    return key == 'true' ? true : false;
+}
+
+/**
+ * get Peer geo Location using GeoJS
+ * https://www.geojs.io/docs/v1/endpoints/geo/
+ *
+ * @param {string} ip
+ * @returns json
+ */
+async function getPeerGeoLocation(ip) {
+    const endpoint = `https://get.geojs.io/v1/ip/geo/${ip}.json`;
+    log.debug('Get peer geo', { ip: ip, endpoint: endpoint });
+    return axios
+        .get(endpoint)
+        .then((response) => response.data)
+        .catch((error) => log.error(error));
+}
+
+/**
+ * Check if peer is Presenter
+ * @param {string} room_id
+ * @param {string} peer_id
+ * @param {string} peer_uuid
+ * @returns boolean
+ */
+async function isPeerPresenter(room_id, peer_id, peer_name, peer_uuid) {
+    let isPresenter = false;
+    try {
+        isPresenter =
+            typeof presenters === 'object' &&
+            Object.keys(presenters[room_id]).length > 1 &&
+            presenters[room_id]['peer_name'] === peer_name &&
+            presenters[room_id]['peer_uuid'] === peer_uuid;
+    } catch (err) {
+        log.error('isPeerPresenter', err);
+        return false;
+    }
+    log.debug('[' + peer_id + '] isPeerPresenter', {
+        peer_name: peer_name,
+        peer_uuid: peer_uuid,
+        isPresenter: isPresenter,
+        presenter: presenters[room_id],
+    });
+    return isPresenter;
+}
 
 /**
  * Get ip
