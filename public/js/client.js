@@ -1128,15 +1128,12 @@ async function whoAreYou() {
     getId('loadingDiv').style.display = 'none';
     document.body.style.background = 'var(--body-bg)';
 
-    let userExist = false;
-
     if (myPeerName) {
         myPeerName = filterXSS(myPeerName);
 
         console.log(`11.1 Check if ${myPeerName} exist in the room`, roomId);
-        userExist = await checkUserName();
 
-        if (userExist) {
+        if (await checkUserName()) {
             return userNameAlreadyInRoom();
         }
 
@@ -1183,9 +1180,7 @@ async function whoAreYou() {
             }
 
             // check if peer name is already in use in the room
-            userExist = await checkUserName();
-
-            if (userExist) {
+            if (await checkUserName()) {
                 return 'Username is already in use!';
             } else {
                 window.localStorage.peer_name = myPeerName;
@@ -5879,8 +5874,7 @@ async function updateMyPeerName() {
     if (!myPeerNameSet.value) return;
 
     // check if peer name is already in use in the room
-    const userExist = await checkUserName(myPeerNameSet.value);
-    if (userExist) {
+    if (await checkUserName(myPeerNameSet.value)) {
         myPeerNameSet.value = '';
         return userLog('warning', 'Username is already in use!');
     }
@@ -7357,7 +7351,8 @@ function sendFileInformations(file, peer_id, broadcast = false) {
         }
 
         // prevent XSS injection to remote peer (fileToSend.name is read only)
-        if (isHtml(fileToSend.name)) return userLog('warning', 'Invalid file name!');
+        if (isHtml(fileToSend.name) || !isValidFileName(fileToSend.name))
+            return userLog('warning', 'Invalid file name!');
 
         const fileInfo = {
             room_id: roomId,
@@ -7419,13 +7414,13 @@ function handleFileInfo(config) {
         'From: ' +
         incomingFileInfo.peer_name +
         '\n' +
-        ' Incoming file: ' +
+        'Incoming file: ' +
         incomingFileInfo.file.fileName +
         '\n' +
-        ' File size: ' +
+        'File size: ' +
         bytesToSize(incomingFileInfo.file.fileSize) +
         '\n' +
-        ' File type: ' +
+        'File type: ' +
         incomingFileInfo.file.fileType;
     console.log(fileToReceiveInfo);
     // generate chat avatar by peer_name
@@ -7827,7 +7822,7 @@ function showAbout() {
         html: `
         <br/>
         <div id="about">
-            <b><a href="https://github.com/mmguero/mirotalk" class="umami--click--github" target="_blank">Open Source</a></b> project
+            <b><a href="https://github.com/mmguero/mirotalk" target="_blank">Open Source</a></b> project
         </div>
         `,
         showClass: {
@@ -8130,6 +8125,16 @@ function toggleClassElements(className, displayState) {
     for (let i = 0; i < elements.length; i++) {
         elements[i].style.display = displayState;
     }
+}
+
+/**
+ * Check if valid filename
+ * @param {string} fileName
+ * @returns boolean
+ */
+function isValidFileName(fileName) {
+    const invalidChars = /[\\\/\?\*\|:"<>]/;
+    return !invalidChars.test(fileName);
 }
 
 /**
