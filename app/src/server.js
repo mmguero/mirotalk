@@ -112,14 +112,25 @@ const ngrok = require('ngrok');
 const ngrokEnabled = getEnvBoolean(process.env.NGROK_ENABLED);
 const ngrokAuthToken = process.env.NGROK_AUTH_TOKEN;
 
-// Stun config
-const stun = process.env.STUN || 'stun:stun.l.google.com:19302';
+// Stun (https://bloggeek.me/webrtcglossary/stun/)
+// Turn (https://bloggeek.me/webrtcglossary/turn/)
+let iceServers = [];
+const stunServerUrl = process.env.STUN_SERVER_URL;
+const turnServerUrl = process.env.TURN_SERVER_URL;
+const turnServerUsername = process.env.TURN_SERVER_USERNAME;
+const turnServerCredential = process.env.TURN_SERVER_CREDENTIAL;
+const stunServerEnabled = getEnvBoolean(process.env.STUN_SERVER_ENABLED);
+const turnServerEnabled = getEnvBoolean(process.env.TURN_SERVER_ENABLED);
+// Stun is mandatory for not internal network
+if (stunServerEnabled && stunServerUrl) iceServers.push({ urls: stunServerUrl });
+// Turn is recommended if direct peer to peer connection is not possible
+if (turnServerEnabled && turnServerUrl && turnServerUsername && turnServerCredential) {
+    iceServers.push({ urls: turnServerUrl, username: turnServerUsername, credential: turnServerCredential });
+}
 
-// Turn config
-const turnEnabled = getEnvBoolean(process.env.TURN_ENABLED);
-const turnUrls = process.env.TURN_URLS;
-const turnUsername = process.env.TURN_USERNAME;
-const turnCredential = process.env.TURN_PASSWORD;
+// Test Stun and Turn connection with query params
+// const testStunTurn = host + '/test?iceServers=' + JSON.stringify(iceServers);
+const testStunTurn = host + '/test';
 
 // IP Lookup
 const IPLookupEnabled = getEnvBoolean(process.env.IP_LOOKUP_ENABLED);
@@ -419,37 +430,6 @@ app.get('*', function (req, res) {
 });
 
 /**
- * You should probably use a different stun-turn server
- * doing commercial stuff, check out: https://github.com/coturn/coturn
- * Installation doc: ../docs/coturn.md
- */
-const iceServers = [];
-
-// Stun is mandatory
-iceServers.push({ urls: stun });
-
-// Turn is recommended if direct peer to peer connection is not possible
-if (turnEnabled) {
-    iceServers.push({
-        urls: turnUrls,
-        username: turnUsername,
-        credential: turnCredential,
-    });
-} else {
-    // As backup if not configured, please configure your own in the .env file
-    // https://www.metered.ca/tools/openrelay/
-    iceServers.push({
-        urls: 'turn:a.relay.metered.ca:443',
-        username: 'e8dd65b92c62d3e36cafb807',
-        credential: 'uWdWNmkhvyqTEswO',
-    });
-}
-
-// Test Stun and Turn connection with query params
-// const testStunTurn = host + '/test?iceServers=' + JSON.stringify(iceServers);
-const testStunTurn = host + '/test';
-
-/**
  * Expose server to external with https tunnel using ngrok
  * https://ngrok.com
  */
@@ -479,7 +459,7 @@ async function ngrokStart() {
             api_docs: api_docs,
             api_key_secret: api_key_secret,
             use_self_signed_certificate: isHttps,
-            own_turn_enabled: turnEnabled,
+            turn_enabled: turnServerEnabled,
             ip_lookup_enabled: IPLookupEnabled,
             chatGPT_enabled: configChatGPT.enabled,
             slack_enabled: slackEnabled,
@@ -527,7 +507,7 @@ server.listen(port, null, () => {
             api_docs: api_docs,
             api_key_secret: api_key_secret,
             use_self_signed_certificate: isHttps,
-            own_turn_enabled: turnEnabled,
+            turn_enabled: turnServerEnabled,
             ip_lookup_enabled: IPLookupEnabled,
             chatGPT_enabled: configChatGPT.enabled,
             slack_enabled: slackEnabled,

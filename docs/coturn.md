@@ -41,7 +41,7 @@ lt-cred-mech
 
 user=your.username:your.password
 
-server_name=your.domain.name
+server-name=your.domain.name
 realm=your.domain.name
 
 total-quota=100
@@ -66,6 +66,15 @@ Group=root
 
 ```bash
 $ sudo systemctl daemon-reload
+```
+
+## Coturn commands
+
+```bash
+$ sudo service coturn status
+$ sudo service coturn stop
+$ sudo service coturn start
+$ sudo service coturn restart
 ```
 
 # Test
