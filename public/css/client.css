@@ -6,7 +6,7 @@
 
 :root {
     /* common */
-    --navbar-bg: linear-gradient(#363434, #000000);
+    --navbar-bg: rgba(0, 0, 0, 0.2);
     --body-bg: radial-gradient(#393939, #000000);
     --border: 0.5px solid rgb(255 255 255 / 32%);
 
@@ -35,7 +35,12 @@
     --hover-color: grey;
 
     /* video elem border color */
-    --elem-border-color: none;
+    --elem-border-color: none; /* 1px solid rgb(255 255 255 / 32%) */
+
+    --tab-btn-active: rgb(30 29 29);
+
+    --btn-bar-bg-color: #fff;
+    --btn-bar-color: #000;
 
     /* left buttons bar vertical default */
     --btns-top: 50%;
@@ -59,6 +64,7 @@
     --msger-bg: radial-gradient(#393939, #000000);
     --msger-private-bg: radial-gradient(#393939, #000000);
     --wb-bg: radial-gradient(#393939, #000000);
+    --select-bg: #2c2c2c;
     --box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
 
     /* chat msg boble */
@@ -107,7 +113,7 @@ body {
 }
 
 #google_translate_element select {
-    background: #2c2c2c !important;
+    background: var(--select-bg) !important;
 }
 
 /*--------------------------------------------------------------
@@ -148,10 +154,11 @@ body {
     width: 100%;
     margin-top: 15px;
     padding: 10px;
-    background: #2c2c2c;
+    background: var(--select-bg);
     color: white;
     border: var(--border);
     border-radius: 5px;
+    box-shadow: none;
     cursor: pointer;
 }
 
@@ -205,13 +212,13 @@ body {
 }
 
 #buttonsBar button {
-    border: none;
-    font-size: 1.5rem;
-    transition: all 0.3s ease-in-out;
-    background: #fff;
     padding: 4px;
+    border: none;
+    background: var(--btn-bar-bg-color);
+    color: var(--btn-bar-color);
+    font-size: 1.5rem;
     border-radius: 5px;
-    color: #000;
+    transition: all 0.3s ease-in-out;
 }
 
 #buttonsBar button:hover {
@@ -271,7 +278,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.2);
     color: #666;
     cursor: move;
 }
@@ -282,7 +289,7 @@ body {
     /* border: var(--border); */
     border: none;
     font-size: 1.1rem;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.2);
     color: #fff;
     border-radius: 5px;
     transition: all 0.3s ease-in-out;
@@ -327,6 +334,7 @@ body {
     border: none;
     border-radius: 3px;
     color: #fff;
+    background-color: var(--select-bg) !important;
     font-size: 1rem;
 }
 
@@ -351,6 +359,7 @@ body {
 #speechRecognitionStart,
 #speechRecognitionStop {
     padding: 10px;
+    margin: auto;
     border: none;
     font-size: 0.7rem;
     border-radius: 5px;
@@ -408,7 +417,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.2);
     color: #666;
     cursor: move;
 }
@@ -417,7 +426,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.2);
     color: #666;
 }
 
@@ -427,7 +436,7 @@ body {
     /* border: var(--border); */
     border: none;
     font-size: 1.1rem;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.2);
     color: #fff;
     border-radius: 5px;
     transition: all 0.3s ease-in-out;
@@ -618,7 +627,7 @@ button:hover {
     resize: none;
     color: #fff;
     font-size: 14px !important;
-    background: rgb(7, 7, 7);
+    background: rgba(0, 0, 0, 0.2);
     border-top-left-radius: 10px;
     -webkit-transition: height 1s;
     -moz-transition: height 1s;
@@ -706,7 +715,7 @@ button:hover {
 #msgerCPList button {
     border: none;
     font-size: 1rem;
-    background: rgb(0, 0, 0);
+    background: rgba(0, 0, 0, 0.2);
     color: #fff;
     border-radius: 5px;
 }
@@ -794,19 +803,22 @@ em-emoji-picker {
     max-width: 305px;
     font-size: 0.9rem;
     color: #fff;
-    background-color: #2b2b2b;
+    background-color: var(--select-bg);
+    border: var(--border);
     border-radius: 5px;
+    box-shadow: none;
     cursor: pointer;
 }
 
 #mySettingsCloseBtn {
-    padding: 5px;
-    /* border: var(--border); */
+    /* top right bottom left */
+    margin: 10px 0px 0px 10px;
+    font-size: 1.2rem;
+    color: #fff;
     border: none;
     border-radius: 5px;
-    font-size: 1.2rem;
-    background: var(--body-bg);
-    color: #fff;
+    /* border: var(--border); */
+    background: transparent;
     transition: background 0.23s;
 }
 
@@ -849,7 +861,7 @@ hr {
     border: var(--border);
     border-radius: 5px;
     color: #fff;
-    background-color: #2b2b2b;
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 #tabRoomSecurity button,
@@ -891,27 +903,25 @@ hr {
 /* Style the tab */
 
 .tab {
-    background-color: rgba(0, 0, 0);
-    padding: 5px;
-    border-radius: 10px;
+    padding: 10px;
     overflow: hidden;
+    border-radius: 5px;
 }
 
 /* Style the buttons inside the tab */
-
 .tab button {
-    margin: 2px;
-    font-size: 1rem;
-    background-color: inherit;
+    margin: 3px;
+    padding: 11px;
     float: left;
-    /* border: var(--border); */
-    border: none;
+    font-size: 1rem;
+    color: #fff;
+    border: var(--border);
     border-radius: 5px;
+    background-color: rgba(0, 0, 0, 0.2);
+    /* border: var(--border); */
     outline: none;
     cursor: pointer;
-    padding: 12px 14px;
     transition: 0.3s;
-    color: #fff;
 }
 
 /* Change background color of buttons on hover */
@@ -925,7 +935,7 @@ hr {
 /* Create an active/current tablink class */
 
 .tab button.active {
-    background-color: rgb(30 29 29);
+    background-color: var(--tab-btn-active);
 }
 
 /* Style the tab content */
@@ -1021,6 +1031,7 @@ input:checked + .slider:before {
 
 .swal2-input {
     border: var(--border) !important;
+    box-shadow: none !important;
 }
 
 .swal2-file {
@@ -1037,8 +1048,12 @@ input:checked + .slider:before {
     border: var(--border) !important;
 }
 
+.swal2-popup .swal2-styled:focus {
+    box-shadow: none !important;
+}
+
 .swal2-select {
-    background-color: black !important;
+    background-color: var(--select-bg) !important;
     color: white !important;
     border-radius: 6px !important;
 }
@@ -1348,6 +1363,7 @@ progress {
 select {
     height: 40px;
     line-height: 40px;
+    box-shadow: none;
 }
 
 hr {
