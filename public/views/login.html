@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="no-js">
     <head>
         <!-- Title and Icon -->
@@ -47,6 +47,10 @@
         <!-- xss -->
 
         <script src="https://rawgit.com/leizongmin/js-xss/master/dist/xss.js"></script>
+
+        <!-- axios -->
+
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     </head>
     <body class="has-animations">
         <div class="body-wrap">
@@ -127,7 +131,19 @@
                                                 let password = filterXSS(document.getElementById('password').value);
 
                                                 if (username && password) {
-                                                    window.location.href = `/login?username=${username}&password=${password}`;
+                                                    axios
+                                                        .post('/login', {
+                                                            username: username,
+                                                            password: password,
+                                                        })
+                                                        .then(function (response) {
+                                                            console.log(response);
+                                                            window.location.href = '/logged';
+                                                        })
+                                                        .catch(function (error) {
+                                                            console.error(error);
+                                                            alert('Unauthorized');
+                                                        });
                                                     return;
                                                 }
                                                 if (!username && !password) {
