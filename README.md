@@ -49,7 +49,7 @@
 -   Direct `peer-to-peer` connection ensures the lowest latency thanks to `WebRTC`
 -   Supports [REST API](app/api/README.md) (Application Programming Interface)
 -   [Slack](https://api.slack.com/apps/) API integration
--   [Sentry](https://sentry.io/) error reporting
+-   [Sentry](https://sentry.io/) for error reporting
 -   ...
 
 </details>
@@ -69,8 +69,7 @@
 <br/>
 
 -   `Open` https://p2p.mirotalk.com/newcall or
--   https://mirotalk.up.railway.app/newcall or
--   https://mirotalk.herokuapp.com/newcall
+-   https://mirotalk.up.railway.app/newcall
 -   `Pick` your Room name and Join
 -   `Allow` using the camera and microphone
 -   `Share` the Room URL and Wait for someone to join for the video conference
@@ -85,7 +84,6 @@
 -   You can `join` directly to `room` by going to:
 -   https://p2p.mirotalk.com/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
 -   https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
--   https://mirotalk.herokuapp.com/join?room=test&name=mirotalk&audio=0&video=0&screen=0&notify=0
 
     | Params | Type    | Description     |
     | ------ | ------- | --------------- |
@@ -148,9 +146,8 @@ $ npm start
 
 <br/>
 
--   Install docker engine: https://docs.docker.com/engine/install/
--   Install docker compose: https://docs.docker.com/compose/install/
--   Repository docker hub: https://hub.docker.com/r/mirotalk/p2p
+-   Install [docker engine](https://docs.docker.com/engine/install/)
+-   Install [docker compose](https://docs.docker.com/compose/install/)
 
 ```bash
 # copy .env.template to .env (edit it according to your needs)
@@ -166,6 +163,7 @@ $ docker-compose down
 ```
 
 -   Open http://localhost:3000 in browser
+-   Repository [docker hub](https://hub.docker.com/r/mirotalk/p2p)
 
 </details>
 
@@ -197,12 +195,11 @@ Install your own [Stun](https://en.wikipedia.org/wiki/STUN) & [Turn](https://en.
 $ curl -X POST "http://localhost:3000/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
 $ curl -X POST "https://p2p.mirotalk.com/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
 $ curl -X POST "https://mirotalk.up.railway.app/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
-$ curl -X POST "https://mirotalk.herokuapp.com/api/v1/meeting" -H "authorization: mirotalk_default_secret" -H "Content-Type: application/json"
 ```
 
 ## API Documentation
 
-The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [live](https://p2p.mirotalk.com/api/v1/docs) & [heroku](https://mirotalk.herokuapp.com/api/v1/docs).
+The API documentation uses [swagger](https://swagger.io/) at http://localhost:3000/api/v1/docs. Or check it out on [live](https://p2p.mirotalk.com/api/v1/docs).
 
 </details>
 
@@ -216,7 +213,7 @@ To `Self-Host MiroTalk P2P` on `Your` dedicated `Server`, read [this documentati
 </details>
 
 <details>
-    
+
 <summary>Credits</summary>
 
 <br/>

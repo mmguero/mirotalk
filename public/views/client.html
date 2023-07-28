@@ -75,14 +75,16 @@ access to use this app.
 
         <div id="initUser" class="init-user hidden">
             <!-- <p>Please allow the camera & microphone access to use this app.</p> -->
-            <video
-                id="initVideo"
-                playsinline="true"
-                autoplay=""
-                class="mirror"
-                poster="../images/loader.gif"
-                style="object-fit: var(--videoObjFit)"
-            ></video>
+            <div class="container">
+                <video
+                    id="initVideo"
+                    playsinline="true"
+                    autoplay=""
+                    class="mirror"
+                    poster="../images/loader.gif"
+                    style="object-fit: var(--videoObjFit)"
+                ></video>
+            </div>
             <button id="initVideoBtn" class="fas fa-video" onclick="handleVideo(event, true)"></button>
             <button id="initAudioBtn" class="fas fa-microphone" onclick="handleAudio(event, true)"></button>
             <button id="initScreenShareBtn" class="fas fa-desktop"></button>
@@ -183,6 +185,7 @@ access to use this app.
                                 id="searchPeerBarName"
                                 type="text"
                                 placeholder=" 🔍 Search peer by name..."
+                                maxlength="32"
                                 name="search"
                                 onkeyup="searchPeer()"
                             />
@@ -320,7 +323,7 @@ access to use this app.
                     <br />
                     <div id="tabRoomPeerName">
                         <label>My name</label><br />
-                        <input id="myPeerNameSet" type="text" placeholder="Change name..." />&nbsp;&nbsp;
+                        <input id="myPeerNameSet" type="text" placeholder="Change name..." maxlength="32" />&nbsp;&nbsp;
                         <button id="myPeerNameSetBtn"><i class="fas fa-user-edit"></i>&nbsp;Change</button>
                     </div>
                     <div id="tabRoomParticipants">

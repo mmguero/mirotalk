@@ -1173,6 +1173,7 @@ async function whoAreYou() {
         position: 'center',
         input: 'text',
         inputPlaceholder: 'Enter your name',
+        inputAttributes: { maxlength: 32 },
         inputValue: window.localStorage.peer_name ? window.localStorage.peer_name : '',
         html: initUser, // inject html
         confirmButtonText: `Join meeting`,
@@ -1345,6 +1346,20 @@ async function loadLocalStorage() {
 }
 
 /**
+ * Check int config from local storage
+ */
+async function checkInitConfig() {
+    const initConfig = lS.getInitConfig();
+    console.log('Get init config', initConfig);
+    if (initConfig) {
+        initAudioBtn = getId('initAudioBtn');
+        initVideoBtn = getId('initVideoBtn');
+        if (useAudio && !initConfig.audio) initAudioBtn.click();
+        if (useVideo && !initConfig.video) initVideoBtn.click();
+    }
+}
+
+/**
  * Change init camera by device id
  * @param {string} deviceId
  */
@@ -1352,6 +1367,9 @@ async function changeInitCamera(deviceId) {
     if (initStream) {
         stopTracks(initStream);
         initVideo.style.display = 'block';
+        if (!initVideo.classList.contains('mirror')) {
+            initVideo.classList.toggle('mirror');
+        }
     }
     // Get video constraints
     let videoConstraints = await getVideoConstraints('default');
@@ -1363,6 +1381,7 @@ async function changeInitCamera(deviceId) {
             initVideo.srcObject = camStream;
             initStream = camStream;
             console.log('Success attached init video stream', initStream.getVideoTracks()[0].getSettings());
+            checkInitConfig();
         })
         .catch((err) => {
             console.error('[Error] changeInitCamera', err);
@@ -4502,6 +4521,7 @@ function handleAudio(e, init, force = null) {
         setTippy(initAudioBtn, myAudioStatus ? 'Stop the audio' : 'Start the audio', 'top');
         getId('initMicrophoneSelect').disabled = !myAudioStatus;
         getId('initSpeakerSelect').disabled = !myAudioStatus;
+        lS.setInitConfig(lS.MEDIA_TYPE.audio, myAudioStatus);
     }
     setMyAudioStatus(myAudioStatus);
 }
@@ -4531,6 +4551,7 @@ function handleVideo(e, init, force = null) {
         setTippy(initVideoBtn, myVideoStatus ? 'Stop the video' : 'Start the video', 'top');
         initVideo.style.display = myVideoStatus ? 'block' : 'none';
         initVideoSelect.disabled = !myVideoStatus;
+        lS.setInitConfig(lS.MEDIA_TYPE.video, myVideoStatus);
     }
     setMyVideoStatus(myVideoStatus);
 }
