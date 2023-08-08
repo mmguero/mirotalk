@@ -259,7 +259,7 @@ access to use this app.
                         <select id="audioSource"></select>
                     </div>
                     <br />
-                    <div>
+                    <div id="audioOutputDiv">
                         <label for="audioOutput">Speaker</label><br />
                         <select id="audioOutput"></select>
                     </div>
@@ -291,18 +291,20 @@ access to use this app.
                         <option value="2kVideo">2k</option>
                         <option value="4kVideo">4K</option>
                     </select>
-                    <br /><br />
-                    <label for="videoFps">Camera fps</label>
-                    <br />
-                    <select id="videoFps">
-                        <option value="60">60 fps</option>
-                        <option value="30">30 fps</option>
-                        <option value="25">25 fps</option>
-                        <option value="20">20 fps</option>
-                        <option value="15">15 fps</option>
-                        <option value="10">10 fps</option>
-                        <option value="5">5 fps</option>
-                    </select>
+                    <div id="videoFpsDiv">
+                        <br />
+                        <label for="videoFps">Camera fps</label>
+                        <br />
+                        <select id="videoFps">
+                            <option value="60">60 fps</option>
+                            <option value="30">30 fps</option>
+                            <option value="25">25 fps</option>
+                            <option value="20">20 fps</option>
+                            <option value="15">15 fps</option>
+                            <option value="10">10 fps</option>
+                            <option value="5">5 fps</option>
+                        </select>
+                    </div>
                     <div id="screenFpsDiv">
                         <br />
                         <label for="screenFps">Screen fps</label>
@@ -406,8 +408,12 @@ access to use this app.
             <header id="whiteboardHeader" class="whiteboard-header">
                 <div id="whiteboardTitle" class="whiteboard-header-title">
                     <button id="whiteboardCloseBtn" class="fas fa-times"></button>
+                    <label id="whiteboardLockBtn" class="switch">
+                        <input type="checkbox" />
+                        <span class="slider round"></span>
+                    </label>
                 </div>
-                <div class="whiteboard-header-options">
+                <div id="whiteboardOptions" class="whiteboard-header-options">
                     <button id="whiteboardGhostButton" class="fas fa-circle-half-stroke"></button>
                     <input id="wbBackgroundColorEl" class="whiteboardColorPicker" type="color" value="#000000" />
                     <input id="wbDrawingColorEl" class="whiteboardColorPicker" type="color" value="#FFFFFF" />

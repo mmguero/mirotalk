@@ -244,23 +244,3 @@ To `Self-Host MiroTalk P2P` on `Your` dedicated `Server`, read [this documentati
 MiroTalk is free and can be modified and forked. But the conditions of the AGPLv3 (GNU Affero General Public License v3.0) need to be respected. In particular modifications need to be free as well and made available to the public. Get a quick overview of the license at [Choose an open source license](https://choosealicense.com/licenses/agpl-3.0/).
 
 </details>
-
-<details>
-<summary>MiroTalk C2C</summary>
-
-<br>
-
-Try also [MiroTalk C2C](https://github.com/miroslavpejic85/mirotalkc2c) cam 2 cam.
-
-</details>
-
-<details>
-<summary>MiroTalk WEB</summary>
-
-<br>
-
-Try also [MiroTalk WEB](https://github.com/miroslavpejic85/mirotalkwebrtc) rooms scheduler.
-
-</details>
-
-This project is tested with [BrowserStack](https://www.browserstack.com).

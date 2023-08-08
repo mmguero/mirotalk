@@ -38,7 +38,7 @@ const messageImg = '../images/message.png';
 const kickedOutImg = '../images/leave-room.png';
 const audioGif = '../images/audio.gif';
 const videoAudioShare = '../images/va-share.png';
-const aboutImg = '../images/mirotalk-logo.png';
+const aboutImg = '../images/mirotalk-logo.gif';
 const imgFeedback = '../images/feedback.png';
 const forbiddenImg = '../images/forbidden.png';
 const avatarImg = '../images/mirotalk-logo.png';
@@ -119,13 +119,8 @@ const myRoomUrl = window.location.href;
 
 // Local Storage class
 const lS = new LocalStorage();
-const localStorageSettings = lS.getObjectLocalStorage('MIROTALK_P2P_SETTINGS');
-const lsSettings = localStorageSettings
-    ? localStorageSettings
-    : {
-          theme: 'dark',
-          //...
-      };
+const localStorageSettings = lS.getObjectLocalStorage('P2P_SETTINGS');
+const lsSettings = localStorageSettings ? localStorageSettings : lS.P2P_SETTINGS;
 
 // Check if PIP is supported by this browser
 const showVideoPipBtn = !isMobileDevice && document.pictureInPictureEnabled;
@@ -186,6 +181,9 @@ const buttons = {
         showVideoCircleBtn: true,
         showZoomInOutBtn: false,
         showVideoPipBtn: showVideoPipBtn,
+    },
+    whiteboard: {
+        whiteboardLockButton: false,
     },
 };
 
@@ -384,9 +382,11 @@ let switchPushToTalk;
 let switchAudioPitchBar;
 let audioInputSelect;
 let audioOutputSelect;
+let audioOutputDiv;
 let videoSelect;
 let videoQualitySelect;
 let videoFpsSelect;
+let videoFpsDiv;
 let screenFpsSelect;
 let themeSelect;
 let videoObjFitSelect;
@@ -412,6 +412,8 @@ let isStreamRecording = false;
 // whiteboard init
 let whiteboard;
 let whiteboardHeader;
+let whiteboardTitle;
+let whiteboardOptions;
 let wbDrawingColorEl;
 let whiteboardGhostButton;
 let wbBackgroundColorEl;
@@ -429,9 +431,11 @@ let whiteboardCircleBtn;
 let whiteboardSaveBtn;
 let whiteboardEraserBtn;
 let whiteboardCleanBtn;
+let whiteboardLockBtn;
 let whiteboardCloseBtn;
 // whiteboard settings
 let wbCanvas = null;
+let wbIsLock = false;
 let wbIsDrawing = false;
 let wbIsOpen = false;
 let wbIsRedoing = false;
@@ -568,9 +572,11 @@ function getHtmlElementsById() {
     switchAudioPitchBar = getId('switchAudioPitchBar');
     audioInputSelect = getId('audioSource');
     audioOutputSelect = getId('audioOutput');
+    audioOutputDiv = getId('audioOutputDiv');
     videoSelect = getId('videoSource');
     videoQualitySelect = getId('videoQuality');
     videoFpsSelect = getId('videoFps');
+    videoFpsDiv = getId('videoFpsDiv');
     screenFpsSelect = getId('screenFps');
     themeSelect = getId('mirotalkTheme');
     videoObjFitSelect = getId('videoObjFitSelect');
@@ -587,6 +593,8 @@ function getHtmlElementsById() {
     // my whiteboard
     whiteboard = getId('whiteboard');
     whiteboardHeader = getId('whiteboardHeader');
+    whiteboardTitle = getId('whiteboardTitle');
+    whiteboardOptions = getId('whiteboardOptions');
     wbDrawingColorEl = getId('wbDrawingColorEl');
     whiteboardGhostButton = getId('whiteboardGhostButton');
     wbBackgroundColorEl = getId('wbBackgroundColorEl');
@@ -604,6 +612,7 @@ function getHtmlElementsById() {
     whiteboardSaveBtn = getId('whiteboardSaveBtn');
     whiteboardEraserBtn = getId('whiteboardEraserBtn');
     whiteboardCleanBtn = getId('whiteboardCleanBtn');
+    whiteboardLockBtn = getId('whiteboardLockBtn');
     whiteboardCloseBtn = getId('whiteboardCloseBtn');
     // room actions buttons
     muteEveryoneBtn = getId('muteEveryoneBtn');
@@ -722,6 +731,7 @@ function setButtonsToolTip() {
     setTippy(whiteboardSaveBtn, 'Save the board', 'bottom');
     setTippy(whiteboardEraserBtn, 'Erase the object', 'bottom');
     setTippy(whiteboardCleanBtn, 'Clean the board', 'bottom');
+    setTippy(whiteboardLockBtn, 'If enabled, participants cannot interact', 'right');
     setTippy(whiteboardCloseBtn, 'Close', 'right');
     // room actions btn
     // setTippy(muteEveryoneBtn, 'Mute everyone except yourself', 'top');
@@ -898,7 +908,7 @@ function countPeerConnections() {
  * On body load Get started
  */
 function initClientPeer() {
-    setTheme(lsSettings.theme);
+    setTheme();
 
     if (!isWebRTCSupported) {
         return userLog('error', 'This browser seems not supported WebRTC!');
@@ -1081,6 +1091,7 @@ function handleRules(isPresenter) {
         buttons.remote.audioBtnClickAllowed = false;
         buttons.remote.videoBtnClickAllowed = false;
         buttons.remote.showKickOutBtn = false;
+        BUTTONS.whiteboard.whiteboardLockBtn = false;
         //...
     } else {
         buttons.settings.showTabRoomParticipants = true;
@@ -1090,6 +1101,7 @@ function handleRules(isPresenter) {
         buttons.remote.audioBtnClickAllowed = true;
         buttons.remote.videoBtnClickAllowed = true;
         buttons.remote.showKickOutBtn = true;
+        buttons.whiteboard.whiteboardLockBtn = true;
     }
 
     handleButtonsRule();
@@ -1132,6 +1144,10 @@ function handleButtonsRule() {
     elemDisplay(tabRoomPeerName, buttons.settings.showTabRoomPeerName);
     elemDisplay(tabRoomParticipants, buttons.settings.showTabRoomParticipants);
     elemDisplay(tabRoomSecurity, buttons.settings.showTabRoomSecurity);
+    // Whiteboard
+    buttons.whiteboard.whiteboardLockBtn
+        ? elemDisplay(whiteboardLockBtn, true)
+        : elemDisplay(whiteboardLockBtn, false, 'flex');
 }
 
 /**
@@ -1804,9 +1820,9 @@ function handleRemovePeer(config) {
  * Set mirotalk theme | dark | grey | ...
  * @param {string} theme type
  */
-function setTheme(theme) {
-    if (!theme) return;
-
+function setTheme() {
+    mirotalkTheme.selectedIndex = lsSettings.theme;
+    const theme = mirotalkTheme.value;
     switch (theme) {
         case 'dark':
             // dark theme
@@ -1907,11 +1923,7 @@ function setTheme(theme) {
         default:
             return console.log('No theme found');
     }
-
-    lsSettings.theme = theme;
-    lS.setObjectLocalStorage('MIROTALK_P2P_SETTINGS', lsSettings);
-
-    setButtonsBarPosition(mirotalkBtnsBar);
+    //setButtonsBarPosition(mirotalkBtnsBar);
 }
 
 /**
@@ -2042,7 +2054,11 @@ function enumerateAudioDevices(stream) {
             isEnumerateAudioDevices = true;
             const sinkId = 'sinkId' in HTMLMediaElement.prototype;
             getId('audioOutput').disabled = !sinkId;
-            if (!sinkId) getId('initSpeakerSelect').display = 'none';
+            // Check if there is speakers
+            if (!sinkId || initSpeakerSelect.options.length === 0) {
+                getId('initSpeakerSelect').style.display = 'none';
+                getId('audioOutputDiv').style.display = 'none';
+            }
         });
 }
 
@@ -2321,6 +2337,7 @@ async function loadLocalMedia(stream) {
     manageLeftButtons();
     handleButtonsRule();
     setupMySettings();
+    loadSettingsFromLocalStorage();
     setupVideoUrlPlayer();
     startCountTime();
 
@@ -3501,7 +3518,7 @@ function setChatRoomBtn() {
             document.documentElement.style.setProperty('--msger-bg', 'rgba(0, 0, 0, 0.100)');
         } else {
             e.target.className = className.ghost;
-            setTheme(lsSettings.theme);
+            setTheme();
         }
     });
 
@@ -3658,7 +3675,7 @@ function setCaptionRoomBtn() {
                 document.documentElement.style.setProperty('--msger-bg', 'rgba(0, 0, 0, 0.100)');
             } else {
                 e.target.className = className.ghost;
-                setTheme(lsSettings.theme);
+                setTheme();
             }
         });
 
@@ -3791,6 +3808,10 @@ function setMyWhiteboardBtn() {
     whiteboardCleanBtn.addEventListener('click', (e) => {
         confirmCleanBoard();
     });
+    whiteboardLockBtn.addEventListener('change', (e) => {
+        wbIsLock = !wbIsLock;
+        whiteboardAction(getWhiteboardAction(wbIsLock ? 'lock' : 'unlock'));
+    });
     whiteboardCloseBtn.addEventListener('click', (e) => {
         handleWhiteboardToggle();
     });
@@ -3804,7 +3825,7 @@ function setMyWhiteboardBtn() {
     whiteboardGhostButton.addEventListener('click', (e) => {
         wbIsBgTransparent = !wbIsBgTransparent;
         //setWhiteboardBgColor(wbIsBgTransparent ? 'rgba(0, 0, 0, 0.100)' : wbBackgroundColorEl.value);
-        wbIsBgTransparent ? wbCanvasBackgroundColor('rgba(0, 0, 0, 0.100)') : setTheme(lsSettings.theme);
+        wbIsBgTransparent ? wbCanvasBackgroundColor('rgba(0, 0, 0, 0.100)') : setTheme();
     });
 }
 
@@ -3951,18 +3972,17 @@ function setupMySettings() {
     videoQualitySelect.addEventListener('change', async (e) => {
         await setLocalVideoQuality();
     });
-    // select video fps
-    videoFpsSelect.addEventListener('change', (e) => {
-        videoMaxFrameRate = parseInt(videoFpsSelect.value);
-        setLocalMaxFps(videoMaxFrameRate);
-    });
-    // default 30 fps
-    videoFpsSelect.selectedIndex = '1';
-
     // Firefox not support video cam Fps O.o
     if (myBrowserName === 'Firefox') {
-        videoFpsSelect.value = null;
-        videoFpsSelect.disabled = true;
+        videoFpsDiv.style.display = 'none';
+    } else {
+        // select video fps
+        videoFpsSelect.addEventListener('change', (e) => {
+            videoMaxFrameRate = parseInt(videoFpsSelect.value);
+            setLocalMaxFps(videoMaxFrameRate);
+        });
+        // default 30 fps
+        videoFpsSelect.selectedIndex = '1';
     }
     // select screen fps
     screenFpsSelect.addEventListener('change', (e) => {
@@ -3979,19 +3999,23 @@ function setupMySettings() {
     }
     // select themes
     themeSelect.addEventListener('change', (e) => {
-        setTheme(themeSelect.value);
+        lsSettings.theme = themeSelect.selectedIndex;
+        lS.setSettings(lsSettings);
+        setTheme();
     });
     // video object fit
     videoObjFitSelect.addEventListener('change', (e) => {
+        lsSettings.video_obj_fit = videoObjFitSelect.selectedIndex;
+        lS.setSettings(lsSettings);
         document.documentElement.style.setProperty('--video-object-fit', videoObjFitSelect.value);
     });
-    videoObjFitSelect.selectedIndex = 2; // cover
-
     // Mobile not support buttons bar position horizontal
     if (isMobileDevice) {
         btnsBarSelect.disabled = true;
     } else {
         btnsBarSelect.addEventListener('change', (e) => {
+            lsSettings.buttons_bar = btnsBarSelect.selectedIndex;
+            lS.setSettings(lsSettings);
             setButtonsBarPosition(btnsBarSelect.value);
         });
     }
@@ -3999,6 +4023,8 @@ function setupMySettings() {
     // Mobile not support pin/unpin video
     if (!isMobileDevice) {
         pinVideoPositionSelect.addEventListener('change', (e) => {
+            lsSettings.pin_grid = pinVideoPositionSelect.selectedIndex;
+            lS.setSettings(lsSettings);
             toggleVideoPin(pinVideoPositionSelect.value);
         });
     } else {
@@ -4021,6 +4047,18 @@ function setupMySettings() {
     unlockRoomBtn.addEventListener('click', (e) => {
         handleRoomAction({ action: 'unlock' }, true);
     });
+}
+
+/**
+ * Load settings from local storage
+ */
+function loadSettingsFromLocalStorage() {
+    videoObjFitSelect.selectedIndex = lsSettings.video_obj_fit;
+    btnsBarSelect.selectedIndex = lsSettings.buttons_bar;
+    pinVideoPositionSelect.selectedIndex = lsSettings.pin_grid;
+    document.documentElement.style.setProperty('--video-object-fit', videoObjFitSelect.value);
+    setButtonsBarPosition(btnsBarSelect.value);
+    toggleVideoPin(pinVideoPositionSelect.value);
 }
 
 /**
@@ -7178,6 +7216,7 @@ function saveDataToFile(dataURL, fileName) {
  * Whiteboard: canvas objects to json
  */
 function wbCanvasToJson() {
+    if (!isPresenter && wbIsLock) return;
     if (thereIsPeerConnections()) {
         const config = {
             room_id: roomId,
@@ -7191,7 +7230,10 @@ function wbCanvasToJson() {
  * If whiteboard opened, update canvas to all peers connected
  */
 async function wbUpdate() {
-    if (wbIsOpen && thereIsPeerConnections()) wbCanvasToJson();
+    if (wbIsOpen && thereIsPeerConnections()) {
+        wbCanvasToJson();
+        whiteboardAction(getWhiteboardAction(wbIsLock ? 'lock' : 'unlock'));
+    }
 }
 
 /**
@@ -7203,6 +7245,10 @@ function handleJsonToWbCanvas(config) {
 
     wbCanvas.loadFromJSON(config.wbCanvasJson);
     wbCanvas.renderAll();
+
+    if (!isPresenter && !wbCanvas.isDrawingMode && wbIsLock) {
+        wbDrawing(false);
+    }
 }
 
 /**
@@ -7285,8 +7331,38 @@ function handleWhiteboardAction(config, logMe = true) {
         case 'toggle':
             toggleWhiteboard();
             break;
+        case 'lock':
+            if (!isPresenter) {
+                elemDisplay(whiteboardTitle, false);
+                elemDisplay(whiteboardOptions, false);
+                elemDisplay(whiteboardBtn, false);
+                wbDrawing(false);
+                wbIsLock = true;
+            }
+            break;
+        case 'unlock':
+            if (!isPresenter) {
+                elemDisplay(whiteboardTitle, true, 'flex');
+                elemDisplay(whiteboardOptions, true, 'inline');
+                elemDisplay(whiteboardBtn, true);
+                wbDrawing(true);
+                wbIsLock = false;
+            }
+            break;
         //...
     }
+}
+
+/**
+ * Toggle whiteboard drawing mode
+ * @param {boolean} status
+ */
+function wbDrawing(status) {
+    wbCanvas.isDrawingMode = status; // Disable free drawing
+    wbCanvas.selection = status; // Disable object selection
+    wbCanvas.forEachObject(function (obj) {
+        obj.selectable = status; // Make all objects unselectable
+    });
 }
 
 /**
@@ -8348,8 +8424,8 @@ function getName(name) {
  * @param {object} elem
  * @param {boolean} yes true/false
  */
-function elemDisplay(elem, yes) {
-    elem.style.display = yes ? 'inline' : 'none';
+function elemDisplay(element, display, mode = 'inline') {
+    element.style.display = display ? mode : 'none';
 }
 
 /**
