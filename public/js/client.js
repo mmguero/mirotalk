@@ -469,8 +469,8 @@ let receiveHideBtn;
 let receiveFilePercentage;
 let receiveInProgress = false;
 // MTU 1kb to prevent drop.
-// const chunkSize = 1024;
-const chunkSize = 1024 * 16; // 16kb/s
+const chunkSize = 1024; // 1kb/s Note: FireFox seems not supports chunkSize > 1024?
+//const chunkSize = 1024 * 16; // 16kb/s
 // video URL player
 let videoUrlCont;
 let videoAudioUrlCont;
@@ -1637,7 +1637,20 @@ async function handleRTCDataChannels(peer_id) {
                 case 'mirotalk_file_sharing_channel':
                     try {
                         const dataFile = msg.data;
-                        handleDataChannelFileSharing(dataFile);
+                        if (dataFile instanceof ArrayBuffer && dataFile.byteLength != 0) {
+                            handleDataChannelFileSharing(dataFile);
+                        } else {
+                            // Work around for Firefox Bug: even if set dc.binaryType to arraybuffer it sends Blob?
+                            if (dataFile instanceof Blob && dataFile.size != 0) {
+                                blobToArrayBuffer(dataFile)
+                                    .then((arrayBuffer) => {
+                                        handleDataChannelFileSharing(arrayBuffer);
+                                    })
+                                    .catch((error) => {
+                                        console.error('mirotalk_file_sharing_channel', error);
+                                    });
+                            }
+                        }
                     } catch (err) {
                         console.error('mirotalk_file_sharing_channel', err);
                     }
@@ -1647,6 +1660,25 @@ async function handleRTCDataChannels(peer_id) {
     };
     createChatDataChannel(peer_id);
     createFileSharingDataChannel(peer_id);
+}
+
+/**
+ * Convert Blob to ArrayBuffer
+ * @param {object} blob
+ * @returns arrayBuffer
+ */
+function blobToArrayBuffer(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const arrayBuffer = reader.result;
+            resolve(arrayBuffer);
+        };
+        reader.onerror = () => {
+            reject(new Error('Error reading Blob as ArrayBuffer'));
+        };
+        reader.readAsArrayBuffer(blob);
+    });
 }
 
 /**
@@ -3871,6 +3903,8 @@ function setMySettingsBtn() {
     // Sounds
     switchSounds.addEventListener('change', (e) => {
         notifyBySound = e.currentTarget.checked;
+        lsSettings.sounds = notifyBySound;
+        lS.setSettings(lsSettings);
         userLog('toast', `${icons.sounds} Notify & sounds ` + (notifyBySound ? 'ON' : 'OFF'));
         playSound('switch');
     });
@@ -3888,6 +3922,8 @@ function setMySettingsBtn() {
 
     switchAudioPitchBar.addEventListener('change', (e) => {
         isAudioPitchBar = e.currentTarget.checked;
+        lsSettings.pitch_bar = isAudioPitchBar;
+        lS.setSettings(lsSettings);
         userLog('toast', `${icons.pitchBar} Audio pitch bar ` + (isAudioPitchBar ? 'ON' : 'OFF'));
         playSound('switch');
     });
@@ -4053,6 +4089,10 @@ function setupMySettings() {
  * Load settings from local storage
  */
 function loadSettingsFromLocalStorage() {
+    notifyBySound = lsSettings.sounds;
+    isAudioPitchBar = lsSettings.pitch_bar;
+    switchSounds.checked = notifyBySound;
+    switchAudioPitchBar.checked = isAudioPitchBar;
     videoObjFitSelect.selectedIndex = lsSettings.video_obj_fit;
     btnsBarSelect.selectedIndex = lsSettings.buttons_bar;
     pinVideoPositionSelect.selectedIndex = lsSettings.pin_grid;
@@ -8046,6 +8086,7 @@ function showAbout() {
         title: '<strong>WebRTC P2P</strong>',
         imageAlt: 'mirotalk-about',
         imageUrl: aboutImg,
+        customClass: { image: 'img-about' },
         html: `
         <br/>
         <div id="about">
