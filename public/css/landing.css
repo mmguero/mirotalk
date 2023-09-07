@@ -919,7 +919,8 @@ strong {
 
 .button-primary {
     color: #f9faff;
-    background-color: #376df9;
+    /* background-color: #376df9; */
+    background-color: #000000;
 }
 
 .button-primary:hover {
@@ -3571,4 +3572,48 @@ img.has-shadow {
 /* Target the scrollbar track when the scrollbar is being hovered */
 ::-webkit-scrollbar-track:hover {
     background-color: #000000; /* color of the track on hover */
+}
+
+.last-room {
+    display: none; /*inline-flex*/
+    flex-wrap: nowrap; /* Prevent wrapping by default */
+    justify-content: center; /* Horizontal centering */
+    align-items: center; /* Vertical centering */
+    margin-bottom: 24px;
+}
+
+.last-room span {
+    color: #ffffff;
+}
+
+.last-room span {
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: -0.1px;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 16px;
+}
+
+.last-room a {
+    font-size: 16px;
+    line-height: 24px;
+    letter-spacing: -0.1px;
+    font-weight: 600;
+    color: #ffffff;
+    text-decoration: none;
+    line-height: 16px;
+    padding: 8px 8px;
+}
+
+.last-room a:hover {
+    color: whitesmoke;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Use a media query to apply a different flex-wrap value for small screens */
+@media (max-width: 768px) {
+    .last-room {
+        flex-wrap: wrap; /* Allow flex items to wrap on small screens */
+    }
 }

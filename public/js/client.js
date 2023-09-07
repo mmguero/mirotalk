@@ -22,8 +22,11 @@
 
 // https://www.w3schools.com/js/js_strict.asp
 
+let myRoomId; // this room id
+
 const signalingServer = getSignalingServer();
 const roomId = getRoomId();
+const myRoomUrl = window.location.origin + '/join/' + roomId; // share room url
 const welcomeImg = '../images/image-placeholder.png';
 const shareUrlImg = '../images/image-placeholder.png';
 const leaveRoomImg = '../images/leave-room.png';
@@ -110,17 +113,17 @@ const icons = {
     unlock: '<i class="fas fa-lock-open"></i>',
     pitchBar: '<i class="fas fa-microphone-lines"></i>',
     sounds: '<i class="fas fa-music"></i>',
+    share: '<i class="fas fa-share-alt"></i>',
     user: '<i class="fas fa-user"></i>',
     fileSend: '<i class="fas fa-file-export"></i>',
     fileReceive: '<i class="fas fa-file-import"></i>',
 };
 
-const myRoomUrl = window.location.href;
-
 // Local Storage class
 const lS = new LocalStorage();
 const localStorageSettings = lS.getObjectLocalStorage('P2P_SETTINGS');
 const lsSettings = localStorageSettings ? localStorageSettings : lS.P2P_SETTINGS;
+console.log('LS_SETTINGS', lsSettings);
 
 // Check if PIP is supported by this browser
 const showVideoPipBtn = !isMobileDevice && document.pictureInPictureEnabled;
@@ -187,13 +190,14 @@ const buttons = {
     },
 };
 
+const userLimits = {
+    active: false, // Limit users per room
+    count: 2, // Limit 2 users per room if userLimits.active true
+};
+
 const isRulesActive = true; // Presenter can do anything, guest is slightly moderate, if false no Rules for the room.
 
 const forceCamMaxResolutionAndFps = false; // This force the webCam to max resolution, up to 4k and 60fps (very high bandwidth are required) if false, you can set it from settings
-
-const userLimitsActive = false; // Limit users per room
-
-const usersCountLimit = 2; // Limit 2 users per room if userLimitsActive true
 
 const useAvatarSvg = true; // if false the cam-Off avatar = avatarImg
 
@@ -369,8 +373,10 @@ let msgerEmojiPicker;
 // my settings
 let mySettings;
 let mySettingsHeader;
-let tabDevicesBtn;
-let tabBandwidthBtn;
+let tabVideoBtn;
+let tabAudioBtn;
+let tabParticipantsBtn;
+let tabProfileBtn;
 let tabRoomBtn;
 let tabStylingBtn;
 let tabLanguagesBtn;
@@ -378,11 +384,13 @@ let mySettingsCloseBtn;
 let myPeerNameSet;
 let myPeerNameSetBtn;
 let switchSounds;
+let switchShare;
 let switchPushToTalk;
 let switchAudioPitchBar;
 let audioInputSelect;
 let audioOutputSelect;
 let audioOutputDiv;
+let speakerTestBtn;
 let videoSelect;
 let videoQualitySelect;
 let videoFpsSelect;
@@ -559,8 +567,10 @@ function getHtmlElementsById() {
     // my settings
     mySettings = getId('mySettings');
     mySettingsHeader = getId('mySettingsHeader');
-    tabDevicesBtn = getId('tabDevicesBtn');
-    tabBandwidthBtn = getId('tabBandwidthBtn');
+    tabVideoBtn = getId('tabVideoBtn');
+    tabAudioBtn = getId('tabAudioBtn');
+    tabParticipantsBtn = getId('tabParticipantsBtn');
+    tabProfileBtn = getId('tabProfileBtn');
     tabRoomBtn = getId('tabRoomBtn');
     tabStylingBtn = getId('tabStylingBtn');
     tabLanguagesBtn = getId('tabLanguagesBtn');
@@ -568,11 +578,13 @@ function getHtmlElementsById() {
     myPeerNameSet = getId('myPeerNameSet');
     myPeerNameSetBtn = getId('myPeerNameSetBtn');
     switchSounds = getId('switchSounds');
+    switchShare = getId('switchShare');
     switchPushToTalk = getId('switchPushToTalk');
     switchAudioPitchBar = getId('switchAudioPitchBar');
     audioInputSelect = getId('audioSource');
     audioOutputSelect = getId('audioOutput');
     audioOutputDiv = getId('audioOutputDiv');
+    speakerTestBtn = getId('speakerTestBtn');
     videoSelect = getId('videoSource');
     videoQualitySelect = getId('videoQuality');
     videoFpsSelect = getId('videoFps');
@@ -701,15 +713,19 @@ function setButtonsToolTip() {
     // settings
     setTippy(mySettingsCloseBtn, 'Close', 'right');
     setTippy(myPeerNameSetBtn, 'Change name', 'top');
+    setTippy(myRoomId, 'Room name', 'right');
     setTippy(
         switchPushToTalk,
         'If Active, When SpaceBar keydown the microphone will be activated, on keyup will be deactivated, like a walkie-talkie.',
         'right',
     );
     setTippy(switchSounds, 'Toggle room notify sounds', 'right');
+    setTippy(switchShare, "Show 'Share Room' popup on join.", 'right');
     // tab btns
-    setTippy(tabDevicesBtn, 'Devices', 'top');
-    setTippy(tabBandwidthBtn, 'Bandwidth', 'top');
+    setTippy(tabVideoBtn, 'Video devices', 'top');
+    setTippy(tabAudioBtn, 'Audio devices', 'top');
+    setTippy(tabParticipantsBtn, 'Participants', 'top');
+    setTippy(tabProfileBtn, 'Profile', 'top');
     setTippy(tabRoomBtn, 'Room', 'top');
     setTippy(tabStylingBtn, 'Styling', 'top');
     setTippy(tabLanguagesBtn, 'Languages', 'top');
@@ -808,6 +824,13 @@ function getRoomId() {
         window.history.pushState({ url: newUrl }, roomId, newUrl);
     }
     console.log('Direct join', { room: roomId });
+
+    // Update Room name in settings
+    myRoomId = getId('myRoomId');
+    if (myRoomId) myRoomId.innerText = roomId;
+
+    // Save room name in local storage
+    window.localStorage.lastRoom = roomId;
     return roomId;
 }
 
@@ -850,9 +873,14 @@ function getNotify() {
     let notify = filterXSS(qs.get('notify'));
     if (notify) {
         let queryNotify = notify === '1' || notify === 'true';
-        if (queryNotify != null) return queryNotify;
+        if (queryNotify != null) {
+            console.log('Direct join', { notify: queryNotify });
+            return queryNotify;
+        }
     }
-    return true;
+    notify = lsSettings.share_on_join;
+    console.log('Direct join', { notify: notify });
+    return notify;
 }
 
 /**
@@ -1030,12 +1058,14 @@ function handleServerInfo(config) {
     console.log('13. Server info', config);
 
     // Limit room to n peers
-    if (userLimitsActive && peers_count > usersCountLimit) {
+    if (userLimits.active && peers_count > userLimits.count) {
         return roomIsBusy();
     }
 
     // Let start with some basic rules
     isPresenter = isPeerReconnected ? isPresenter : is_presenter;
+    getId('isPeerPresenter').innerText = isPresenter;
+
     if (isRulesActive) {
         handleRules(isPresenter);
     }
@@ -1061,15 +1091,11 @@ function roomIsBusy() {
         imageUrl: forbiddenImg,
         position: 'center',
         title: 'Room is busy',
-        html: `The room is limited to ${usersCountLimit} users. <br/> Please try again later`,
+        html: `The room is limited to ${userLimits.count} users. <br/> Please try again later`,
         showDenyButton: false,
         confirmButtonText: `OK`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             openURL('/');
@@ -1193,12 +1219,8 @@ async function whoAreYou() {
         inputValue: window.localStorage.peer_name ? window.localStorage.peer_name : '',
         html: initUser, // inject html
         confirmButtonText: `Join meeting`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         inputValidator: async (value) => {
             if (!value) return 'Please enter your name';
 
@@ -1295,12 +1317,8 @@ function userNameAlreadyInRoom() {
         html: `The Username is already in use. <br/> Please try with another one`,
         showDenyButton: false,
         confirmButtonText: `OK`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             openURL('/');
@@ -1401,7 +1419,7 @@ async function changeInitCamera(deviceId) {
         })
         .catch((err) => {
             console.error('[Error] changeInitCamera', err);
-            userLog('error', 'Error while swapping init camera' + err, 'top-end');
+            userLog('error', 'Error while swapping init camera' + err);
         });
 }
 
@@ -1435,6 +1453,7 @@ async function whoAreYouJoin() {
     myVideoWrap.style.display = 'inline';
     myVideoParagraph.innerText = myPeerName + ' (me)';
     setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
+    setPeerAvatarImgName('myProfileAvatar', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);
     joinToChannel();
 }
@@ -1511,7 +1530,7 @@ async function handleAddPeer(config) {
     await handleOnTrack(peer_id, peers);
     await handleAddTracks(peer_id);
 
-    if (useVideo && !peer_video && !needToCreateOffer) {
+    if (!peer_video && !needToCreateOffer) {
         needToCreateOffer = true;
     }
     if (should_create_offer) {
@@ -2008,12 +2027,8 @@ async function initEnumerateDevices() {
             text: "Meet needs access to the camera and microphone. Click the locked camera and microphone icon in your browser's address bar, before to join room.",
             showDenyButton: false,
             confirmButtonText: `OK`,
-            showClass: {
-                popup: 'animate__animated animate__fadeInDown',
-            },
-            hideClass: {
-                popup: 'animate__animated animate__fadeOutUp',
-            },
+            showClass: { popup: 'animate__animated animate__fadeInDown' },
+            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
             if (result.isConfirmed) {
                 openURL('/'); // back to homepage
@@ -2184,7 +2199,7 @@ async function setupLocalMedia() {
         if (stream) {
             await loadLocalMedia(stream);
             if (useAudio) {
-                await startPitchDetection(stream);
+                await getMicrophoneVolumeIndicator(stream);
             }
         }
     } catch (err) {
@@ -2419,12 +2434,8 @@ function checkShareScreen() {
             showDenyButton: true,
             confirmButtonText: `Yes`,
             denyButtonText: `No`,
-            showClass: {
-                popup: 'animate__animated animate__fadeInDown',
-            },
-            hideClass: {
-                popup: 'animate__animated animate__fadeOutUp',
-            },
+            showClass: { popup: 'animate__animated animate__fadeInDown' },
+            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
             if (result.isConfirmed) {
                 screenShareBtn.click();
@@ -2441,6 +2452,8 @@ function checkShareScreen() {
  */
 async function loadRemoteMediaStream(stream, peers, peer_id) {
     // get data from peers obj
+    console.log('REMOTE PEER INFO', peers[peer_id]);
+
     const peer_name = peers[peer_id]['peer_name'];
     const peer_video = peers[peer_id]['peer_video'];
     const peer_video_status = peers[peer_id]['peer_video_status'];
@@ -2691,7 +2704,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     // refresh remote peers hand icon status and title
     setPeerHandStatus(peer_id, peer_name, peer_hand_status);
     // refresh remote peers video icon status and title
-    setPeerVideoStatus(peer_id, peer_video_status);
+    setPeerVideoStatus(peer_id, peer_screen_status ? peer_screen_status : peer_video_status);
     // refresh remote peers audio icon status and title
     setPeerAudioStatus(peer_id, peer_audio_status);
     // handle remote peers audio volume
@@ -2719,10 +2732,14 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     // notify if peer started to recording own screen + audio
     if (peer_rec_status) notifyRecording(peer_name, 'Started');
 
-    // peer not has video at all
-    if (!peer_video) {
+    // Peer without camera, screen sharing OFF
+    if (!peer_video && !peer_screen_status) {
         remoteVideoAvatarImage.style.display = 'block';
         remoteVideoStatusIcon.className = className.videoOff;
+    }
+    // Peer without camera, screen sharing ON
+    if (!peer_video && peer_screen_status) {
+        handleScreenStart(peer_id);
     }
 }
 
@@ -2732,7 +2749,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
  * @param {object} stream media stream audio - video
  */
 function logStreamSettingsInfo(name, stream) {
-    if (useVideo || isScreenStreaming) {
+    if ((useVideo || isScreenStreaming) && hasVideoTrack(stream)) {
         console.log(name, {
             video: {
                 label: stream.getVideoTracks()[0].label,
@@ -2740,7 +2757,7 @@ function logStreamSettingsInfo(name, stream) {
             },
         });
     }
-    if (useAudio) {
+    if (useAudio && hasAudioTrack(stream)) {
         console.log(name, {
             audio: {
                 label: stream.getAudioTracks()[0].label,
@@ -2757,6 +2774,8 @@ function logStreamSettingsInfo(name, stream) {
  */
 function adaptAspectRatio() {
     let participantsCount = getId('videoMediaContainer').childElementCount;
+    const peersCount = getId('peersCount');
+    if (peersCount) peersCount.innerText = participantsCount;
     let desktop,
         mobile = 1;
     // desktop aspect ratio
@@ -3081,6 +3100,7 @@ function handleVideoPrivacyBtn(videoId, privacyBtnId) {
  */
 function setVideoPrivacyStatus(peerVideoId, peerPrivacyActive) {
     let video = getId(peerVideoId);
+    if (!video) return;
     if (peerPrivacyActive) {
         video.classList.remove('videoDefault');
         video.classList.add('videoCircle');
@@ -3664,6 +3684,8 @@ function setChatRoomBtn() {
         } else {
             msgPopup('info', "Chat not will be shown, when I'm receive a new message", 'top-end', 3000);
         }
+        lsSettings.show_chat_on_msg = showChatOnMessage;
+        lS.setSettings(lsSettings);
     });
 
     // chat send msg
@@ -3897,6 +3919,9 @@ function setMySettingsBtn() {
     mySettingsCloseBtn.addEventListener('click', (e) => {
         hideShowMySettings();
     });
+    speakerTestBtn.addEventListener('click', (e) => {
+        playSound('ring', true);
+    });
     myPeerNameSetBtn.addEventListener('click', (e) => {
         updateMyPeerName();
     });
@@ -3906,6 +3931,13 @@ function setMySettingsBtn() {
         lsSettings.sounds = notifyBySound;
         lS.setSettings(lsSettings);
         userLog('toast', `${icons.sounds} Notify & sounds ` + (notifyBySound ? 'ON' : 'OFF'));
+        playSound('switch');
+    });
+    switchShare.addEventListener('change', (e) => {
+        notify = e.currentTarget.checked;
+        lsSettings.share_on_join = notify;
+        lS.setSettings(lsSettings);
+        userLog('toast', `${icons.share} Share room on join ` + (notify ? 'ON' : 'OFF'));
         playSound('switch');
     });
 
@@ -3972,14 +4004,20 @@ function handleBodyOnMouseMove() {
  */
 function setupMySettings() {
     // tab buttons
-    tabDevicesBtn.addEventListener('click', (e) => {
-        openTab(e, 'tabDevices');
-    });
-    tabBandwidthBtn.addEventListener('click', (e) => {
-        openTab(e, 'tabBandwidth');
-    });
     tabRoomBtn.addEventListener('click', (e) => {
         openTab(e, 'tabRoom');
+    });
+    tabVideoBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabVideo');
+    });
+    tabAudioBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabAudio');
+    });
+    tabParticipantsBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabParticipants');
+    });
+    tabProfileBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabProfile');
     });
     tabStylingBtn.addEventListener('click', (e) => {
         openTab(e, 'tabStyling');
@@ -4016,17 +4054,17 @@ function setupMySettings() {
         videoFpsSelect.addEventListener('change', (e) => {
             videoMaxFrameRate = parseInt(videoFpsSelect.value);
             setLocalMaxFps(videoMaxFrameRate);
+            lsSettings.video_fps = e.currentTarget.selectedIndex;
+            lS.setSettings(lsSettings);
         });
-        // default 30 fps
-        videoFpsSelect.selectedIndex = '1';
     }
     // select screen fps
     screenFpsSelect.addEventListener('change', (e) => {
         screenMaxFrameRate = parseInt(screenFpsSelect.value);
         if (isScreenStreaming) setLocalMaxFps(screenMaxFrameRate);
+        lsSettings.screen_fps = e.currentTarget.selectedIndex;
+        lS.setSettings(lsSettings);
     });
-    // default 30 fps
-    screenFpsSelect.selectedIndex = '1';
 
     // Mobile not support screen sharing
     if (isMobileDevice) {
@@ -4089,9 +4127,16 @@ function setupMySettings() {
  * Load settings from local storage
  */
 function loadSettingsFromLocalStorage() {
+    showChatOnMessage = lsSettings.show_chat_on_msg;
+    msgerShowChatOnMsg.checked = showChatOnMessage;
+    screenFpsSelect.selectedIndex = lsSettings.screen_fps;
+    videoFpsSelect.selectedIndex = lsSettings.video_fps;
+    screenMaxFrameRate = getSelectedIndexValue(screenFpsSelect);
+    videoMaxFrameRate = getSelectedIndexValue(videoFpsSelect);
     notifyBySound = lsSettings.sounds;
     isAudioPitchBar = lsSettings.pitch_bar;
     switchSounds.checked = notifyBySound;
+    switchShare.checked = notify;
     switchAudioPitchBar.checked = isAudioPitchBar;
     videoObjFitSelect.selectedIndex = lsSettings.video_obj_fit;
     btnsBarSelect.selectedIndex = lsSettings.buttons_bar;
@@ -4099,6 +4144,15 @@ function loadSettingsFromLocalStorage() {
     document.documentElement.style.setProperty('--video-object-fit', videoObjFitSelect.value);
     setButtonsBarPosition(btnsBarSelect.value);
     toggleVideoPin(pinVideoPositionSelect.value);
+}
+
+/**
+ * Get value from element selected index
+ * @param {object} elem
+ * @returns any value
+ */
+function getSelectedIndexValue(elem) {
+    return elem.options[elem.selectedIndex].value;
 }
 
 /**
@@ -4239,6 +4293,26 @@ async function getAudioConstraints() {
 }
 
 /**
+ * Refresh stream constraints
+ * @param {MediaStream} stream
+ * @param {integer} maxFrameRate
+ * @returns void
+ */
+async function refreshConstraints(stream, maxFrameRate) {
+    if (!useVideo || stream.getVideoTracks().length == 0) return;
+    stream
+        .getVideoTracks()[0]
+        .applyConstraints({ frameRate: { max: maxFrameRate } })
+        .then(() => {
+            logStreamSettingsInfo('refreshConstraints', stream);
+        })
+        .catch((err) => {
+            console.error('refreshConstraints', err);
+            userLog('error', "Your device doesn't support the selected fps, please select the another one.");
+        });
+}
+
+/**
  * Set local max fps: https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints
  * @param {string} maxFrameRate desired max frame rate
  */
@@ -4315,6 +4389,8 @@ function attachSinkId(element, sinkId) {
  * @returns {object} media Devices Info
  */
 async function gotStream(stream) {
+    const videoFPS = isScreenStreaming ? screenMaxFrameRate : videoMaxFrameRate;
+    await refreshConstraints(stream, videoFPS);
     await refreshMyLocalStream(stream, true);
     await refreshMyStreamToPeers(stream, true);
     if (myVideoChange) {
@@ -4512,12 +4588,8 @@ function shareRoomMeetingURL(checkScreen = false) {
         confirmButtonText: `Copy URL`,
         denyButtonText: `Email invite`,
         cancelButtonText: `Close`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             copyRoomURL();
@@ -4652,6 +4724,7 @@ async function swapCamera() {
         // https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
         camStream = await navigator.mediaDevices.getUserMedia({ video: camVideo });
         if (camStream) {
+            await refreshConstraints(camStream, videoMaxFrameRate);
             await refreshMyLocalStream(camStream);
             await refreshMyStreamToPeers(camStream);
             await setMyVideoStatusTrue();
@@ -4717,29 +4790,37 @@ async function toggleScreenSharing(init = false) {
         if (screenMediaPromise) {
             isVideoPrivacyActive = false;
             emitPeerStatus('privacy', isVideoPrivacyActive);
+
             isScreenStreaming = !isScreenStreaming;
+            myScreenStatus = isScreenStreaming;
+
             if (isScreenStreaming) {
                 setMyVideoStatusTrue();
                 emitPeersAction('screenStart');
             } else {
                 emitPeersAction('screenStop');
                 adaptAspectRatio();
+                await refreshConstraints(screenMediaPromise, videoMaxFrameRate);
             }
-            myScreenStatus = isScreenStreaming;
             await emitPeerStatus('screen', myScreenStatus);
             await stopLocalVideoTrack();
             await refreshMyLocalStream(screenMediaPromise);
             await refreshMyStreamToPeers(screenMediaPromise);
 
-            if (initStream) {
-                stopTracks(initStream);
+            if (init) {
+                // handle init media stream
+                if (initStream) stopTracks(initStream);
                 initStream = screenMediaPromise;
-                const newStream = new MediaStream([initStream.getVideoTracks()[0]]);
-                initVideo.style.display = 'block';
-                initVideo.classList.toggle('mirror');
-                initVideo.srcObject = newStream;
-                disable(initVideoSelect, isScreenStreaming);
-                disable(initVideoBtn, isScreenStreaming);
+                if (hasVideoTrack(initStream)) {
+                    const newStream = new MediaStream([initStream.getVideoTracks()[0]]);
+                    initVideo.style.display = 'block';
+                    initVideo.classList.toggle('mirror');
+                    initVideo.srcObject = newStream;
+                    disable(initVideoSelect, isScreenStreaming);
+                    disable(initVideoBtn, isScreenStreaming);
+                } else {
+                    initVideo.style.display = 'none';
+                }
             }
 
             // Disable cam video when screen sharing stop
@@ -4758,7 +4839,7 @@ async function toggleScreenSharing(init = false) {
     } catch (err) {
         console.error('[Error] Unable to share the screen', err);
         if (init) return;
-        userLog('error', 'Unable to share the screen ' + err);
+        // userLog('error', 'Unable to share the screen ' + err);
     }
 }
 
@@ -4767,6 +4848,8 @@ async function toggleScreenSharing(init = false) {
  * @param {boolean} status of screen sharing
  */
 function setScreenSharingStatus(status) {
+    myVideo.style.display = status ? 'block' : 'none';
+    emitPeerStatus('video', status);
     initScreenShareBtn.className = status ? className.screenOff : className.screenOn;
     screenShareBtn.className = status ? className.screenOff : className.screenOn;
     setTippy(screenShareBtn, status ? 'Stop screen sharing' : 'Start screen sharing', 'right-start');
@@ -4820,6 +4903,15 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
     console.log('PEER-CONNECTIONS', peerConnections); // all peers connections in the room expect myself
     console.log('ALL-PEERS', allPeers); // all peers connected in the room
 
+    // check if passed stream has audio track
+    const streamHasAudioTrack = hasAudioTrack(stream);
+
+    // audio Track to replace to peers
+    const myAudioTrack =
+        streamHasAudioTrack && (localAudioTrackChange || isScreenStreaming)
+            ? stream.getAudioTracks()[0]
+            : localMediaStream.getAudioTracks()[0];
+
     // refresh my stream to connected peers expect myself
     for (let peer_id in peerConnections) {
         let peer_name = allPeers[peer_id]['peer_name'];
@@ -4844,14 +4936,6 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
                 }
             });
         }
-
-        let myAudioTrack; // audio Track to replace to peers
-
-        if (stream.getAudioTracks()[0] && (localAudioTrackChange || isScreenStreaming)) {
-            myAudioTrack = stream.getAudioTracks()[0];
-        } else {
-            myAudioTrack = localMediaStream.getAudioTracks()[0];
-        }
         // https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/getSenders
         let audioSender = peerConnections[peer_id]
             .getSenders()
@@ -4862,19 +4946,19 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
             audioSender.replaceTrack(myAudioTrack);
             console.log('REPLACE AUDIO TRACK TO', { peer_id: peer_id, peer_name: peer_name });
         }
+    }
 
-        // When share a video tab that contain audio, my voice will be turned off
-        if (isScreenStreaming && stream.getAudioTracks()[0]) {
-            setMyAudioOff('you');
-            needToEnableMyAudio = true;
-            audioBtn.disabled = true;
-        }
-        // On end screen sharing enable my audio if need
-        if (!isScreenStreaming && needToEnableMyAudio) {
-            setMyAudioOn('you');
-            needToEnableMyAudio = false;
-            audioBtn.disabled = false;
-        }
+    // When share a video tab that contain audio, my voice will be turned off
+    if (isScreenStreaming && streamHasAudioTrack) {
+        setMyAudioOff('you');
+        needToEnableMyAudio = true;
+        audioBtn.disabled = true;
+    }
+    // On end screen sharing enable my audio if need
+    if (!isScreenStreaming && needToEnableMyAudio) {
+        setMyAudioOn('you');
+        needToEnableMyAudio = false;
+        audioBtn.disabled = false;
     }
 }
 
@@ -4896,18 +4980,23 @@ async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
 
     let newStream = null;
 
+    const tracksToInclude = [];
+    const videoTrack = hasVideoTrack(stream) ? stream.getVideoTracks()[0] : null;
+    const audioTrack =
+        hasAudioTrack(stream) && localAudioTrackChange
+            ? stream.getAudioTracks()[0]
+            : localMediaStream.getAudioTracks()[0];
+
     // https://developer.mozilla.org/en-US/docs/Web/API/MediaStream
     if (useVideo || isScreenStreaming) {
-        console.log('Refresh my local media stream VIDEO - AUDIO');
-        newStream = new MediaStream([
-            stream.getVideoTracks()[0],
-            localAudioTrackChange ? stream.getAudioTracks()[0] : localMediaStream.getAudioTracks()[0],
-        ]);
+        console.log('Refresh my local media stream VIDEO - AUDIO', { isScreenStreaming: isScreenStreaming });
+        if (videoTrack) tracksToInclude.push(videoTrack);
+        if (audioTrack) tracksToInclude.push(audioTrack);
+        newStream = new MediaStream(tracksToInclude);
     } else {
         console.log('Refresh my local media stream AUDIO');
-        newStream = new MediaStream([
-            localAudioTrackChange ? stream.getAudioTracks()[0] : localMediaStream.getAudioTracks()[0],
-        ]);
+        if (audioTrack) tracksToInclude.push(audioTrack);
+        newStream = new MediaStream(tracksToInclude);
     }
 
     localMediaStream = newStream;
@@ -4925,17 +5014,37 @@ async function refreshMyLocalStream(stream, localAudioTrackChange = false) {
     logStreamSettingsInfo('refreshMyLocalStream', localMediaStream);
 
     // start capture mic volumes
-    startPitchDetection(localMediaStream);
+    getMicrophoneVolumeIndicator(localMediaStream);
 
     // attachMediaStream is a part of the adapter.js library
     attachMediaStream(myVideo, localMediaStream); // newStream
 
-    // on toggleScreenSharing video stop
+    // on toggleScreenSharing video stop from popup bar
     if (useVideo || isScreenStreaming) {
         stream.getVideoTracks()[0].onended = () => {
             toggleScreenSharing();
         };
     }
+}
+
+/**
+ * Check if MediaStream has audio track
+ * @param {MediaStream} mediaStream
+ * @returns boolean
+ */
+function hasAudioTrack(mediaStream) {
+    const audioTracks = mediaStream.getAudioTracks();
+    return audioTracks.length > 0;
+}
+
+/**
+ * Check if MediaStream has video track
+ * @param {MediaStream} mediaStream
+ * @returns boolean
+ */
+function hasVideoTrack(mediaStream) {
+    const videoTracks = mediaStream.getVideoTracks();
+    return videoTracks.length > 0;
 }
 
 /**
@@ -5287,12 +5396,8 @@ function cleanMessages() {
         showDenyButton: true,
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         // clean chat messages
         if (result.isConfirmed) {
@@ -5321,12 +5426,8 @@ function cleanCaptions() {
         showDenyButton: true,
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         // clean chat messages
         if (result.isConfirmed) {
@@ -5601,12 +5702,8 @@ function deleteMessage(id) {
         showDenyButton: true,
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         // clean this message
         if (result.isConfirmed) {
@@ -6132,6 +6229,7 @@ async function updateMyPeerName() {
     window.localStorage.peer_name = myPeerName;
 
     setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
+    setPeerAvatarImgName('myProfileAvatar', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);
     userLog('toast', 'My name changed to ' + myPeerName);
 }
@@ -6222,6 +6320,7 @@ function setMyAudioStatus(status) {
  * @param {boolean} status of my video
  */
 function setMyVideoStatus(status) {
+    console.log('My video status', status);
     // on vdeo OFF display my video avatar name
     if (myVideoAvatarImage) myVideoAvatarImage.style.display = status ? 'none' : 'block';
     if (myVideoStatusIcon) myVideoStatusIcon.className = status ? className.videoOn : className.videoOff;
@@ -6232,8 +6331,8 @@ function setMyVideoStatus(status) {
         setTippy(videoBtn, status ? 'Stop the video' : 'Start the video', 'right-start');
     }
     myVideo.style.display = status ? 'block' : 'none';
+    initVideo.style.display = status ? 'block' : 'none';
     status ? playSound('on') : playSound('off');
-    console.log('My video status', status);
 }
 
 /**
@@ -6359,12 +6458,8 @@ function sendPrivateMsgToPeer(toPeerId, toPeerName) {
         input: 'text',
         showCancelButton: true,
         confirmButtonText: `Send`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.value) {
             result.value = filterXSS(result.value);
@@ -6467,7 +6562,7 @@ async function emitPeerAction(peer_id, peerAction) {
  * @param {object} config data
  */
 function handlePeerAction(config) {
-    // console.log('Handle peer action: ', config);
+    console.log('Handle peer action: ', config);
     const { peer_id, peer_name, peer_use_video, peer_action } = config;
 
     switch (peer_action) {
@@ -6611,12 +6706,8 @@ function disableAllPeers(element) {
         showDenyButton: true,
         confirmButtonText: element == 'audio' ? `Mute` : `Hide`,
         denyButtonText: `Cancel`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             switch (element) {
@@ -6649,12 +6740,8 @@ function ejectEveryone() {
         showDenyButton: true,
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             emitPeersAction('ejectAll');
@@ -6683,12 +6770,8 @@ function disablePeer(peer_id, element) {
         showDenyButton: true,
         confirmButtonText: element == 'audio' ? `Mute` : `Hide`,
         denyButtonText: `Cancel`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             switch (element) {
@@ -6735,12 +6818,8 @@ function handleRoomAction(config, emit = false) {
                     inputPlaceholder: 'Set Room password',
                     confirmButtonText: `OK`,
                     denyButtonText: `Cancel`,
-                    showClass: {
-                        popup: 'animate__animated animate__fadeInDown',
-                    },
-                    hideClass: {
-                        popup: 'animate__animated animate__fadeOutUp',
-                    },
+                    showClass: { popup: 'animate__animated animate__fadeInDown' },
+                    hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                     inputValidator: (pwd) => {
                         if (!pwd) return 'Please enter the Room password';
                         thisRoomPassword = pwd;
@@ -6808,12 +6887,8 @@ function handleRoomLocked() {
         text: 'The room is locked, try with another one.',
         showDenyButton: false,
         confirmButtonText: `Ok`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) openURL('/newcall');
     });
@@ -6834,12 +6909,8 @@ function handleUnlockTheRoom() {
         input: 'text',
         inputPlaceholder: 'Enter the Room password',
         confirmButtonText: `OK`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         inputValidator: (pwd) => {
             if (!pwd) return 'Please enter the Room password';
             thisRoomPassword = pwd;
@@ -6994,12 +7065,8 @@ function whiteboardAddObj(type) {
                 input: 'text',
                 showCancelButton: true,
                 confirmButtonText: 'OK',
-                showClass: {
-                    popup: 'animate__animated animate__fadeInDown',
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp',
-                },
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             }).then((result) => {
                 if (result.isConfirmed) {
                     let wbCanvasImgURL = result.value;
@@ -7027,12 +7094,8 @@ function whiteboardAddObj(type) {
                 showDenyButton: true,
                 confirmButtonText: `OK`,
                 denyButtonText: `Cancel`,
-                showClass: {
-                    popup: 'animate__animated animate__fadeInDown',
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp',
-                },
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             }).then((result) => {
                 if (result.isConfirmed) {
                     let wbCanvasImg = result.value;
@@ -7319,12 +7382,8 @@ function confirmCleanBoard() {
         showDenyButton: true,
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             whiteboardAction(getWhiteboardAction('clear'));
@@ -7588,12 +7647,8 @@ function selectFileToShare(peer_id, broadcast = false) {
         showDenyButton: true,
         confirmButtonText: `Send`,
         denyButtonText: `Cancel`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             sendFileInformations(result.value, peer_id, broadcast);
@@ -7742,12 +7797,8 @@ function endDownload() {
                 showDenyButton: true,
                 confirmButtonText: `Save`,
                 denyButtonText: `Cancel`,
-                showClass: {
-                    popup: 'animate__animated animate__fadeInDown',
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp',
-                },
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             }).then((result) => {
                 if (result.isConfirmed) saveBlobToFile(blob, file);
             });
@@ -7767,12 +7818,8 @@ function endDownload() {
             showDenyButton: true,
             confirmButtonText: `Save`,
             denyButtonText: `Cancel`,
-            showClass: {
-                popup: 'animate__animated animate__fadeInDown',
-            },
-            hideClass: {
-                popup: 'animate__animated animate__fadeOutUp',
-            },
+            showClass: { popup: 'animate__animated animate__fadeInDown' },
+            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
             if (result.isConfirmed) saveBlobToFile(blob, file);
         });
@@ -7815,12 +7862,8 @@ function sendVideoUrl(peer_id = null) {
         input: 'text',
         showCancelButton: true,
         confirmButtonText: `Share`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.value) {
             result.value = filterXSS(result.value);
@@ -8004,12 +8047,8 @@ function kickOut(peer_id) {
         showDenyButton: true,
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         if (result.isConfirmed) {
             // send peer to kick out from room
@@ -8062,12 +8101,8 @@ function handleKickedOut(config) {
         willClose: () => {
             clearInterval(timerInterval);
         },
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then(() => {
         checkRecording();
         openURL('/newcall');
@@ -8093,12 +8128,8 @@ function showAbout() {
             <b><a href="https://github.com/mmguero/mirotalk" target="_blank">Open Source</a></b> project
         </div>
         `,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     });
 }
 
@@ -8128,12 +8159,8 @@ function leaveFeedback() {
         text: 'Do you want to rate your MiroTalk experience?',
         confirmButtonText: `Yes`,
         denyButtonText: `No`,
-        showClass: {
-            popup: 'animate__animated animate__fadeInDown',
-        },
-        hideClass: {
-            popup: 'animate__animated animate__fadeOutUp',
-        },
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
         checkRecording();
         if (result.isConfirmed) {
@@ -8224,8 +8251,8 @@ function handlePeerVolume(data) {
     if (!isAudioPitchBar) return;
     let peer_id = data.peer_id;
     let element = getId(peer_id + '_pitch_bar');
-    let remoteVideoWrap = getId(peer_id + '_videoWrap');
-    let volume = data.volume + 25; //for design purpose
+    //let remoteVideoWrap = getId(peer_id + '_videoWrap');
+    let volume = data.volume;
     if (!element) return;
     if (volume > 50) {
         element.style.backgroundColor = 'orange';
@@ -8236,7 +8263,7 @@ function handlePeerVolume(data) {
         element.style.backgroundColor = '#19bb5c';
         element.style.height = '0%';
         //remoteVideoWrap.classList.toggle('speaking');
-    }, 700);
+    }, 100);
 }
 
 /**
@@ -8246,7 +8273,7 @@ function handlePeerVolume(data) {
 function handleMyVolume(data) {
     if (!isAudioPitchBar) return;
     let element = getId('myPitchBar');
-    let volume = data.volume + 25;
+    let volume = data.volume;
     if (!element) return;
     if (volume > 50) {
         element.style.backgroundColor = 'orange';
@@ -8257,11 +8284,11 @@ function handleMyVolume(data) {
         element.style.backgroundColor = '#19bb5c';
         element.style.height = '0%';
         //myVideoWrap.classList.toggle('speaking');
-    }, 700);
+    }, 100);
 }
 
 /**
- * Basic user logging using https://sweetalert2.github.io
+ * Basic user logging using https://sweetalert2.github.io & https://animate.style/
  * @param {string} type of popup
  * @param {string} message to popup
  * @param {integer} timer toast duration ms
@@ -8276,9 +8303,8 @@ function userLog(type, message, timer = 3000) {
                 icon: type,
                 title: type,
                 text: message,
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp',
-                },
+                showClass: { popup: 'animate__animated animate__rubberBand' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             });
             playSound('alert');
             break;
@@ -8290,12 +8316,8 @@ function userLog(type, message, timer = 3000) {
                 icon: type,
                 title: type,
                 text: message,
-                showClass: {
-                    popup: 'animate__animated animate__fadeInDown',
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp',
-                },
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             });
             break;
         case 'success-html':
@@ -8305,12 +8327,8 @@ function userLog(type, message, timer = 3000) {
                 icon: 'success',
                 title: 'Success',
                 html: message,
-                showClass: {
-                    popup: 'animate__animated animate__fadeInDown',
-                },
-                hideClass: {
-                    popup: 'animate__animated animate__fadeOutUp',
-                },
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             });
             break;
         case 'toast':
@@ -8325,6 +8343,8 @@ function userLog(type, message, timer = 3000) {
             Toast.fire({
                 icon: 'info',
                 title: message,
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             });
             break;
         // ......
@@ -8352,15 +8372,18 @@ function msgPopup(icon, message, position, timer = 1000) {
     Toast.fire({
         icon: icon,
         title: message,
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     });
 }
 
 /**
  * https://notificationsounds.com/notification-sounds
  * @param {string} name audio to play
+ * @param {boolean} force audio
  */
-async function playSound(name) {
-    if (!notifyBySound) return;
+async function playSound(name, force = false) {
+    if (!notifyBySound && !force) return;
     let sound = '../sounds/' + name + '.mp3';
     let audioToPlay = new Audio(sound);
     try {
