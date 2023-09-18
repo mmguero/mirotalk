@@ -103,6 +103,7 @@ const className = {
     captionOn: 'fas fa-closed-captioning',
     trash: 'fas fa-trash',
     copy: 'fas fa-copy',
+    speech: 'fas fa-volume-high',
     heart: 'fas fa-heart',
     pip: 'fas fa-images',
 };
@@ -278,6 +279,8 @@ let isCaptionBoxVisible = false;
 let isChatEmojiVisible = false;
 let isChatMarkdownOn = false;
 let isChatGPTOn = false;
+let isSpeechSynthesisSupported = 'speechSynthesis' in window;
+let speechInMessages = false;
 let isButtonsVisible = false;
 let isButtonsBarOver = false;
 let isMySettingsVisible = false;
@@ -351,7 +354,10 @@ let msgerShareFileBtn;
 let msgerInput;
 let msgerCleanTextBtn;
 let msgerPasteBtn;
+let msgerShowChatOnMsgDiv;
 let msgerShowChatOnMsg;
+let msgerSpeechMsgDiv;
+let msgerSpeechMsg;
 let msgerSendBtn;
 //caption section
 let captionDraggable;
@@ -546,7 +552,10 @@ function getHtmlElementsById() {
     msgerInput = getId('msgerInput');
     msgerCleanTextBtn = getId('msgerCleanTextBtn');
     msgerPasteBtn = getId('msgerPasteBtn');
+    msgerShowChatOnMsgDiv = getId('msgerShowChatOnMsgDiv');
     msgerShowChatOnMsg = getId('msgerShowChatOnMsg');
+    msgerSpeechMsgDiv = getId('msgerSpeechMsgDiv');
+    msgerSpeechMsg = getId('msgerSpeechMsg');
     msgerSendBtn = getId('msgerSendBtn');
     // chat room connected peers
     msgerCP = getId('msgerCP');
@@ -699,7 +708,8 @@ function setButtonsToolTip() {
     setTippy(msgerShareFileBtn, 'Share file', 'top');
     setTippy(msgerCleanTextBtn, 'Clean', 'top');
     setTippy(msgerPasteBtn, 'Paste', 'top');
-    setTippy(msgerShowChatOnMsg, 'Show me when I receive a new message', 'top');
+    setTippy(msgerShowChatOnMsgDiv, 'Show chat when you receive a new message', 'top');
+    setTippy(msgerSpeechMsgDiv, 'Speech the incoming messages', 'top');
     setTippy(msgerSendBtn, 'Send', 'top');
     // chat participants buttons
     setTippy(msgerCPCloseBtn, 'Close', 'left');
@@ -1206,6 +1216,24 @@ async function whoAreYou() {
 
     await loadLocalStorage();
 
+    if (!buttons.main.showVideoBtn) {
+        useVideo = false;
+        elemDisplay(document.getElementById('initVideo'), false);
+        elemDisplay(document.getElementById('initVideoBtn'), false);
+        elemDisplay(document.getElementById('initVideoSelect'), false);
+        elemDisplay(document.getElementById('tabVideoBtn'), false);
+    }
+    if (!buttons.main.showAudioBtn) {
+        //useAudio = false;
+        elemDisplay(document.getElementById('initAudioBtn'), false);
+        elemDisplay(document.getElementById('initMicrophoneSelect'), false);
+        elemDisplay(document.getElementById('initSpeakerSelect'), false);
+        elemDisplay(document.getElementById('tabAudioBtn'), false);
+    }
+    if (!buttons.main.showScreenBtn) {
+        elemDisplay(document.getElementById('initScreenShareBtn'), false);
+    }
+
     const initUser = getId('initUser');
     initUser.classList.toggle('hidden');
 
@@ -1437,12 +1465,14 @@ function checkPeerAudioVideo() {
         audio = audio.toLowerCase();
         let queryPeerAudio = audio === '1' || audio === 'true';
         if (queryPeerAudio != null) handleAudio(audioBtn, false, queryPeerAudio);
+        elemDisplay(document.getElementById('tabAudioBtn'), queryPeerAudio);
         console.log('Direct join', { audio: queryPeerAudio });
     }
     if (video) {
         video = video.toLowerCase();
         let queryPeerVideo = video === '1' || video === 'true';
         if (queryPeerVideo != null) handleVideo(videoBtn, false, queryPeerVideo);
+        elemDisplay(document.getElementById('tabVideoBtn'), queryPeerVideo);
         console.log('Direct join', { video: queryPeerVideo });
     }
 }
@@ -3681,14 +3711,27 @@ function setChatRoomBtn() {
     msgerShowChatOnMsg.addEventListener('change', (e) => {
         playSound('switch');
         showChatOnMessage = e.currentTarget.checked;
-        if (showChatOnMessage) {
-            msgPopup('info', "Chat will be shown, when I'm receive a new message", 'top-end', 3000);
-        } else {
-            msgPopup('info', "Chat not will be shown, when I'm receive a new message", 'top-end', 3000);
-        }
+        showChatOnMessage
+            ? msgPopup('info', 'Chat will be shown, when you receive a new message', 'top-end', 3000)
+            : msgPopup('info', 'Chat not will be shown, when you receive a new message', 'top-end', 3000);
         lsSettings.show_chat_on_msg = showChatOnMessage;
         lS.setSettings(lsSettings);
     });
+
+    // speech incoming message
+    if (isSpeechSynthesisSupported) {
+        msgerSpeechMsg.addEventListener('change', (e) => {
+            playSound('switch');
+            speechInMessages = e.currentTarget.checked;
+            speechInMessages
+                ? msgPopup('info', 'When I receive a new message, it will be converted into speech', 'top-end', 3000)
+                : msgPopup('info', 'You have disabled speech messages', 'top-end', 3000);
+            lsSettings.speech_in_msg = speechInMessages;
+            lS.setSettings(lsSettings);
+        });
+    } else {
+        elemDisplay(msgerSpeechMsgDiv, false);
+    }
 
     // chat send msg
     msgerSendBtn.addEventListener('click', async (e) => {
@@ -4138,7 +4181,9 @@ function setupMySettings() {
  */
 function loadSettingsFromLocalStorage() {
     showChatOnMessage = lsSettings.show_chat_on_msg;
+    speechInMessages = lsSettings.speech_in_msg;
     msgerShowChatOnMsg.checked = showChatOnMessage;
+    msgerSpeechMsg.checked = speechInMessages;
     screenFpsSelect.selectedIndex = lsSettings.screen_fps;
     videoFpsSelect.selectedIndex = lsSettings.video_fps;
     screenMaxFrameRate = getSelectedIndexValue(screenFpsSelect);
@@ -4841,7 +4886,9 @@ async function toggleScreenSharing(init = false) {
                 if (hasVideoTrack(initStream)) {
                     const newStream = new MediaStream([initStream.getVideoTracks()[0]]);
                     initVideo.style.display = 'block';
-                    initVideo.classList.toggle('mirror');
+                    if (initVideo.classList.contains('mirror')) {
+                        initVideo.classList.toggle('mirror');
+                    }
                     initVideo.srcObject = newStream;
                     disable(initVideoSelect, isScreenStreaming);
                     disable(initVideoBtn, isScreenStreaming);
@@ -5554,9 +5601,9 @@ function handleDataChannelChat(dataMessage) {
         userLog('toast', `New message from: ${msgFrom}`);
     }
 
-    playSound('chatMessage');
     setPeerChatAvatarImgName('left', msgFrom);
     appendMessage(msgFrom, leftChatAvatar, 'left', msg, msgPrivate, msgId);
+    speechInMessages ? speechMessage(true, msgFrom, msg) : playSound('chatMessage');
 }
 
 /**
@@ -5702,17 +5749,43 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                     class="${className.copy}"
                     style="color:#fff; border:none; background:transparent;"
                     onclick="copyToClipboard('${chatMessagesId}')"
-                ></button>
+                ></button>`;
+    if (isSpeechSynthesisSupported) {
+        msgHTML += `
+                <button
+                    id="msg-speech-${chatMessagesId}"
+                    class="${className.speech}" 
+                    style="color:#fff; border:none; background:transparent;"
+                    onclick="speechMessage(false, '${getFrom}', '${checkMsg(getMsg)}')"
+                ></button>`;
+    }
+    msgHTML += ` 
             </div>
         </div>
-	</div>
+    </div>
     `;
     msgerChat.insertAdjacentHTML('beforeend', msgHTML);
     msgerChat.scrollTop += 500;
     setTippy(getId('msg-delete-' + chatMessagesId), 'Delete', 'top');
     setTippy(getId('msg-copy-' + chatMessagesId), 'Copy', 'top');
+    setTippy(getId('msg-speech-' + chatMessagesId), 'Speech', 'top');
     setTippy(getId('msg-private-reply-' + chatMessagesId), 'Reply', 'top');
     chatMessagesId++;
+}
+
+/**
+ * Speech message
+ * https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisUtterance
+ *
+ * @param {boolean} newMsg true/false
+ * @param {string} from peer_name
+ * @param {string} msg message
+ */
+function speechMessage(newMsg = true, from, msg) {
+    const speech = new SpeechSynthesisUtterance();
+    speech.text = (newMsg ? 'New' : '') + ' message from:' + from + '. The message is:' + msg;
+    speech.rate = 0.9;
+    window.speechSynthesis.speak(speech);
 }
 
 /**
@@ -6120,7 +6193,7 @@ async function getChatGPTmessage(msg) {
                 setPeerChatAvatarImgName('left', 'ChatGPT');
                 appendMessage('ChatGPT', leftChatAvatar, 'left', completion, true);
                 cleanMessageInput();
-                playSound('message');
+                speechInMessages ? speechMessage(true, 'ChatGPT', completion) : playSound('message');
             }.bind(this),
         )
         .catch((err) => {
