@@ -2633,9 +2633,31 @@ ul.pricing-item-features-list li {
     padding: 12px 28px;
 }
 
+.clients-size-logo {
+    width: 240px;
+    height: 50px;
+}
+
+.clients-logo {
+    display: flex;
+    justify-content: center;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: radial-gradient(circle at bottom, #000000 0%, #000000 0%, #1d2026 100%);
+}
+
+.clients-logo:hover {
+    background: radial-gradient(circle at bottom, #000000 0%, #000000 0%, #0e0e0e 100%);
+}
+
 @media (min-width: 641px) {
     .clients .clients-inner ul {
         flex-direction: row;
+    }
+}
+@media (max-width: 641px) {
+    .clients-size-logo {
+        width: 300px;
     }
 }
 
@@ -2715,7 +2737,8 @@ ul.pricing-item-features-list li {
 
 .features-tiles-item-image {
     display: inline-flex;
-    border-radius: 50%;
+    padding: 1rem;
+    border-radius: 1rem;
     background: radial-gradient(circle at bottom, #376df9 0%, #ff79af 50%, #ff8d74 100%);
 }
 
@@ -3410,10 +3433,6 @@ img.has-shadow {
     border-radius: 24px;
 }
 
-.w-150 {
-    width: 150px;
-}
-
 .w-300 {
     width: 300px;
 }
@@ -3476,10 +3495,6 @@ img.has-shadow {
 
     .spacer-64-mobile {
         padding-top: 64px;
-    }
-
-    .w-150 {
-        width: 300px;
     }
 }
 
@@ -3548,8 +3563,9 @@ img.has-shadow {
 }
 /*Pulse Button*/
 
-/* Webkit-Scrollbar Styles---------------------
------------------------------------------------ */
+/*--------------------------------------------------------------
+# Webkit-Scrollbar Styles
+--------------------------------------------------------------*/
 
 /* Target the scrollbar track */
 ::-webkit-scrollbar {
@@ -3573,6 +3589,10 @@ img.has-shadow {
 ::-webkit-scrollbar-track:hover {
     background-color: #000000; /* color of the track on hover */
 }
+
+/*--------------------------------------------------------------
+# Last room link
+--------------------------------------------------------------*/
 
 .last-room {
     display: none; /*inline-flex*/
@@ -3618,4 +3638,13 @@ img.has-shadow {
     .last-room {
         flex-wrap: wrap; /* Allow flex items to wrap on small screens */
     }
+}
+
+/*--------------------------------------------------------------
+# svg custom size
+--------------------------------------------------------------*/
+
+.wh-200-150 {
+    width: 200px;
+    height: 150px;
 }

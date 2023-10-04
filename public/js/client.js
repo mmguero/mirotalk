@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.0.5
+ * @version 1.0.6
  *
  */
 
@@ -55,21 +55,59 @@ const isWebRTCSupported = DetectRTC.isWebRTCSupported;
 const isMobileDevice = DetectRTC.isMobileDevice;
 const myBrowserName = DetectRTC.browser.name;
 
+const Base64Prefix = 'data:application/pdf;base64,';
+const wbPdfInput = 'application/pdf';
 const wbImageInput = 'image/*';
 const wbWidth = 1200;
 const wbHeight = 600;
 
 const chatInputEmoji = {
-    '<3': '\u2764\uFE0F',
-    '</3': '\uD83D\uDC94',
-    ':D': '\uD83D\uDE00',
-    ':)': '\uD83D\uDE03',
-    ';)': '\uD83D\uDE09',
-    ':(': '\uD83D\uDE12',
-    ':p': '\uD83D\uDE1B',
-    ';p': '\uD83D\uDE1C',
-    ":'(": '\uD83D\uDE22',
-    ':+1:': '\uD83D\uDC4D',
+    '<3': '❤️',
+    '</3': '💔',
+    ':D': '😀',
+    ':)': '😃',
+    ';)': '😉',
+    ':(': '😒',
+    ':p': '😛',
+    ';p': '😜',
+    ":'(": '😢',
+    ':+1:': '👍',
+    ':*': '😘',
+    ':O': '😲',
+    ':|': '😐',
+    ':*(': '😭',
+    XD: '😆',
+    ':B': '😎',
+    ':P': '😜',
+    '<(': '👎',
+    '>:(': '😡',
+    ':S': '😟',
+    ':X': '🤐',
+    ';(': '😥',
+    ':T': '😖',
+    ':@': '😠',
+    ':$': '🤑',
+    ':&': '🤗',
+    ':#': '🤔',
+    ':!': '😵',
+    ':W': '😷',
+    ':%': '🤒',
+    ':*!': '🤩',
+    ':G': '😬',
+    ':R': '😋',
+    ':M': '🤮',
+    ':L': '🥴',
+    ':C': '🥺',
+    ':F': '🥳',
+    ':Z': '🤢',
+    ':^': '🤓',
+    ':K': '🤫',
+    ':D!': '🤯',
+    ':H': '🧐',
+    ':U': '🤥',
+    ':V': '🤪',
+    ':N': '🥶',
+    ':J': '🥴',
 }; // https://github.com/wooorm/gemoji/blob/main/support.md
 
 const className = {
@@ -129,7 +167,11 @@ console.log('LS_SETTINGS', lsSettings);
 // Check if PIP is supported by this browser
 const showVideoPipBtn = !isMobileDevice && document.pictureInPictureEnabled;
 
-// Show desired buttons captionBtn, showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn, 'showVideoPipBtn' -> (auto-detected)
+/**
+ * Configuration for controlling the visibility of buttons in the MiroTalk P2P client.
+ * Set properties to true to show the corresponding buttons, or false to hide them.
+ * captionBtn, showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn, 'showVideoPipBtn' -> (auto-detected).
+ */
 const buttons = {
     main: {
         showShareRoomBtn: true,
@@ -221,6 +263,8 @@ let isVideoPrivacyActive = false; // Video circle for privacy
 let surveyActive = false; // when leaving the room give a feedback, if false will be redirected to newcall page
 
 let surveyURL = 'https://example.org';
+
+let audioRecorder = null; // helpers.js
 
 let myPeerId; // socket.id
 let peerInfo = {}; // Some peer info
@@ -336,6 +380,8 @@ let fileShareBtn;
 let mySettingsBtn;
 let aboutBtn;
 let leaveRoomBtn;
+let placement = 'right';
+// https://atomiks.github.io/tippyjs/#placements
 // chat room elements
 let msgerDraggable;
 let msgerHeader;
@@ -437,6 +483,7 @@ let whiteboardObjectBtn;
 let whiteboardUndoBtn;
 let whiteboardRedoBtn;
 let whiteboardImgFileBtn;
+let whiteboardPdfFileBtn;
 let whiteboardImgUrlBtn;
 let whiteboardTextBtn;
 let whiteboardLineBtn;
@@ -626,6 +673,7 @@ function getHtmlElementsById() {
     whiteboardUndoBtn = getId('whiteboardUndoBtn');
     whiteboardRedoBtn = getId('whiteboardRedoBtn');
     whiteboardImgFileBtn = getId('whiteboardImgFileBtn');
+    whiteboardPdfFileBtn = getId('whiteboardPdfFileBtn');
     whiteboardImgUrlBtn = getId('whiteboardImgUrlBtn');
     whiteboardTextBtn = getId('whiteboardTextBtn');
     whiteboardLineBtn = getId('whiteboardLineBtn');
@@ -679,51 +727,37 @@ function setButtonsToolTip() {
     // init buttons
     setTippy(initScreenShareBtn, 'Toggle screen sharing', 'top');
     // main buttons
-    setTippy(shareRoomBtn, 'Invite others to join', 'right-start');
-    setTippy(hideMeBtn, 'Toggle hide myself from the room view', 'right-start');
-    setTippy(audioBtn, 'Stop the audio', 'right-start');
-    setTippy(videoBtn, 'Stop the video', 'right-start');
-    setTippy(screenShareBtn, 'Start screen sharing', 'right-start');
-    setTippy(recordStreamBtn, 'Start recording', 'right-start');
-    setTippy(fullScreenBtn, 'View full screen', 'right-start');
-    setTippy(chatRoomBtn, 'Open the chat', 'right-start');
-    setTippy(captionBtn, 'Open the caption', 'right-start');
-    setTippy(myHandBtn, 'Raise your hand', 'right-start');
-    setTippy(whiteboardBtn, 'Open the whiteboard', 'right-start');
-    setTippy(fileShareBtn, 'Share file', 'right-start');
-    setTippy(mySettingsBtn, 'Open settings', 'right-start');
-    setTippy(aboutBtn, 'About this project', 'right-start');
-    setTippy(leaveRoomBtn, 'Leave this room', 'right-start');
+    refreshMainButtonsToolTipPlacement();
     // chat room buttons
-    setTippy(msgerTheme, 'Ghost theme', 'top');
-    setTippy(msgerCPBtn, 'Private messages', 'top');
-    setTippy(msgerClean, 'Clean the messages', 'top');
-    setTippy(msgerSaveBtn, 'Save the messages', 'top');
-    setTippy(msgerClose, 'Close', 'right');
-    setTippy(msgerMaxBtn, 'Maximize', 'right');
-    setTippy(msgerMinBtn, 'Minimize', 'right');
+    setTippy(msgerClose, 'Close', 'bottom');
+    setTippy(msgerShowChatOnMsgDiv, 'Show chat when you receive a new message', 'bottom');
+    setTippy(msgerSpeechMsgDiv, 'Speech the incoming messages', 'bottom');
+    setTippy(msgerTheme, 'Ghost theme', 'bottom');
+    setTippy(msgerClean, 'Clean the messages', 'bottom');
+    setTippy(msgerSaveBtn, 'Save the messages', 'bottom');
+    setTippy(msgerMaxBtn, 'Maximize', 'bottom');
+    setTippy(msgerMinBtn, 'Minimize', 'bottom');
     setTippy(msgerEmojiBtn, 'Emoji', 'top');
     setTippy(msgerMarkdownBtn, 'Markdown', 'top');
     setTippy(msgerGPTBtn, 'ChatGPT', 'top');
     setTippy(msgerShareFileBtn, 'Share file', 'top');
+    setTippy(msgerCPBtn, 'Private messages', 'top');
     setTippy(msgerCleanTextBtn, 'Clean', 'top');
     setTippy(msgerPasteBtn, 'Paste', 'top');
-    setTippy(msgerShowChatOnMsgDiv, 'Show chat when you receive a new message', 'top');
-    setTippy(msgerSpeechMsgDiv, 'Speech the incoming messages', 'top');
     setTippy(msgerSendBtn, 'Send', 'top');
     // chat participants buttons
-    setTippy(msgerCPCloseBtn, 'Close', 'left');
+    setTippy(msgerCPCloseBtn, 'Close', 'bottom');
     // caption buttons
-    setTippy(captionClose, 'Close', 'right');
-    setTippy(captionMaxBtn, 'Maximize', 'right');
-    setTippy(captionMinBtn, 'Minimize', 'right');
-    setTippy(captionTheme, 'Ghost theme', 'top');
-    setTippy(captionClean, 'Clean the messages', 'top');
-    setTippy(captionSaveBtn, 'Save the messages', 'top');
+    setTippy(captionClose, 'Close', 'bottom');
+    setTippy(captionMaxBtn, 'Maximize', 'bottom');
+    setTippy(captionMinBtn, 'Minimize', 'bottom');
+    setTippy(captionTheme, 'Ghost theme', 'bottom');
+    setTippy(captionClean, 'Clean the messages', 'bottom');
+    setTippy(captionSaveBtn, 'Save the messages', 'bottom');
     setTippy(speechRecognitionStart, 'Start', 'top');
     setTippy(speechRecognitionStop, 'Stop', 'top');
     // settings
-    setTippy(mySettingsCloseBtn, 'Close', 'right');
+    setTippy(mySettingsCloseBtn, 'Close', 'bottom');
     setTippy(myPeerNameSetBtn, 'Change name', 'top');
     setTippy(myRoomId, 'Room name (click to copy/share)', 'right');
     setTippy(
@@ -733,15 +767,15 @@ function setButtonsToolTip() {
     );
     setTippy(switchSounds, 'Toggle room notify sounds', 'right');
     setTippy(switchShare, "Show 'Share Room' popup on join.", 'right');
-    // tab btns
-    setTippy(tabVideoBtn, 'Video devices', 'top');
-    setTippy(tabAudioBtn, 'Audio devices', 'top');
-    setTippy(tabParticipantsBtn, 'Participants', 'top');
-    setTippy(tabProfileBtn, 'Profile', 'top');
-    setTippy(tabRoomBtn, 'Room', 'top');
-    setTippy(tabStylingBtn, 'Styling', 'top');
-    setTippy(tabLanguagesBtn, 'Languages', 'top');
-    // whiteboard btns
+    // tab buttons
+    // setTippy(tabVideoBtn, 'Video devices', 'top');
+    // setTippy(tabAudioBtn, 'Audio devices', 'top');
+    // setTippy(tabParticipantsBtn, 'Participants', 'top');
+    // setTippy(tabProfileBtn, 'Profile', 'top');
+    // setTippy(tabRoomBtn, 'Room', 'top');
+    // setTippy(tabStylingBtn, 'Styling', 'top');
+    // setTippy(tabLanguagesBtn, 'Languages', 'top');
+    // whiteboard buttons
     setTippy(wbDrawingColorEl, 'Drawing color', 'bottom');
     setTippy(whiteboardGhostButton, 'Toggle transparent background', 'bottom');
     setTippy(wbBackgroundColorEl, 'Background color', 'bottom');
@@ -750,6 +784,7 @@ function setButtonsToolTip() {
     setTippy(whiteboardUndoBtn, 'Undo', 'bottom');
     setTippy(whiteboardRedoBtn, 'Redo', 'bottom');
     setTippy(whiteboardImgFileBtn, 'Add image from file', 'bottom');
+    setTippy(whiteboardPdfFileBtn, 'Add pdf from file', 'bottom');
     setTippy(whiteboardImgUrlBtn, 'Add image from URL', 'bottom');
     setTippy(whiteboardTextBtn, 'Add the text', 'bottom');
     setTippy(whiteboardLineBtn, 'Add the line', 'bottom');
@@ -761,31 +796,64 @@ function setButtonsToolTip() {
     setTippy(whiteboardCleanBtn, 'Clean the board', 'bottom');
     setTippy(whiteboardLockBtn, 'If enabled, participants cannot interact', 'right');
     setTippy(whiteboardCloseBtn, 'Close', 'right');
-    // room actions btn
+    // room actions buttons
     // setTippy(muteEveryoneBtn, 'Mute everyone except yourself', 'top');
     // setTippy(hideEveryoneBtn, 'Hide everyone except yourself', 'top');
     // setTippy(ejectEveryoneBtn, 'Eject everyone except yourself', 'top');
-    // Suspend/Hide File transfer btn
+    // Suspend/Hide File transfer buttons
     setTippy(sendAbortBtn, 'Abort file transfer', 'right-start');
     setTippy(receiveHideBtn, 'Hide file transfer', 'right-start');
     // video URL player
-    setTippy(videoUrlCloseBtn, 'Close the video player', 'right-start');
-    setTippy(videoAudioCloseBtn, 'Close the video player', 'right-start');
+    setTippy(videoUrlCloseBtn, 'Close the video player', 'bottom');
+    setTippy(videoAudioCloseBtn, 'Close the video player', 'bottom');
     setTippy(msgerVideoUrlBtn, 'Share a video or audio to all participants', 'top');
 }
 
 /**
+ * Refresh main buttons tooltips based of they position (vertical/horizontal)
+ * @returns void
+ */
+function refreshMainButtonsToolTipPlacement() {
+    // not need for mobile
+    if (isMobileDevice) return;
+    // main buttons
+    placement = btnsBarSelect.options[btnsBarSelect.selectedIndex].value == 'vertical' ? 'right' : 'top';
+    setTippy(shareRoomBtn, 'Invite others to join', placement);
+    setTippy(hideMeBtn, 'Toggle hide myself from the room view', placement);
+    setTippy(audioBtn, 'Stop the audio', placement);
+    setTippy(videoBtn, 'Stop the video', placement);
+    setTippy(screenShareBtn, 'Start screen sharing', placement);
+    setTippy(recordStreamBtn, 'Start recording', placement);
+    setTippy(fullScreenBtn, 'View full screen', placement);
+    setTippy(chatRoomBtn, 'Open the chat', placement);
+    setTippy(captionBtn, 'Open the caption', placement);
+    setTippy(myHandBtn, 'Raise your hand', placement);
+    setTippy(whiteboardBtn, 'Open the whiteboard', placement);
+    setTippy(fileShareBtn, 'Share file', placement);
+    setTippy(mySettingsBtn, 'Open settings', placement);
+    setTippy(aboutBtn, 'About this project', placement);
+    setTippy(leaveRoomBtn, 'Leave this room', placement);
+}
+
+/**
  * Set nice tooltip to element
- * @param {object} elem element
+ * @param {object} element element
  * @param {string} content message to popup
  * @param {string} placement position
  */
-function setTippy(elem, content, placement) {
+function setTippy(element, content, placement) {
     if (isMobileDevice) return;
-    tippy(elem, {
-        content: content,
-        placement: placement,
-    });
+    if (element) {
+        if (element._tippy) {
+            element._tippy.destroy();
+        }
+        tippy(element, {
+            content: content,
+            placement: placement,
+        });
+    } else {
+        console.warn('setTippy element not found with content', content);
+    }
 }
 
 /**
@@ -1875,8 +1943,6 @@ function handleDisconnect(reason) {
 function handleRemovePeer(config) {
     console.log('Signaling server said to remove peer:', config);
 
-    checkRecording();
-
     const { peer_id } = config;
 
     if (peer_id in peerMediaElements) {
@@ -2036,7 +2102,9 @@ function setButtonsBarPosition(position) {
             break;
         default:
             console.log('No position found');
+            break;
     }
+    refreshMainButtonsToolTipPlacement();
 }
 
 /**
@@ -2323,18 +2391,20 @@ async function loadLocalMedia(stream) {
     myVideoPinBtn.className = className.pinUnpin;
 
     // no mobile devices
-    setTippy(myCountTime, 'Session Time', 'bottom');
-    setTippy(myPeerName, 'My name', 'bottom');
-    setTippy(myHandStatusIcon, 'My hand is raised', 'bottom');
-    setTippy(myPrivacyBtn, 'Toggle video privacy', 'bottom');
-    setTippy(myVideoStatusIcon, 'My video is on', 'bottom');
-    setTippy(myAudioStatusIcon, 'My audio is on', 'bottom');
-    setTippy(myVideoToImgBtn, 'Take a snapshot', 'bottom');
-    setTippy(myVideoFullScreenBtn, 'Full screen mode', 'bottom');
-    setTippy(myVideoZoomInBtn, 'Zoom in video', 'bottom');
-    setTippy(myVideoPiPBtn, 'Toggle picture in picture');
-    setTippy(myVideoZoomOutBtn, 'Zoom out video', 'bottom');
-    setTippy(myVideoPinBtn, 'Toggle Pin video', 'bottom');
+    if (!isMobileDevice) {
+        setTippy(myCountTime, 'Session Time', 'bottom');
+        setTippy(myPeerName, 'My name', 'bottom');
+        setTippy(myHandStatusIcon, 'My hand is raised', 'bottom');
+        setTippy(myPrivacyBtn, 'Toggle video privacy', 'bottom');
+        setTippy(myVideoStatusIcon, 'My video is on', 'bottom');
+        setTippy(myAudioStatusIcon, 'My audio is on', 'bottom');
+        setTippy(myVideoToImgBtn, 'Take a snapshot', 'bottom');
+        setTippy(myVideoFullScreenBtn, 'Full screen mode', 'bottom');
+        setTippy(myVideoZoomInBtn, 'Zoom in video', 'bottom');
+        setTippy(myVideoPiPBtn, 'Toggle picture in picture', 'bottom');
+        setTippy(myVideoZoomOutBtn, 'Zoom out video', 'bottom');
+        setTippy(myVideoPinBtn, 'Toggle Pin video', 'bottom');
+    }
 
     // my video avatar image
     myVideoAvatarImage.setAttribute('id', 'myVideoAvatarImage');
@@ -2590,21 +2660,23 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     remoteVideoPinBtn.className = className.pinUnpin;
 
     // no mobile devices
-    setTippy(remotePeerName, 'Participant name', 'bottom');
-    setTippy(remoteHandStatusIcon, 'Participant hand is raised', 'bottom');
-    setTippy(remoteVideoStatusIcon, 'Participant video is on', 'bottom');
-    setTippy(remoteAudioStatusIcon, 'Participant audio is on', 'bottom');
-    setTippy(remoteAudioVolume, '🔊 Volume', 'top-end');
-    setTippy(remoteVideoAudioUrlBtn, 'Send Video or Audio', 'bottom');
-    setTippy(remotePrivateMsgBtn, 'Send private message', 'bottom');
-    setTippy(remoteFileShareBtn, 'Send file', 'bottom');
-    setTippy(remoteVideoToImgBtn, 'Take a snapshot', 'bottom');
-    setTippy(remotePeerKickOut, 'Kick out', 'bottom');
-    setTippy(remoteVideoFullScreenBtn, 'Full screen mode', 'bottom');
-    setTippy(remoteVideoZoomInBtn, 'Zoom in video', 'bottom');
-    setTippy(remoteVideoZoomOutBtn, 'Zoom out video', 'bottom');
-    setTippy(remoteVideoPiPBtn, 'Toggle picture in picture');
-    setTippy(remoteVideoPinBtn, 'Toggle Pin video', 'bottom');
+    if (!isMobileDevice) {
+        setTippy(remotePeerName, 'Participant name', 'bottom');
+        setTippy(remoteHandStatusIcon, 'Participant hand is raised', 'bottom');
+        setTippy(remoteVideoStatusIcon, 'Participant video is on', 'bottom');
+        setTippy(remoteAudioStatusIcon, 'Participant audio is on', 'bottom');
+        setTippy(remoteAudioVolume, '🔊 Volume', 'top');
+        setTippy(remoteVideoAudioUrlBtn, 'Send Video or Audio', 'bottom');
+        setTippy(remotePrivateMsgBtn, 'Send private message', 'bottom');
+        setTippy(remoteFileShareBtn, 'Send file', 'bottom');
+        setTippy(remoteVideoToImgBtn, 'Take a snapshot', 'bottom');
+        setTippy(remotePeerKickOut, 'Kick out', 'bottom');
+        setTippy(remoteVideoFullScreenBtn, 'Full screen mode', 'bottom');
+        setTippy(remoteVideoZoomInBtn, 'Zoom in video', 'bottom');
+        setTippy(remoteVideoZoomOutBtn, 'Zoom out video', 'bottom');
+        setTippy(remoteVideoPiPBtn, 'Toggle picture in picture', 'bottom');
+        setTippy(remoteVideoPinBtn, 'Toggle Pin video', 'bottom');
+    }
 
     // my video avatar image
     remoteVideoAvatarImage.setAttribute('id', peer_id + '_avatar');
@@ -2762,7 +2834,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id) {
     // show status menu
     toggleClassElements('statusMenu', 'inline');
     // notify if peer started to recording own screen + audio
-    if (peer_rec_status) notifyRecording(peer_name, 'Started');
+    if (peer_rec_status) notifyRecording(peer_id, peer_name, 'Started');
 
     // Peer without camera, screen sharing OFF
     if (!peer_video && !peer_screen_status) {
@@ -3567,7 +3639,7 @@ function setFullScreenBtn() {
             if (!fullscreenElement) {
                 fullScreenBtn.className = className.fsOff;
                 isDocumentOnFullScreen = false;
-                setTippy(fullScreenBtn, 'View full screen', 'right-start');
+                setTippy(fullScreenBtn, 'View full screen', placement);
             }
         });
         fullScreenBtn.addEventListener('click', (e) => {
@@ -3724,7 +3796,7 @@ function setChatRoomBtn() {
             playSound('switch');
             speechInMessages = e.currentTarget.checked;
             speechInMessages
-                ? msgPopup('info', 'When I receive a new message, it will be converted into speech', 'top-end', 3000)
+                ? msgPopup('info', 'When You receive a new message, it will be converted into speech', 'top-end', 3000)
                 : msgPopup('info', 'You have disabled speech messages', 'top-end', 3000);
             lsSettings.speech_in_msg = speechInMessages;
             lS.setSettings(lsSettings);
@@ -3882,6 +3954,9 @@ function setMyWhiteboardBtn() {
     });
     whiteboardImgFileBtn.addEventListener('click', (e) => {
         whiteboardAddObj('imgFile');
+    });
+    whiteboardPdfFileBtn.addEventListener('click', (e) => {
+        whiteboardAddObj('pdfFile');
     });
     whiteboardImgUrlBtn.addEventListener('click', (e) => {
         whiteboardAddObj('imgUrl');
@@ -4844,7 +4919,7 @@ async function stopLocalAudioTrack() {
 async function toggleScreenSharing(init = false) {
     screenMaxFrameRate = parseInt(screenFpsSelect.value);
     const constraints = {
-        audio: true, // enable tab audio
+        audio: false, // enable/disable tab audio
         video: { frameRate: { max: screenMaxFrameRate } },
     }; // true | { frameRate: { max: screenMaxFrameRate } }
 
@@ -4926,7 +5001,7 @@ function setScreenSharingStatus(status) {
     emitPeerStatus('video', status);
     initScreenShareBtn.className = status ? className.screenOff : className.screenOn;
     screenShareBtn.className = status ? className.screenOff : className.screenOn;
-    setTippy(screenShareBtn, status ? 'Stop screen sharing' : 'Start screen sharing', 'right-start');
+    setTippy(screenShareBtn, status ? 'Stop screen sharing' : 'Start screen sharing', placement);
 }
 
 /**
@@ -4943,7 +5018,7 @@ async function setMyVideoStatusTrue() {
     myVideoAvatarImage.style.display = 'none';
     emitPeerStatus('video', myVideoStatus);
     myVideo.style.display = 'block';
-    setTippy(videoBtn, 'Stop the video', 'right-start');
+    setTippy(videoBtn, 'Stop the video', placement);
     setTippy(initVideoBtn, 'Stop the video', 'top');
 }
 
@@ -4963,7 +5038,7 @@ function toggleFullScreen() {
             isDocumentOnFullScreen = false;
         }
     }
-    setTippy(fullScreenBtn, isDocumentOnFullScreen ? 'Exit full screen' : 'View full screen', 'right-start');
+    setTippy(fullScreenBtn, isDocumentOnFullScreen ? 'Exit full screen' : 'View full screen', placement);
 }
 
 /**
@@ -5022,7 +5097,7 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
         }
     }
 
-    // When share a video tab that contain audio, my voice will be turned off
+    // When share a video tab that contain audio, my voice will be turned off (tabAudio: true)
     if (isScreenStreaming && streamHasAudioTrack) {
         setMyAudioOff('you');
         needToEnableMyAudio = true;
@@ -5133,6 +5208,15 @@ function checkRecording() {
 }
 
 /**
+ * Handle recording errors
+ * @param {string} error
+ */
+function handleRecordingError(error) {
+    console.error('Recording error', error);
+    userLog('error', error, 6000);
+}
+
+/**
  * Start recording time
  */
 function startRecordingTime() {
@@ -5173,55 +5257,171 @@ function getSupportedMimeTypes() {
 function startStreamRecording() {
     recordedBlobs = [];
 
-    let options = getSupportedMimeTypes();
-    console.log('MediaRecorder options supported', options);
-    options = { mimeType: options[0] }; // select the first available as mimeType
+    // Get supported MIME types and set options
+    const supportedMimeTypes = getSupportedMimeTypes();
+    console.log('MediaRecorder supported options', supportedMimeTypes);
+    const options = { mimeType: supportedMimeTypes[0] };
 
     try {
-        if (isMobileDevice) {
-            // on mobile devices recording camera + audio
-            mediaRecorder = new MediaRecorder(localMediaStream, options);
-            console.log('Created MediaRecorder', mediaRecorder, 'with options', options);
-            handleMediaRecorder(mediaRecorder);
-        } else {
-            // on desktop devices recording screen + audio
-            screenMaxFrameRate = parseInt(screenFpsSelect.value);
-            const constraints = {
-                video: { frameRate: { max: screenMaxFrameRate } },
-            };
-            let recScreenStreamPromise = navigator.mediaDevices.getDisplayMedia(constraints);
-            recScreenStreamPromise
-                .then((screenStream) => {
-                    const newStream = new MediaStream([
-                        screenStream.getVideoTracks()[0],
-                        localMediaStream.getAudioTracks()[0],
-                    ]);
-                    recScreenStream = newStream;
-                    mediaRecorder = new MediaRecorder(recScreenStream, options);
-                    console.log('Created MediaRecorder', mediaRecorder, 'with options', options);
-                    isRecScreenStream = true;
-                    handleMediaRecorder(mediaRecorder);
-                })
-                .catch((err) => {
-                    console.error('[Error] Unable to recording the screen + audio', err);
-                    userLog('error', 'Unable to recording the screen + audio ' + err);
-                });
-        }
+        audioRecorder = new MixedAudioRecorder();
+        const audioStreams = getAudioStreamFromVideoElements();
+        console.log('Audio streams tracks --->', audioStreams.getTracks());
+
+        const audioMixerStreams = audioRecorder.getMixedAudioStream([audioStreams, localMediaStream]);
+        const audioMixerTracks = audioMixerStreams.getTracks();
+        console.log('Audio mixer tracks --->', audioMixerTracks);
+
+        isMobileDevice
+            ? startMobileRecording(options, audioMixerTracks)
+            : startDesktopRecording(options, audioMixerTracks);
     } catch (err) {
-        console.error('Exception while creating MediaRecorder: ', err);
-        return userLog('error', "Can't start stream recording: " + err);
+        handleRecordingError('Exception while creating MediaRecorder: ' + err);
     }
 }
 
 /**
+ * Starts mobile recording with the specified options and audio mixer tracks.
+ * @param {MediaRecorderOptions} options - MediaRecorder options.
+ * @param {array} audioMixerTracks - Array of audio tracks from the audio mixer.
+ */
+function startMobileRecording(options, audioMixerTracks) {
+    try {
+        // Combine audioMixerTracks and videoTracks into a single array
+        const combinedTracks = [];
+
+        // Add audio mixer tracks to the combinedTracks array if available
+        if (Array.isArray(audioMixerTracks)) {
+            combinedTracks.push(...audioMixerTracks);
+        }
+
+        // Check if there's a local media stream (presumably for the camera)
+        if (localMediaStream !== null) {
+            const videoTracks = localMediaStream.getVideoTracks();
+            console.log('Cam video tracks --->', videoTracks);
+
+            // Add video tracks from the local media stream to combinedTracks if available
+            if (Array.isArray(videoTracks)) {
+                combinedTracks.push(...videoTracks);
+            }
+        }
+
+        // Create a new MediaStream using the combinedTracks
+        const recCamStream = new MediaStream(combinedTracks);
+        console.log('New Cam Media Stream tracks  --->', recCamStream.getTracks());
+
+        // Create a MediaRecorder instance with the combined stream and specified options
+        mediaRecorder = new MediaRecorder(recCamStream, options);
+        console.log('Created MediaRecorder', mediaRecorder, 'with options', options);
+
+        // Call a function to handle the MediaRecorder
+        handleMediaRecorder(mediaRecorder);
+    } catch (err) {
+        // Handle any errors that occur during the recording setup
+        handleRecordingError('Unable to record the camera + audio: ' + err);
+    }
+}
+
+/**
+ * Starts desktop recording with the specified options and audio mixer tracks.
+ * On desktop devices, it records the screen or window along with all audio tracks.
+ * @param {MediaRecorderOptions} options - MediaRecorder options.
+ * @param {array} audioMixerTracks - Array of audio tracks from the audio mixer.
+ */
+function startDesktopRecording(options, audioMixerTracks) {
+    // Get the desired frame rate for screen recording
+    screenMaxFrameRate = parseInt(screenFpsSelect.value);
+
+    // Define constraints for capturing the screen
+    const constraints = {
+        video: { frameRate: { max: screenMaxFrameRate } },
+    };
+
+    // Request access to screen capture using the specified constraints
+    navigator.mediaDevices
+        .getDisplayMedia(constraints)
+        .then((screenStream) => {
+            // Get video tracks from the screen capture stream
+            const screenTracks = screenStream.getVideoTracks();
+            console.log('Screen video tracks --->', screenTracks);
+
+            // Create an array to combine screen tracks and audio mixer tracks
+            const combinedTracks = [];
+
+            // Add screen video tracks to combinedTracks if available
+            if (Array.isArray(screenTracks)) {
+                combinedTracks.push(...screenTracks);
+            }
+
+            // Add audio mixer tracks to combinedTracks if available
+            if (Array.isArray(audioMixerTracks)) {
+                combinedTracks.push(...audioMixerTracks);
+            }
+
+            // Create a new MediaStream using the combinedTracks
+            recScreenStream = new MediaStream(combinedTracks);
+            console.log('New Screen/Window Media Stream tracks  --->', recScreenStream.getTracks());
+
+            // Create a MediaRecorder instance with the combined stream and specified options
+            mediaRecorder = new MediaRecorder(recScreenStream, options);
+            console.log('Created MediaRecorder', mediaRecorder, 'with options', options);
+
+            // Set a flag to indicate that screen recording is active
+            isRecScreenStream = true;
+
+            // Call a function to handle the MediaRecorder
+            handleMediaRecorder(mediaRecorder);
+        })
+        .catch((err) => {
+            // Handle any errors that occur during screen recording setup
+            handleRecordingError('Unable to record the screen + audio: ' + err);
+        });
+}
+
+/**
+ * Get a MediaStream containing audio tracks from video elements on the page.
+ * @returns {MediaStream} A MediaStream containing audio tracks.
+ */
+function getAudioStreamFromVideoElements() {
+    // Find all video elements on the page
+    const videoElements = document.querySelectorAll('video');
+    // Create a new MediaStream to hold audio tracks
+    const audioStream = new MediaStream();
+    // Iterate through each video element
+    videoElements.forEach((video) => {
+        // Check if the video element has a source object
+        if (video.srcObject) {
+            const audioTracks = video.srcObject.getAudioTracks();
+            // Iterate through audio tracks and add them to the audio stream
+            audioTracks.forEach((audioTrack) => {
+                audioStream.addTrack(audioTrack);
+            });
+        } else {
+            // If the video element doesn't have a source object, try to capture audio from the audio element
+            const audioElement = video.querySelector('audio');
+            if (audioElement) {
+                const audioSource = audioElement.captureStream();
+                const audioTracks = audioSource.getAudioTracks();
+                // Iterate through audio tracks and add them to the audio stream
+                audioTracks.forEach((audioTrack) => {
+                    audioStream.addTrack(audioTrack);
+                });
+            }
+        }
+    });
+    return audioStream;
+}
+
+/**
  * Notify me if someone start to recording they screen + audio
+ * @param {string} fromId peer_id
  * @param {string} from peer_name
  * @param {string} action recording action
  */
-function notifyRecording(from, action) {
+function notifyRecording(fromId, from, action) {
     let msg = '[ 🔴 REC ] : ' + action + ' to recording his own screen and audio';
     let chatMessage = {
         from: from,
+        fromId: fromId,
         to: myPeerName,
         msg: msg,
         privateMsg: false,
@@ -5246,7 +5446,6 @@ function handleMediaRecorder(mediaRecorder) {
  * @param {object} event of media recorder
  */
 function handleMediaRecorderStart(event) {
-    playSound('recStart');
     if (isRecScreenStream) {
         emitPeersAction('recStart');
         emitPeerStatus('rec', isRecScreenStream);
@@ -5255,10 +5454,11 @@ function handleMediaRecorderStart(event) {
     isStreamRecording = true;
     recordStreamBtn.style.setProperty('color', '#ff4500');
     startRecordingTime();
-    setTippy(recordStreamBtn, 'Stop recording', 'right-start');
+    setTippy(recordStreamBtn, 'Stop recording', placement);
     if (isMobileDevice) {
         swapCameraBtn.style.display = 'none';
     }
+    playSound('recStart');
 }
 
 /**
@@ -5275,7 +5475,6 @@ function handleMediaRecorderData(event) {
  * @param {object} event of media recorder
  */
 function handleMediaRecorderStop(event) {
-    playSound('recStop');
     console.log('MediaRecorder stopped: ', event);
     console.log('MediaRecorder Blobs: ', recordedBlobs);
     isStreamRecording = false;
@@ -5290,10 +5489,11 @@ function handleMediaRecorderStop(event) {
     }
     recordStreamBtn.style.setProperty('color', '#000');
     downloadRecordedStream();
-    setTippy(recordStreamBtn, 'Start recording', 'right-start');
+    setTippy(recordStreamBtn, 'Start recording', placement);
     if (isMobileDevice) {
         swapCameraBtn.style.display = 'block';
     }
+    playSound('recStop');
 }
 
 /**
@@ -5301,6 +5501,7 @@ function handleMediaRecorderStop(event) {
  */
 function stopStreamRecording() {
     mediaRecorder.stop();
+    audioRecorder.stopMixedAudioStream();
 }
 
 /**
@@ -5377,7 +5578,7 @@ function showChatRoomDraggable() {
     msgerDraggable.style.left = isMobileDevice ? '50%' : '25%';
     msgerDraggable.style.display = 'flex';
     isChatRoomVisible = true;
-    setTippy(chatRoomBtn, 'Close the chat', 'right-start');
+    setTippy(chatRoomBtn, 'Close the chat', placement);
 }
 
 /**
@@ -5394,7 +5595,7 @@ function showCaptionDraggable() {
     captionDraggable.style.left = isMobileDevice ? '50%' : '75%';
     captionDraggable.style.display = 'flex';
     isCaptionBoxVisible = true;
-    setTippy(captionBtn, 'Close the caption', 'right-start');
+    setTippy(captionBtn, 'Close the caption', placement);
 }
 
 /**
@@ -5527,7 +5728,7 @@ function hideChatRoomAndEmojiPicker() {
     chatRoomBtn.className = className.chatOn;
     isChatRoomVisible = false;
     isChatEmojiVisible = false;
-    setTippy(chatRoomBtn, 'Open the chat', 'right-start');
+    setTippy(chatRoomBtn, 'Open the chat', placement);
 }
 
 /**
@@ -5537,7 +5738,7 @@ function hideCaptionBox() {
     captionDraggable.style.display = 'none';
     captionBtn.className = className.captionOn;
     isCaptionBoxVisible = false;
-    setTippy(captionBtn, 'Open the caption', 'right-start');
+    setTippy(captionBtn, 'Open the caption', placement);
 }
 
 /**
@@ -5766,10 +5967,12 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
     `;
     msgerChat.insertAdjacentHTML('beforeend', msgHTML);
     msgerChat.scrollTop += 500;
-    setTippy(getId('msg-delete-' + chatMessagesId), 'Delete', 'top');
-    setTippy(getId('msg-copy-' + chatMessagesId), 'Copy', 'top');
-    setTippy(getId('msg-speech-' + chatMessagesId), 'Speech', 'top');
-    setTippy(getId('msg-private-reply-' + chatMessagesId), 'Reply', 'top');
+    if (!isMobileDevice) {
+        setTippy(getId('msg-delete-' + chatMessagesId), 'Delete', 'top');
+        setTippy(getId('msg-copy-' + chatMessagesId), 'Copy', 'top');
+        setTippy(getId('msg-speech-' + chatMessagesId), 'Speech', 'top');
+        setTippy(getId('msg-private-reply-' + chatMessagesId), 'Reply', 'top');
+    }
     chatMessagesId++;
 }
 
@@ -5825,7 +6028,7 @@ function copyToClipboard(id) {
             msgPopup('success', 'Message copied!', 'top-end', 1000);
         })
         .catch((err) => {
-            msgPopup('error', err, 'top-end', 2000);
+            msgPopup('error', err, 'top', 2000);
         });
 }
 
@@ -6390,13 +6593,14 @@ function setMyHandStatus() {
     if (myHandStatus) {
         // Raise hand
         myHandStatus = false;
-        setTippy(myHandBtn, 'Raise your hand', 'right-start');
+        setTippy(myHandBtn, 'Raise your hand', placement);
     } else {
         // Lower hand
         myHandStatus = true;
-        setTippy(myHandBtn, 'Lower your hand', 'right-start');
+        setTippy(myHandBtn, 'Lower your hand', placement);
         playSound('raiseHand');
     }
+    myHandBtn.style.color = myHandStatus ? 'green' : 'black';
     myHandStatusIcon.style.display = myHandStatus ? 'inline' : 'none';
     emitPeerStatus('hand', myHandStatus);
 }
@@ -6410,7 +6614,7 @@ function setMyAudioStatus(status) {
     // send my audio status to all peers in the room
     emitPeerStatus('audio', status);
     setTippy(myAudioStatusIcon, status ? 'My audio is on' : 'My audio is off', 'bottom');
-    setTippy(audioBtn, status ? 'Stop the audio' : 'Start the audio', 'right-start');
+    setTippy(audioBtn, status ? 'Stop the audio' : 'Start the audio', placement);
     status ? playSound('on') : playSound('off');
     console.log('My audio status', status);
 }
@@ -6428,7 +6632,7 @@ function setMyVideoStatus(status) {
     emitPeerStatus('video', status);
     if (!isMobileDevice) {
         if (myVideoStatusIcon) setTippy(myVideoStatusIcon, status ? 'My video is on' : 'My video is off', 'bottom');
-        setTippy(videoBtn, status ? 'Stop the video' : 'Start the video', 'right-start');
+        setTippy(videoBtn, status ? 'Stop the video' : 'Start the video', placement);
     }
     myVideo.style.display = status ? 'block' : 'none';
     initVideo.style.display = status ? 'block' : 'none';
@@ -6673,10 +6877,10 @@ function handlePeerAction(config) {
             setMyVideoOff(peer_name);
             break;
         case 'recStart':
-            notifyRecording(peer_name, 'Started');
+            notifyRecording(peer_id, peer_name, 'Started');
             break;
         case 'recStop':
-            notifyRecording(peer_name, 'Stopped');
+            notifyRecording(peer_id, peer_name, 'Stopped');
             break;
         case 'screenStart':
             handleScreenStart(peer_id);
@@ -7217,6 +7421,40 @@ function whiteboardAddObj(type) {
                 }
             });
             break;
+        case 'pdfFile':
+            Swal.fire({
+                allowOutsideClick: false,
+                background: swalBackground,
+                position: 'center',
+                title: 'Select the PDF',
+                input: 'file',
+                inputAttributes: {
+                    accept: wbPdfInput,
+                    'aria-label': 'Select the PDF',
+                },
+                showDenyButton: true,
+                confirmButtonText: `OK`,
+                denyButtonText: `Cancel`,
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    let wbCanvasPdf = result.value;
+                    if (wbCanvasPdf && wbCanvasPdf.size > 0) {
+                        let reader = new FileReader();
+                        reader.onload = async function (event) {
+                            wbCanvas.requestRenderAll();
+                            await pdfToImage(event.target.result, wbCanvas);
+                            whiteboardIsDrawingMode(false);
+                            wbCanvasToJson();
+                        };
+                        reader.readAsDataURL(wbCanvasPdf);
+                    } else {
+                        userLog('error', 'File not selected or empty', 'top-end');
+                    }
+                }
+            });
+            break;
         case 'text':
             const text = new fabric.IText('Lorem Ipsum', {
                 top: 0,
@@ -7273,6 +7511,82 @@ function whiteboardAddObj(type) {
             break;
         default:
             break;
+    }
+}
+
+/**
+ * Promisify the FileReader
+ * @param {object} blob
+ * @returns object Data URL
+ */
+function readBlob(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener('load', () => resolve(reader.result));
+        reader.addEventListener('error', reject);
+        reader.readAsDataURL(blob);
+    });
+}
+
+/**
+ * Load PDF and return an array of canvases
+ * @param {object} pdfData
+ * @param {object} pages
+ * @returns canvas object
+ */
+async function loadPDF(pdfData, pages) {
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfData = pdfData instanceof Blob ? await readBlob(pdfData) : pdfData;
+    const data = atob(pdfData.startsWith(Base64Prefix) ? pdfData.substring(Base64Prefix.length) : pdfData);
+    try {
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const numPages = pdf.numPages;
+        const canvases = await Promise.all(
+            Array.from({ length: numPages }, (_, i) => {
+                const pageNumber = i + 1;
+                if (pages && pages.indexOf(pageNumber) === -1) return null;
+                return pdf.getPage(pageNumber).then(async (page) => {
+                    const viewport = page.getViewport({ scale: window.devicePixelRatio });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport,
+                    };
+                    await page.render(renderContext).promise;
+                    return canvas;
+                });
+            }),
+        );
+        return canvases.filter((canvas) => canvas !== null);
+    } catch (error) {
+        console.error('Error loading PDF:', error);
+        throw error;
+    }
+}
+
+/**
+ * Convert PDF to fabric.js images and add to canvas
+ * @param {object} pdfData
+ * @param {object} canvas
+ */
+async function pdfToImage(pdfData, canvas) {
+    const scale = 1 / window.devicePixelRatio;
+    try {
+        const canvases = await loadPDF(pdfData);
+        canvases.forEach(async (c) => {
+            canvas.add(
+                new fabric.Image(await c, {
+                    scaleX: scale,
+                    scaleY: scale,
+                }),
+            );
+        });
+    } catch (error) {
+        console.error('Error converting PDF to images:', error);
+        throw error;
     }
 }
 
@@ -8225,7 +8539,13 @@ function showAbout() {
         html: `
         <br/>
         <div id="about">
-            <b><a href="https://github.com/mmguero/mirotalk" target="_blank">Open Source</a></b> project
+            <button
+                id="support-button"
+                data-umami-event="Support button"
+                class="pulsate"
+                onclick="window.open('https://github.com/mmguero/mirotalk')">
+                <i class="${className.heart}" ></i>&nbsp;GitHub
+            </button>
         </div>
         `,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
