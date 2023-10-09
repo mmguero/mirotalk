@@ -114,6 +114,7 @@ access to use this app.
             <button id="myHandBtn" class="fas fa-hand-paper"></button>
             <button id="whiteboardBtn" class="fas fa-chalkboard-teacher"></button>
             <button id="fileShareBtn" class="fas fa-folder-open"></button>
+            <button id="documentPiPBtn" class="fas fa-images"></button>
             <button id="mySettingsBtn" class="fas fa-cogs"></button>
             <button id="aboutBtn" class="fas fa-question"></button>
             <button id="leaveRoomBtn" class="fas fa-right-from-bracket"></button>
@@ -381,10 +382,7 @@ access to use this app.
                             <select id="videoFps">
                                 <option value="60">60 - frame-per-second</option>
                                 <option value="30">30 - frame-per-second</option>
-                                <option value="25">25 - frame-per-second</option>
-                                <option value="20">20 - frame-per-second</option>
                                 <option value="15">15 - frame-per-second</option>
-                                <option value="10">10 - frame-per-second</option>
                                 <option value="5">5 - frame-per-second</option>
                             </select>
                         </div>
@@ -398,10 +396,7 @@ access to use this app.
                             <select id="screenFps">
                                 <option value="60">60 - frame-per-second</option>
                                 <option value="30">30 - frame-per-second</option>
-                                <option value="25">25 - frame-per-second</option>
-                                <option value="20">20 - frame-per-second</option>
                                 <option value="15">15 - frame-per-second</option>
-                                <option value="10">10 - frame-per-second</option>
                                 <option value="5">5 - frame-per-second</option>
                             </select>
                         </div>
@@ -662,7 +657,15 @@ access to use this app.
 
         <div id="videoPinMediaContainer"></div>
         <div id="videoMediaContainer">
-            <!-- <div class="Camera"></div> -->
+            <!-- <div class="Camera">
+                <video></video>
+            </div> -->
+        </div>
+
+        <div id="audioMediaContainer" style="display: none">
+            <!-- <div>
+                <audio></audio>
+            </div>-->
         </div>
 
         <!-- End Video container -->
