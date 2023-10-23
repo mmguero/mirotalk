@@ -34,6 +34,8 @@
 
 .Camera {
     position: relative;
+    vertical-align: middle;
+    align-self: center;
     border-radius: 10px;
     overflow: hidden;
     display: inline-block;
@@ -139,7 +141,7 @@
     position: absolute;
     width: 100%;
     height: 100%;
-    border-radius: '10px';
+    border-radius: 10px;
 }
 
 video {
