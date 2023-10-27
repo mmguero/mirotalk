@@ -277,6 +277,9 @@ access to use this app.
                     <button id="tabAudioBtn" class="fas fa-microphone tablinks">
                         <p class="tabButtonText">Audio</p>
                     </button>
+                    <button id="tabRecordingBtn" class="fas fa-record-vinyl tablinks">
+                        <p class="tabButtonText">Recording</p>
+                    </button>
                     <button id="tabVideoShareBtn" class="fab fa-youtube tablinks">
                         <p class="tabButtonText">Media</p>
                     </button>
@@ -493,6 +496,7 @@ access to use this app.
                                             <div class="title">
                                                 <input
                                                     type="range"
+                                                    class="mic-input-range"
                                                     id="micLatencyRange"
                                                     name="latency"
                                                     min="10"
@@ -515,6 +519,7 @@ access to use this app.
                                             <div>
                                                 <input
                                                     type="range"
+                                                    class="mic-input-range"
                                                     id="micVolumeRange"
                                                     name="volume"
                                                     min="0"
@@ -602,6 +607,23 @@ access to use this app.
                         </table>
                     </div>
 
+                    <div id="tabRecording" class="tabcontent">
+                        <br />
+                        <div style="display: table-row">
+                            <span class="clw" id="recordingTime"></span>
+                            <br />
+                            <button id="pauseRecBtn" class="buttons" style="display: none">
+                                <i class="far fa-pause-circle"></i>
+                                <p>Pause recording</p>
+                            </button>
+                            <button id="resumeRecBtn" class="buttons" style="display: none">
+                                <i class="far fa-play-circle"></i>
+                                <p>Resume recording</p>
+                            </button>
+                            <div class="clw" id="lastRecordingInfo"></div>
+                        </div>
+                    </div>
+
                     <div id="tabMedia" class="tabcontent">
                         <br />
                         <button id="shareMediaAudioVideoBtn" class="buttons">
@@ -671,7 +693,7 @@ access to use this app.
                             <p>Buttons bar</p>
                         </div>
                         <br />
-                        <select id="mirotalkBtnsBar">
+                        <select id="mainButtonsBarPosition">
                             <option value="vertical">Vertical</option>
                             <option value="horizontal">Horizontal</option>
                         </select>
