@@ -245,3 +245,4 @@ To `Self-Host MiroTalk P2P` on `Your` dedicated `Server`, read [this documentati
 MiroTalk P2P is free and open-source under the terms of AGPLv3 (GNU Affero General Public License v3.0). Please `respect the license conditions`, In particular `modifications need to be free as well and made available to the public`. Get a quick overview of the license at [Choose an open source license](https://choosealicense.com/licenses/agpl-3.0/).
 
 </details>
+
