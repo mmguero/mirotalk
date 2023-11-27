@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.3
+ * @version 1.2.5
  *
  */
 
@@ -500,6 +500,8 @@ let isDocumentOnFullScreen = false;
 let myPeerId; // This socket.id
 let myPeerUUID = getUUID(); // Unique peer id
 let myPeerName = getPeerName();
+let myUsername = getPeerUsername(); // default false if not passed by query params
+let myPassword = getPeerPassword(); // default false if not passed by query params
 let isPresenter = false; // True Who init the room (aka first peer joined)
 let myHandStatus = false;
 let myVideoStatus = false;
@@ -560,7 +562,7 @@ let isVideoFullScreenSupported = true;
 let isVideoOnFullScreen = false;
 let isScreenSharingSupported = false;
 let isScreenStreaming = false;
-let isHideMeActive = false; // Hide myself from the meeting view
+let isHideMeActive = getHideMeActive();
 let remoteMediaControls = false; // enable - disable peers video player controls (default false)
 let camera = 'user'; // user = front-facing camera on a smartphone. | environment = the back camera on a smartphone.
 
@@ -629,6 +631,10 @@ let receiveInProgress = false;
  * Note: FireFox seems not supports chunkSize > 1024?
  */
 const chunkSize = 1024; // 1024 * 16; // 16kb/s
+
+// server
+let isHostProtected = false; // Username and Password required to initialize room
+let isPeerAuthEnabled = false; // Username and Password required in the URL params to join room
 
 // survey
 let surveyActive = false; // when leaving the room give a feedback, if false will be redirected to newcall page
@@ -896,6 +902,38 @@ function getNotify() {
 }
 
 /**
+ * Get Peer username
+ * @returns {mixed} boolean false or username string
+ */
+function getPeerUsername() {
+    if (window.sessionStorage.peer_username) return window.sessionStorage.peer_username;
+    let qs = new URLSearchParams(window.location.search);
+    let username = filterXSS(qs.get('username'));
+    let queryUsername = false;
+    if (username) {
+        queryUsername = username;
+    }
+    console.log('Direct join', { username: queryUsername });
+    return queryUsername;
+}
+
+/**
+ * Get Peer password
+ * @returns {mixed} boolean false or password string
+ */
+function getPeerPassword() {
+    if (window.sessionStorage.peer_password) return window.sessionStorage.peer_password;
+    let qs = new URLSearchParams(window.location.search);
+    let password = filterXSS(qs.get('password'));
+    let queryPassword = false;
+    if (password) {
+        queryPassword = password;
+    }
+    console.log('Direct join', { password: queryPassword });
+    return queryPassword;
+}
+
+/**
  * Check if peer name is set
  * @returns {string} Peer Name
  */
@@ -925,6 +963,22 @@ function getScreenEnabled() {
     }
     console.log('Direct join', { screen: false });
     return false;
+}
+
+/**
+ * Hide myself from the meeting view
+ * @returns {boolean} true/false
+ */
+function getHideMeActive() {
+    let qs = new URLSearchParams(window.location.search);
+    let hide = filterXSS(qs.get('hide'));
+    let queryHideMe = false;
+    if (hide) {
+        hide = hide.toLowerCase();
+        queryHideMe = hide === '1' || hide === 'true';
+    }
+    console.log('Direct join', { hide: queryHideMe });
+    return queryHideMe;
 }
 
 /**
@@ -990,6 +1044,7 @@ function initClientPeer() {
 
     // on receiving data from signaling server...
     signalingSocket.on('connect', handleConnect);
+    signalingSocket.on('unauthorized', handleUnauthorized);
     signalingSocket.on('roomIsLocked', handleUnlockTheRoom);
     signalingSocket.on('roomAction', handleRoomAction);
     signalingSocket.on('addPeer', handleAddPeer);
@@ -1070,7 +1125,10 @@ async function handleConnect() {
 function handleServerInfo(config) {
     console.log('13. Server info', config);
 
-    const { peers_count, is_presenter, survey, redirect } = config;
+    const { peers_count, host_protected, user_auth, is_presenter, survey, redirect } = config;
+
+    isHostProtected = host_protected;
+    isPeerAuthEnabled = user_auth;
 
     // Get survey settings from server
     surveyActive = survey.active;
@@ -1097,6 +1155,27 @@ function handleServerInfo(config) {
     } else {
         checkShareScreen();
     }
+}
+
+/**
+ * HOST_USER_AUTH enabled and peer not match valid username and password
+ */
+function handleUnauthorized() {
+    playSound('alert');
+    Swal.fire({
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        background: swBg,
+        imageUrl: images.forbidden,
+        title: 'Oops, Unauthorized',
+        text: 'The host has user authentication enabled',
+        confirmButtonText: `Login`,
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+    }).then(() => {
+        // Login required to join room
+        openURL(`/login/?room=${roomId}`);
+    });
 }
 
 /**
@@ -1553,12 +1632,12 @@ function checkPeerAudioVideo() {
  * Room and Peer name are ok Join Channel
  */
 async function whoAreYouJoin() {
-    elemDisplay(myVideoWrap, true);
     myVideoParagraph.innerText = myPeerName + ' (me)';
     setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
     setPeerAvatarImgName('myProfileAvatar', myPeerName);
     setPeerChatAvatarImgName('right', myPeerName);
     joinToChannel();
+    handleHideMe(isHideMeActive);
 }
 
 /**
@@ -1573,6 +1652,8 @@ async function joinToChannel() {
         peer_info: peerInfo,
         peer_uuid: myPeerUUID,
         peer_name: myPeerName,
+        peer_username: myUsername,
+        peer_password: myPassword,
         peer_video: useVideo,
         peer_audio: useAudio,
         peer_video_status: myVideoStatus,
@@ -2403,10 +2484,11 @@ async function loadLocalMedia(stream, kind) {
 
             // session time
             mySessionTime.setAttribute('id', 'mySessionTime');
+            mySessionTime.className = 'notranslate';
 
             // my peer name
             myPeerName.setAttribute('id', 'myVideoParagraph');
-            myPeerName.className = 'videoPeerName';
+            myPeerName.className = 'videoPeerName notranslate';
 
             // my hand status element
             myHandStatusIcon.setAttribute('id', 'myHandStatusIcon');
@@ -2791,7 +2873,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             remoteMedia.setAttribute('id', peer_id + '___video');
             remoteMedia.setAttribute('playsinline', true);
             remoteMedia.autoplay = true;
-            isMobileDevice ? (remoteMediaControls = false) : (remoteMediaControls = remoteMediaControls);
+            remoteMediaControls = isMobileDevice ? false : remoteMediaControls;
             remoteMedia.style.objectFit = peer_screen_status ? 'contain' : 'var(--video-object-fit)';
             remoteMedia.style.name = peer_id + (peer_screen_status ? '_typeScreen' : '_typeCam');
             remoteMedia.controls = remoteMediaControls;
@@ -4964,7 +5046,8 @@ async function shareRoomUrl() {
     if (navigator.share) {
         try {
             // not add title and description to load metadata from url
-            await navigator.share({ url: myRoomUrl });
+            const roomURL = getRoomURL();
+            await navigator.share({ url: roomURL });
             userLog('toast', 'Room Shared successfully!');
         } catch (err) {
             /*
@@ -4987,6 +5070,7 @@ async function shareRoomUrl() {
  */
 function shareRoomMeetingURL(checkScreen = false) {
     playSound('newMessage');
+    const roomURL = getRoomURL();
     Swal.fire({
         background: swBg,
         position: 'center',
@@ -4998,7 +5082,7 @@ function shareRoomMeetingURL(checkScreen = false) {
         <br/>
         <p style="color:rgb(8, 189, 89);">Join from your mobile device</p>
         <p style="background:transparent; color:white; font-family: Arial, Helvetica, sans-serif;">No need for apps, simply capture the QR code with your mobile camera Or Invite someone else to join by sending them the following URL</p>
-        <p style="color:rgb(8, 189, 89);">${myRoomUrl}</p>`,
+        <p style="color:rgb(8, 189, 89);">${roomURL}</p>`,
         showDenyButton: true,
         showCancelButton: true,
         cancelButtonColor: 'red',
@@ -5038,7 +5122,7 @@ function makeRoomQR() {
  * Copy Room URL to clipboard
  */
 function copyRoomURL() {
-    const roomURL = window.location.href;
+    const roomURL = getRoomURL();
     const tmpInput = document.createElement('input');
     document.body.appendChild(tmpInput);
     tmpInput.value = roomURL;
@@ -5068,11 +5152,12 @@ function shareRoomByEmail() {
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         preConfirm: () => {
+            const roomURL = getRoomURL();
             const selectedDateTime = document.getElementById('datetimePicker').value;
             const newLine = '%0D%0A%0D%0A';
             const email = '';
             const emailSubject = `Please join our MiroTalk P2P Video Chat Meeting`;
-            const emailBody = `The meeting is scheduled at: ${newLine} DateTime: ${selectedDateTime} ${newLine} Click to join: ${myRoomUrl} ${newLine}`;
+            const emailBody = `The meeting is scheduled at: ${newLine} DateTime: ${selectedDateTime} ${newLine} Click to join: ${roomURL} ${newLine}`;
             document.location = 'mailto:' + email + '?subject=' + emailSubject + '&body=' + emailBody;
         },
     });
@@ -5081,6 +5166,16 @@ function shareRoomByEmail() {
         dateFormat: 'Y-m-d H:i',
         time_24hr: true,
     });
+}
+
+/**
+ * Get Room URL
+ * @returns {url} roomURL
+ */
+function getRoomURL() {
+    return isHostProtected && isPeerAuthEnabled
+        ? window.location.origin + '/join/?room=' + roomId + '&username=' + myUsername + '&password=' + myPassword
+        : myRoomUrl;
 }
 
 /**
@@ -7070,9 +7165,7 @@ function handleHideMe(isHideMeActive) {
         setColor(hideMeBtn, 'black');
         playSound('on');
     }
-    if (Object.keys(peerConnections).length === 1) {
-        resizeVideoMedia();
-    }
+    resizeVideoMedia();
 }
 
 /**
