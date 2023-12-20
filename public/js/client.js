@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.5
+ * @version 1.2.63
  *
  */
 
@@ -95,6 +95,7 @@ const icons = {
     user: '<i class="fas fa-user"></i>',
     fileSend: '<i class="fas fa-file-export"></i>',
     fileReceive: '<i class="fas fa-file-import"></i>',
+    codecs: '<i class="fa-solid fa-film"></i>',
 };
 
 // Whiteboard and fileSharing
@@ -373,12 +374,15 @@ const videoFpsDiv = getId('videoFpsDiv');
 const screenFpsSelect = getId('screenFps');
 const pushToTalkDiv = getId('pushToTalkDiv');
 const recImage = getId('recImage');
+const switchH264Recording = getId('switchH264Recording');
 const pauseRecBtn = getId('pauseRecBtn');
 const resumeRecBtn = getId('resumeRecBtn');
 const recordingTime = getId('recordingTime');
 const lastRecordingInfo = getId('lastRecordingInfo');
 const themeSelect = getId('mirotalkTheme');
 const videoObjFitSelect = getId('videoObjFitSelect');
+const mainButtonsBar = getQsA('#buttonsBar button');
+const mainButtonsIcon = getQsA('#buttonsBar button i');
 const btnsBarSelect = getId('mainButtonsBarPosition');
 const pinUnpinGridDiv = getId('pinUnpinGridDiv');
 const pinVideoPositionSelect = getId('pinVideoPositionSelect');
@@ -601,7 +605,9 @@ let recordedBlobs;
 let audioRecorder; // helpers.js
 let recScreenStream; // screen media to recording
 let recTimer;
+let recCodecs;
 let recElapsedTime;
+let recPrioritizeH264 = false;
 let isStreamRecording = false;
 let isStreamRecordingPaused = false;
 let isRecScreenStream = false;
@@ -716,6 +722,11 @@ function setButtonsToolTip() {
     setTippy(switchSounds, 'Toggle room notify sounds', 'right');
     setTippy(switchShare, "Show 'Share Room' popup on join.", 'right');
     setTippy(recImage, 'Toggle recording', 'right');
+    setTippy(
+        switchH264Recording,
+        'Prioritize h.264 with AAC or h.264 with Opus codecs over VP8 with Opus or VP9 with Opus codecs',
+        'right',
+    );
     // Whiteboard buttons
     setTippy(wbDrawingColorEl, 'Drawing color', 'bottom');
     setTippy(whiteboardGhostButton, 'Toggle transparent background', 'bottom');
@@ -1125,7 +1136,7 @@ async function handleConnect() {
 function handleServerInfo(config) {
     console.log('13. Server info', config);
 
-    const { peers_count, host_protected, user_auth, is_presenter, survey, redirect } = config;
+    const { peers_count, host_protected, user_auth, is_presenter, survey, redirect, rec_prioritize_h264 } = config;
 
     isHostProtected = host_protected;
     isPeerAuthEnabled = user_auth;
@@ -1216,8 +1227,8 @@ function handleRules(isPresenter) {
         buttons.settings.showMicOptionsBtn = false;
         buttons.settings.showTabRoomParticipants = false;
         buttons.settings.showTabRoomSecurity = false;
-        buttons.remote.audioBtnClickAllowed = false;
-        buttons.remote.videoBtnClickAllowed = false;
+        // buttons.remote.audioBtnClickAllowed = false;
+        // buttons.remote.videoBtnClickAllowed = false;
         buttons.remote.showKickOutBtn = false;
         buttons.whiteboard.whiteboardLockBtn = false;
         //...
@@ -2860,7 +2871,8 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             remoteVideoNavBar.appendChild(remoteVideoStatusIcon);
             remoteVideoNavBar.appendChild(remoteAudioStatusIcon);
 
-            if (peer_audio && buttons.remote.showAudioVolume) {
+            // Disabled audio volume control on Mobile devices
+            if (!isMobileDevice && peer_audio && buttons.remote.showAudioVolume) {
                 remoteVideoNavBar.appendChild(remoteAudioVolume);
             }
             remoteVideoNavBar.appendChild(remoteHandStatusIcon);
@@ -4463,6 +4475,14 @@ function setMySettingsBtn() {
     // make chat room draggable for desktop
     if (!isMobileDevice) dragElement(mySettings, mySettingsHeader);
 
+    // recording codecs
+    switchH264Recording.addEventListener('change', (e) => {
+        recPrioritizeH264 = e.currentTarget.checked;
+        lsSettings.rec_prioritize_h264 = recPrioritizeH264;
+        lS.setSettings(lsSettings);
+        userLog('toast', `${icons.codecs} Recording prioritize h.264 ` + (recPrioritizeH264 ? 'ON' : 'OFF'));
+        playSound('switch');
+    });
     // Recording pause/resume
     pauseRecBtn.addEventListener('click', (e) => {
         pauseRecording();
@@ -4666,6 +4686,7 @@ function setupMySettings() {
             lsSettings.buttons_bar = btnsBarSelect.selectedIndex;
             lS.setSettings(lsSettings);
             setButtonsBarPosition(btnsBarSelect.value);
+            resizeMainButtons();
         });
     }
 
@@ -4713,9 +4734,11 @@ function loadSettingsFromLocalStorage() {
     videoMaxFrameRate = parseInt(getSelectedIndexValue(videoFpsSelect), 10);
     notifyBySound = lsSettings.sounds;
     isAudioPitchBar = lsSettings.pitch_bar;
+    recPrioritizeH264 = lsSettings.rec_prioritize_h264;
     switchSounds.checked = notifyBySound;
     switchShare.checked = notify;
     switchAudioPitchBar.checked = isAudioPitchBar;
+    switchH264Recording.checked = recPrioritizeH264;
 
     switchAutoGainControl.checked = lsSettings.mic_auto_gain_control;
     switchEchoCancellation.checked = lsSettings.mic_echo_cancellations;
@@ -4734,6 +4757,7 @@ function loadSettingsFromLocalStorage() {
     setSP('--video-object-fit', videoObjFitSelect.value);
     setButtonsBarPosition(btnsBarSelect.value);
     toggleVideoPin(pinVideoPositionSelect.value);
+    resizeMainButtons();
 }
 
 /**
@@ -5741,13 +5765,9 @@ function stopRecordingTimer() {
  * @returns {boolean} is mimeType supported by media recorder
  */
 function getSupportedMimeTypes() {
-    const possibleTypes = [
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/webm;codecs=h264,opus',
-        'video/mp4;codecs=h264,aac',
-        'video/mp4',
-    ];
+    const possibleTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4'];
+    possibleTypes.splice(recPrioritizeH264 ? 0 : 2, 0, 'video/mp4;codecs=h264,aac', 'video/webm;codecs=h264,opus');
+    console.log('POSSIBLE CODECS', possibleTypes);
     return possibleTypes.filter((mimeType) => {
         return MediaRecorder.isTypeSupported(mimeType);
     });
@@ -5766,6 +5786,8 @@ function startStreamRecording() {
     const supportedMimeTypes = getSupportedMimeTypes();
     console.log('MediaRecorder supported options', supportedMimeTypes);
     const options = { mimeType: supportedMimeTypes[0] };
+
+    recCodecs = supportedMimeTypes[0];
 
     try {
         audioRecorder = new MixedAudioRecorder();
@@ -6084,11 +6106,12 @@ function downloadRecordedStream() {
             <ul>
                 <li>Time: ${recordingTime.innerText}</li>
                 <li>File: ${recFileName}</li>
+                <li>Codecs: ${recCodecs}</li>
                 <li>Size: ${blobFileSize}</li>
             </ul>
         <br/>
         `;
-        lastRecordingInfo.innerHTML = `Last recording info: ${recordingInfo}`;
+        lastRecordingInfo.innerHTML = `<br/>Last recording info: ${recordingInfo}`;
         recordingTime.innerText = '';
 
         userLog(
@@ -7322,7 +7345,11 @@ function handlePeerAudioBtn(peer_id) {
     if (!buttons.remote.audioBtnClickAllowed) return;
     const peerAudioBtn = getId(peer_id + '_audioStatus');
     peerAudioBtn.onclick = () => {
-        if (peerAudioBtn.className === className.audioOn) disablePeer(peer_id, 'audio');
+        if (peerAudioBtn.className === className.audioOn) {
+            isPresenter
+                ? disablePeer(peer_id, 'audio')
+                : msgPopup('warning', 'Only the presenter can mute participants', 'top-end', 4000);
+        }
     };
 }
 
@@ -7334,7 +7361,11 @@ function handlePeerVideoBtn(peer_id) {
     if (!useVideo || !buttons.remote.videoBtnClickAllowed) return;
     const peerVideoBtn = getId(peer_id + '_videoStatus');
     peerVideoBtn.onclick = () => {
-        if (peerVideoBtn.className === className.videoOn) disablePeer(peer_id, 'video');
+        if (peerVideoBtn.className === className.videoOn) {
+            isPresenter
+                ? disablePeer(peer_id, 'video')
+                : msgPopup('warning', 'Only the presenter can hide participants', 'top-end', 4000);
+        }
     };
 }
 
@@ -9097,7 +9128,9 @@ function handlePeerKickOutBtn(peer_id) {
     if (!buttons.remote.showKickOutBtn) return;
     const peerKickOutBtn = getId(peer_id + '_kickOut');
     peerKickOutBtn.addEventListener('click', (e) => {
-        kickOut(peer_id);
+        isPresenter
+            ? kickOut(peer_id)
+            : msgPopup('warning', 'Only the presenter can eject participants', 'top-end', 4000);
     });
 }
 
@@ -9556,6 +9589,15 @@ function isIpad(userAgent) {
  */
 function getId(id) {
     return document.getElementById(id);
+}
+
+/**
+ * Get all element descendants of node
+ * @param {string} selectors
+ * @returns all element descendants of node that match selectors.
+ */
+function getQsA(selectors) {
+    return document.querySelectorAll(selectors);
 }
 
 /**
