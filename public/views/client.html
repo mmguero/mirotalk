@@ -80,7 +80,7 @@ access to use this app.
 
         <div id="initUser" class="init-user hidden">
             <!-- <p>Please allow the camera & microphone access to use this app.</p> -->
-            <div class="container">
+            <div id="initVideoContainer" class="init-video-container">
                 <video
                     id="initVideo"
                     playsinline="true"
@@ -90,12 +90,14 @@ access to use this app.
                     style="object-fit: contain"
                 ></video>
             </div>
-            <button id="initVideoBtn" class="fas fa-video" onclick="handleVideo(event, true)"></button>
-            <button id="initAudioBtn" class="fas fa-microphone" onclick="handleAudio(event, true)"></button>
-            <button id="initScreenShareBtn" class="fas fa-desktop"></button>
-            <select id="initVideoSelect" class="form-select text-light bg-dark"></select>
-            <select id="initMicrophoneSelect" class="form-select text-light bg-dark"></select>
-            <select id="initSpeakerSelect" class="form-select text-light bg-dark"></select>
+            <div class="initComands">
+                <button id="initVideoBtn" class="fas fa-video" onclick="handleVideo(event, true)"></button>
+                <button id="initAudioBtn" class="fas fa-microphone" onclick="handleAudio(event, true)"></button>
+                <button id="initScreenShareBtn" class="fas fa-desktop"></button>
+                <select id="initVideoSelect" class="form-select text-light bg-dark"></select>
+                <select id="initMicrophoneSelect" class="form-select text-light bg-dark"></select>
+                <select id="initSpeakerSelect" class="form-select text-light bg-dark"></select>
+            </div>
         </div>
 
         <!-- Start buttons bar https://fontawesome.com/icons?d=gallery -->
@@ -312,14 +314,16 @@ access to use this app.
                                 </td>
                             </tr>
                         </table>
-                        <button id="roomSendEmailBtn">
-                            <i class="fas fa-envelope-circle-check"></i>&nbsp;Send email invitation
-                        </button>
-                        <br />
                         <div id="tabRoomSecurity">
                             <button id="lockRoomBtn"><i class="fas fa-lock-open"></i>&nbsp;Lock room</button>
                             <button id="unlockRoomBtn"><i class="fas fa-lock"></i>&nbsp;Unlock room</button>
                             <br />
+                        </div>
+                        <div style="margin-bottom: 5px">
+                            <button id="roomSendEmailBtn">
+                                <i class="fas fa-envelope-circle-check"></i>&nbsp;Send email invitation
+                                <br />
+                            </button>
                         </div>
                         <br />
                         <table id="mySettingsTable">
@@ -876,6 +880,7 @@ access to use this app.
         - https://www.npmjs.com/package/qrious                              (https://github.com/neocotic/qrious)
         - https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js    (https://github.com/missive/emoji-mart)
         - https://mozilla.github.io/pdf.js/                                 (https://github.com/mozilla/pdf.js)
+        - https://www.jsdelivr.com/package/npm/crypto-js                    (https://github.com/brix/crypto-js/)
         - https://www.npmjs.com/package/tippy.js                            (https://github.com/atomiks/tippyjs) 
         - https://flatpickr.js.org/                                         (https://github.com/flatpickr/flatpickr)
         -->
@@ -888,6 +893,8 @@ access to use this app.
         <script defer src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+        <script defer src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+        <!-- <script defer src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/index.min.js"></script> -->
         <script defer src="https://unpkg.com/@popperjs/core@2"></script>
         <script defer src="https://unpkg.com/tippy.js@6"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

@@ -37,7 +37,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.63
+ * @version 1.2.67
  *
  */
 
@@ -666,7 +666,7 @@ io.sockets.on('connect', async (socket) => {
                 try {
                     // https://platform.openai.com/docs/api-reference/completions/create
                     const completion = await chatGPT.completions.create({
-                        model: configChatGPT.model || 'text-davinci-003',
+                        model: configChatGPT.model || 'gpt-3.5-turbo-instruct',
                         prompt: params.prompt,
                         max_tokens: configChatGPT.max_tokens || 1000,
                         temperature: configChatGPT.temperature || 0,
