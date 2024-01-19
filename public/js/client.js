@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.70
+ * @version 1.2.75
  *
  */
 
@@ -64,6 +64,7 @@ const className = {
     privacy: 'far fa-circle',
     snapShot: 'fas fa-camera-retro',
     pinUnpin: 'fas fa-map-pin',
+    mirror: 'fas fa-arrow-right-arrow-left',
     zoomIn: 'fas fa-magnifying-glass-plus',
     zoomOut: 'fas fa-magnifying-glass-minus',
     fullScreen: 'fas fa-expand',
@@ -219,6 +220,7 @@ const initVideo = getId('initVideo');
 const initVideoBtn = getId('initVideoBtn');
 const initAudioBtn = getId('initAudioBtn');
 const initScreenShareBtn = getId('initScreenShareBtn');
+const initVideoMirrorBtn = getId('initVideoMirrorBtn');
 const initVideoSelect = getId('initVideoSelect');
 const initMicrophoneSelect = getId('initMicrophoneSelect');
 const initSpeakerSelect = getId('initSpeakerSelect');
@@ -681,6 +683,7 @@ function setButtonsToolTip() {
     if (isMobileDevice) return;
     // Init buttons
     setTippy(initScreenShareBtn, 'Toggle screen sharing', 'top');
+    setTippy(initVideoMirrorBtn, 'Toggle video mirror', 'top');
     // Main buttons
     refreshMainButtonsToolTipPlacement();
     // Chat room buttons
@@ -1328,6 +1331,7 @@ async function whoAreYou() {
         useVideo = false;
         elemDisplay(document.getElementById('initVideo'), false);
         elemDisplay(document.getElementById('initVideoBtn'), false);
+        elemDisplay(document.getElementById('initVideoMirrorBtn'), false);
         elemDisplay(document.getElementById('initVideoSelect'), false);
         elemDisplay(document.getElementById('tabVideoBtn'), false);
     }
@@ -2496,6 +2500,7 @@ async function loadLocalMedia(stream, kind) {
             const myAudioStatusIcon = document.createElement('button');
             const myVideoFullScreenBtn = document.createElement('button');
             const myVideoPinBtn = document.createElement('button');
+            const myVideoMirrorBtn = document.createElement('button');
             const myVideoZoomInBtn = document.createElement('button');
             const myVideoZoomOutBtn = document.createElement('button');
             const myVideoPiPBtn = document.createElement('button');
@@ -2550,6 +2555,10 @@ async function loadLocalMedia(stream, kind) {
             myVideoPinBtn.setAttribute('id', 'myVideoPinBtn');
             myVideoPinBtn.className = className.pinUnpin;
 
+            // my video toggle mirror
+            myVideoMirrorBtn.setAttribute('id', 'myVideoMirror');
+            myVideoMirrorBtn.className = className.mirror;
+
             // no mobile devices
             if (!isMobileDevice) {
                 setTippy(mySessionTime, 'Session Time', 'bottom');
@@ -2560,10 +2569,11 @@ async function loadLocalMedia(stream, kind) {
                 setTippy(myAudioStatusIcon, 'My audio is on', 'bottom');
                 setTippy(myVideoToImgBtn, 'Take a snapshot', 'bottom');
                 setTippy(myVideoFullScreenBtn, 'Full screen mode', 'bottom');
-                setTippy(myVideoZoomInBtn, 'Zoom in video', 'bottom');
                 setTippy(myVideoPiPBtn, 'Toggle picture in picture', 'bottom');
+                setTippy(myVideoZoomInBtn, 'Zoom in video', 'bottom');
                 setTippy(myVideoZoomOutBtn, 'Zoom out video', 'bottom');
                 setTippy(myVideoPinBtn, 'Toggle Pin video', 'bottom');
+                setTippy(myVideoMirrorBtn, 'Toggle video mirror', 'bottom');
             }
 
             // my video avatar image
@@ -2584,6 +2594,8 @@ async function loadLocalMedia(stream, kind) {
             myVideoNavBar.appendChild(mySessionTime);
 
             !isMobileDevice && myVideoNavBar.appendChild(myVideoPinBtn);
+
+            myVideoNavBar.appendChild(myVideoMirrorBtn);
 
             buttons.local.showVideoPipBtn && myVideoNavBar.appendChild(myVideoPiPBtn);
 
@@ -2630,6 +2642,8 @@ async function loadLocalMedia(stream, kind) {
             logStreamSettingsInfo('localVideoMediaStream', stream);
             attachMediaStream(myLocalMedia, stream);
             adaptAspectRatio();
+
+            handleVideoToggleMirror(myLocalMedia.id, myVideoMirrorBtn.id);
 
             isVideoFullScreenSupported && handleVideoPlayerFs(myLocalMedia.id, myVideoFullScreenBtn.id);
 
@@ -2756,6 +2770,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             const remoteVideoToImgBtn = document.createElement('button');
             const remoteVideoFullScreenBtn = document.createElement('button');
             const remoteVideoPinBtn = document.createElement('button');
+            const remoteVideoMirrorBtn = document.createElement('button');
             const remoteVideoZoomInBtn = document.createElement('button');
             const remoteVideoZoomOutBtn = document.createElement('button');
             const remoteVideoPiPBtn = document.createElement('button');
@@ -2829,6 +2844,10 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             remoteVideoPinBtn.setAttribute('id', peer_id + '_pinUnpin');
             remoteVideoPinBtn.className = className.pinUnpin;
 
+            // remote video toggle mirror
+            remoteVideoMirrorBtn.setAttribute('id', peer_id + '_toggleMirror');
+            remoteVideoMirrorBtn.className = className.mirror;
+
             // no mobile devices
             if (!isMobileDevice) {
                 setTippy(remotePeerName, 'Participant name', 'bottom');
@@ -2846,6 +2865,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
                 setTippy(remoteVideoZoomOutBtn, 'Zoom out video', 'bottom');
                 setTippy(remoteVideoPiPBtn, 'Toggle picture in picture', 'bottom');
                 setTippy(remoteVideoPinBtn, 'Toggle Pin video', 'bottom');
+                setTippy(remoteVideoMirrorBtn, 'Toggle video mirror', 'bottom');
             }
 
             // my video avatar image
@@ -2866,6 +2886,8 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
 
             // attach to remote video nav bar
             !isMobileDevice && remoteVideoNavBar.appendChild(remoteVideoPinBtn);
+
+            remoteVideoNavBar.appendChild(remoteVideoMirrorBtn);
 
             buttons.remote.showVideoPipBtn && remoteVideoNavBar.appendChild(remoteVideoPiPBtn);
 
@@ -2925,6 +2947,9 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
 
             // handle video pin/unpin
             handleVideoPinUnpin(remoteMedia.id, remoteVideoPinBtn.id, remoteVideoWrap.id, peer_id, peer_screen_status);
+
+            // handle video toggle mirror
+            handleVideoToggleMirror(remoteMedia.id, remoteVideoMirrorBtn.id);
 
             // handle vide picture in picture
             buttons.remote.showVideoPipBtn && handlePictureInPicture(remoteVideoPiPBtn.id, remoteMedia.id);
@@ -3201,6 +3226,22 @@ function setPeerChatAvatarImgName(avatar, peerName) {
             // console.log("Set My chat avatar image");
             rightChatAvatar = avatarImg;
             break;
+    }
+}
+
+/**
+ * Handle Video Toggle Mirror
+ * @param {string} videoId
+ * @param {string} videoToggleMirrorBtnId
+ */
+function handleVideoToggleMirror(videoId, videoToggleMirrorBtnId) {
+    const videoPlayer = getId(videoId);
+    const videoToggleMirrorBtn = getId(videoToggleMirrorBtnId);
+    if (videoPlayer && videoToggleMirrorBtn) {
+        // Toggle video mirror
+        videoToggleMirrorBtn.addEventListener('click', (e) => {
+            videoPlayer.classList.toggle('mirror');
+        });
     }
 }
 
@@ -4857,6 +4898,14 @@ async function handleLocalCameraMirror() {
 }
 
 /**
+ * Toggle vide mirror
+ */
+function toggleInitVideoMirror() {
+    initVideo.classList.toggle('mirror');
+    myVideo.classList.toggle('mirror');
+}
+
+/**
  * Get audio - video constraints
  * @returns {object} audio - video constraints
  */
@@ -5314,6 +5363,7 @@ async function handleVideo(e, init, force = null) {
         initVideoSelect.disabled = !videoStatus;
         lS.setInitConfig(lS.MEDIA_TYPE.video, videoStatus);
         initVideoContainerShow(videoStatus);
+        elemDisplay(initVideoMirrorBtn, videoStatus);
     }
 
     if (!videoStatus) {
