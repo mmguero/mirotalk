@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.76
+ * @version 1.2.84
  *
  */
 
@@ -97,6 +97,7 @@ const icons = {
     fileSend: '<i class="fas fa-file-export"></i>',
     fileReceive: '<i class="fas fa-file-import"></i>',
     codecs: '<i class="fa-solid fa-film"></i>',
+    theme: '<i class="fas fa-fill-drip"></i>',
 };
 
 // Whiteboard and fileSharing
@@ -479,6 +480,9 @@ const speechRecognitionIcon = getId('speechRecognitionIcon');
 const speechRecognitionStart = getId('speechRecognitionStart');
 const speechRecognitionStop = getId('speechRecognitionStop');
 
+// Media
+const sinkId = 'sinkId' in HTMLMediaElement.prototype;
+
 //....
 
 const userLimits = {
@@ -497,6 +501,55 @@ const useAvatarSvg = true; // if false the cam-Off avatar = images.avatar
  */
 const ZOOM_CENTER_MODE = false;
 const ZOOM_IN_OUT_ENABLED = true; // Video Zoom in/out default (true)
+
+// Color Picker:
+
+const themeCustom = {
+    input: getId('themeColorPicker'),
+    check: getId('keepCustomTheme'),
+    color: lsSettings.theme_color ? lsSettings.theme_color : '#000000',
+    keep: lsSettings.theme_custom ? lsSettings.theme_custom : false,
+};
+
+const pickr = Pickr.create({
+    el: themeCustom.input,
+    theme: 'classic', // or 'monolith', or 'nano'
+    default: themeCustom.color,
+    useAsButton: true,
+    swatches: [
+        'rgba(244, 67, 54, 1)',
+        'rgba(233, 30, 99, 0.95)',
+        'rgba(156, 39, 176, 0.9)',
+        'rgba(103, 58, 183, 0.85)',
+        'rgba(63, 81, 181, 0.8)',
+        'rgba(33, 150, 243, 0.75)',
+        'rgba(3, 169, 244, 0.7)',
+        'rgba(0, 188, 212, 0.7)',
+        'rgba(0, 150, 136, 0.75)',
+        'rgba(76, 175, 80, 0.8)',
+        'rgba(139, 195, 74, 0.85)',
+        'rgba(205, 220, 57, 0.9)',
+        'rgba(255, 235, 59, 0.95)',
+        'rgba(255, 193, 7, 1)',
+    ],
+    components: {
+        preview: true,
+        opacity: true,
+        hue: true,
+    },
+})
+    .on('init', (pickr) => {
+        themeCustom.input.value = pickr.getSelectedColor().toHEXA().toString(0);
+    })
+    .on('change', (color) => {
+        themeCustom.color = color.toHEXA().toString();
+        themeCustom.input.value = themeCustom.color;
+        setCustomTheme();
+    })
+    .on('changestop', () => {
+        lsSettings.theme_color = themeCustom.color;
+        lS.setSettings(lsSettings);
+    });
 
 // misc
 let swBg = 'rgba(0, 0, 0, 0.7)'; // swAlert background color
@@ -1394,20 +1447,20 @@ async function whoAreYou() {
     // select video - audio
 
     initVideoSelect.onchange = async () => {
-        videoSelect.selectedIndex = initVideoSelect.selectedIndex;
-        lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, initVideoSelect.selectedIndex, initVideoSelect.value);
         await changeInitCamera(initVideoSelect.value);
         await handleLocalCameraMirror();
+        videoSelect.selectedIndex = initVideoSelect.selectedIndex;
+        refreshLsDevices();
     };
     initMicrophoneSelect.onchange = async () => {
-        audioInputSelect.selectedIndex = initMicrophoneSelect.selectedIndex;
-        lS.setLocalStorageDevices(lS.MEDIA_TYPE.audio, initMicrophoneSelect.selectedIndex, initMicrophoneSelect.value);
         await changeLocalMicrophone(initMicrophoneSelect.value);
+        audioInputSelect.selectedIndex = initMicrophoneSelect.selectedIndex;
+        refreshLsDevices();
     };
-    initSpeakerSelect.onchange = () => {
+    initSpeakerSelect.onchange = async () => {
+        await changeAudioDestination();
         audioOutputSelect.selectedIndex = initSpeakerSelect.selectedIndex;
-        lS.setLocalStorageDevices(lS.MEDIA_TYPE.speaker, initSpeakerSelect.selectedIndex, initSpeakerSelect.value);
-        changeAudioDestination();
+        refreshLsDevices();
     };
 
     // init video -audio buttons
@@ -1422,6 +1475,15 @@ async function whoAreYou() {
 
     setTippy(initAudioBtn, 'Stop the audio', 'top');
     setTippy(initVideoBtn, 'Stop the video', 'top');
+}
+
+/**
+ * Refresh all LS devices
+ */
+async function refreshLsDevices() {
+    lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, videoSelect.selectedIndex, videoSelect.value);
+    lS.setLocalStorageDevices(lS.MEDIA_TYPE.audio, audioInputSelect.selectedIndex, audioInputSelect.value);
+    lS.setLocalStorageDevices(lS.MEDIA_TYPE.speaker, audioOutputSelect.selectedIndex, audioOutputSelect.value);
 }
 
 /**
@@ -1474,36 +1536,50 @@ async function loadLocalStorage() {
     console.log('12. Get Local Storage Devices before', localStorageDevices);
     if (localStorageDevices) {
         //
-        initMicrophoneSelect.selectedIndex = localStorageDevices.audio.index;
-        initSpeakerSelect.selectedIndex = localStorageDevices.speaker.index;
-        initVideoSelect.selectedIndex = localStorageDevices.video.index;
+        const initMicrophoneExist = selectOptionByValueExist(initMicrophoneSelect, localStorageDevices.audio.select);
+        const initSpeakerExist = selectOptionByValueExist(initSpeakerSelect, localStorageDevices.speaker.select);
+        const initVideoExist = selectOptionByValueExist(initVideoSelect, localStorageDevices.video.select);
         //
-        audioInputSelect.selectedIndex = initMicrophoneSelect.selectedIndex;
-        audioOutputSelect.selectedIndex = initSpeakerSelect.selectedIndex;
-        videoSelect.selectedIndex = initVideoSelect.selectedIndex;
-        //
-        if (lS.DEVICES_COUNT.audio != localStorageDevices.audio.count) {
+        const audioInputExist = selectOptionByValueExist(audioInputSelect, localStorageDevices.audio.select);
+        const audioOutputExist = selectOptionByValueExist(audioOutputSelect, localStorageDevices.speaker.select);
+        const videoExist = selectOptionByValueExist(videoSelect, localStorageDevices.video.select);
+
+        console.log('Check for audio changes', {
+            previous: localStorageDevices.audio.select,
+            current: audioInputSelect.value,
+        });
+
+        if (!initMicrophoneExist || !audioInputExist) {
             console.log('12.1 Audio devices seems changed, use default index 0');
             initMicrophoneSelect.selectedIndex = 0;
             audioInputSelect.selectedIndex = 0;
-            lS.setLocalStorageDevices(
-                lS.MEDIA_TYPE.audio,
-                initMicrophoneSelect.selectedIndex,
-                initMicrophoneSelect.value,
-            );
+            refreshLsDevices();
         }
-        if (lS.DEVICES_COUNT.speaker != localStorageDevices.speaker.count) {
+
+        console.log('Check for speaker changes', {
+            previous: localStorageDevices.speaker.select,
+            current: audioOutputSelect.value,
+        });
+
+        if (!initSpeakerExist || !audioOutputExist) {
             console.log('12.2 Speaker devices seems changed, use default index 0');
             initSpeakerSelect.selectedIndex = 0;
             audioOutputSelect.selectedIndex = 0;
-            lS.setLocalStorageDevices(lS.MEDIA_TYPE.speaker, initSpeakerSelect.selectedIndex, initSpeakerSelect.value);
+            refreshLsDevices();
         }
-        if (lS.DEVICES_COUNT.video != localStorageDevices.video.count) {
+
+        console.log('Check for video changes', {
+            previous: localStorageDevices.video.select,
+            current: videoSelect.value,
+        });
+
+        if (!initVideoExist || !videoExist) {
             console.log('12.3 Video devices seems changed, use default index 0');
             initVideoSelect.selectedIndex = 0;
             videoSelect.selectedIndex = 0;
-            lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, initVideoSelect.selectedIndex, initVideoSelect.value);
+            refreshLsDevices();
         }
+
         //
         console.log('12.4 Get Local Storage Devices after', lS.getLocalStorageDevices());
     }
@@ -1513,6 +1589,31 @@ async function loadLocalStorage() {
         await handleLocalCameraMirror();
         await checkInitConfig();
     }
+    // Refresh audio
+    if (useAudio && audioInputSelect.value) {
+        await changeLocalMicrophone(audioInputSelect.value);
+    }
+    // Refresh speaker
+    if (audioOutputSelect.value) await changeAudioDestination();
+}
+
+/**
+ * Use the select element to check if a specific option value exists,
+ * and if it does, automatically set it as the selected option.
+ * @param {object} selectElement
+ * @param {string} value
+ * @return boolean
+ */
+function selectOptionByValueExist(selectElement, value) {
+    let foundValue = false;
+    for (let i = 0; i < selectElement.options.length; i++) {
+        if (selectElement.options[i].value === value) {
+            selectElement.selectedIndex = i;
+            foundValue = true;
+            break;
+        }
+    }
+    return foundValue;
 }
 
 /**
@@ -1560,7 +1661,8 @@ async function changeInitCamera(deviceId) {
             console.error('[Error] changeInitCamera', err);
             userLog('error', 'Error while swapping init camera' + err);
             initVideoSelect.selectedIndex = 0;
-            lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, initVideoSelect.selectedIndex, initVideoSelect.value);
+            videoSelect.selectedIndex = 0;
+            refreshLsDevices();
             // Refresh page...
             setTimeout(function () {
                 location.reload();
@@ -2121,10 +2223,34 @@ function handleRemovePeer(config) {
 }
 
 /**
+ * Set custom theme
+ */
+function setCustomTheme() {
+    const color = themeCustom.color;
+    swBg = `radial-gradient(${color}, ${color})`;
+    setSP('--body-bg', `radial-gradient(${color}, ${color})`);
+    setSP('--msger-bg', `radial-gradient(${color}, ${color})`);
+    setSP('--msger-private-bg', `radial-gradient(${color}, ${color})`);
+    setSP('--wb-bg', `radial-gradient(${color}, ${color})`);
+    setSP('--elem-border-color', '0.5px solid rgb(255 255 255 / 32%)');
+    setSP('--navbar-bg', 'rgba(0, 0, 0, 0.2)');
+    setSP('--select-bg', `${color}`);
+    setSP('--tab-btn-active', `${color}`);
+    setSP('--box-shadow', '0px 8px 16px 0px rgba(0, 0, 0, 0.2)');
+    setSP('--left-msg-bg', '#252d31');
+    setSP('--right-msg-bg', `${color}`);
+    setSP('--private-msg-bg', '#6b1226');
+    setSP('--btn-bar-bg-color', '#FFFFFF');
+    setSP('--btn-bar-color', '#000000');
+    document.body.style.background = `radial-gradient(${color}, ${color})`;
+}
+
+/**
  * Set mirotalk theme | dark | grey | ...
- * @param {string} theme type
  */
 function setTheme() {
+    if (themeCustom.keep) return setCustomTheme();
+
     mirotalkTheme.selectedIndex = lsSettings.theme;
     const theme = mirotalkTheme.value;
     switch (theme) {
@@ -2135,6 +2261,7 @@ function setTheme() {
             setSP('--msger-bg', 'radial-gradient(#393939, #000000)');
             setSP('--msger-private-bg', 'radial-gradient(#393939, #000000)');
             setSP('--wb-bg', 'radial-gradient(#393939, #000000)');
+            setSP('--elem-border-color', 'none');
             setSP('--navbar-bg', 'rgba(0, 0, 0, 0.2)');
             setSP('--select-bg', '#2c2c2c');
             setSP('--tab-btn-active', 'rgb(30 29 29)');
@@ -2153,6 +2280,7 @@ function setTheme() {
             setSP('--body-bg', 'radial-gradient(#666, #333)');
             setSP('--msger-bg', 'radial-gradient(#666, #333)');
             setSP('--wb-bg', 'radial-gradient(#797979, #000)');
+            setSP('--elem-border-color', 'none');
             setSP('--navbar-bg', 'rgba(0, 0, 0, 0.2)');
             setSP('--select-bg', '#2c2c2c');
             setSP('--tab-btn-active', 'rgb(30 29 29)');
@@ -2172,6 +2300,7 @@ function setTheme() {
             setSP('--body-bg', 'radial-gradient(#003934, #001E1A)');
             setSP('--msger-bg', 'radial-gradient(#003934, #001E1A)');
             setSP('--wb-bg', 'radial-gradient(#003934, #001E1A)');
+            setSP('--elem-border-color', 'none');
             setSP('--navbar-bg', 'rgba(0, 0, 0, 0.2)');
             setSP('--select-bg', '#001E1A');
             setSP('--tab-btn-active', '#003934');
@@ -2191,6 +2320,7 @@ function setTheme() {
             setSP('--body-bg', 'radial-gradient(#306bac, #141B41)');
             setSP('--msger-bg', 'radial-gradient(#306bac, #141B41)');
             setSP('--wb-bg', 'radial-gradient(#306bac, #141B41)');
+            setSP('--elem-border-color', 'none');
             setSP('--navbar-bg', 'rgba(0, 0, 0, 0.2)');
             setSP('--select-bg', '#141B41');
             setSP('--tab-btn-active', '#306bac');
@@ -2335,7 +2465,7 @@ async function enumerateAudioDevices(stream) {
         .then(async () => {
             await stopTracks(stream);
             isEnumerateAudioDevices = true;
-            const sinkId = 'sinkId' in HTMLMediaElement.prototype;
+            //const sinkId = 'sinkId' in HTMLMediaElement.prototype;
             audioOutputSelect.disabled = !sinkId;
             // Check if there is speakers
             if (!sinkId || initSpeakerSelect.options.length === 0) {
@@ -3027,6 +3157,8 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             handleAudioVolume(remoteAudioVolumeId, remoteAudioMedia.id);
             // Toggle visibility of volume control based on the audio status of the peer
             elemDisplay(getId(remoteAudioVolumeId), peer_audio_status);
+            // Change audio output...
+            if (sinkId && audioOutputSelect.value) await changeAudioDestination(remoteAudioMedia);
             break;
         default:
             break;
@@ -4571,6 +4703,18 @@ function setMySettingsBtn() {
     resumeRecBtn.addEventListener('click', (e) => {
         resumeRecording();
     });
+    // Styles
+    themeCustom.check.onchange = (e) => {
+        themeCustom.keep = e.currentTarget.checked;
+        themeSelect.disabled = themeCustom.keep;
+        lsSettings.theme_custom = themeCustom.keep;
+        lsSettings.theme_color = themeCustom.color;
+        lS.setSettings(lsSettings);
+        setTheme();
+        userLog('toast', `${icons.theme} Custom theme keep ` + (themeCustom.keep ? 'ON' : 'OFF'));
+        playSound('switch');
+        e.target.blur();
+    };
 }
 
 /**
@@ -4655,7 +4799,7 @@ function setupMySettings() {
     // select audio input
     audioInputSelect.addEventListener('change', async () => {
         await changeLocalMicrophone(audioInputSelect.value);
-        lS.setLocalStorageDevices(lS.MEDIA_TYPE.audio, audioInputSelect.selectedIndex, audioInputSelect.value);
+        refreshLsDevices();
     });
     // advance audio options
     micOptionsBtn.addEventListener('click', function () {
@@ -4712,16 +4856,16 @@ function setupMySettings() {
         micOptionsBtn.click();
     });
     // select audio output
-    audioOutputSelect.addEventListener('change', (e) => {
-        changeAudioDestination();
-        lS.setLocalStorageDevices(lS.MEDIA_TYPE.speaker, audioOutputSelect.selectedIndex, audioOutputSelect.value);
+    audioOutputSelect.addEventListener('change', async () => {
+        await changeAudioDestination();
+        refreshLsDevices();
     });
     // select video input
     videoSelect.addEventListener('change', async () => {
         await changeLocalCamera(videoSelect.value);
         await handleLocalCameraMirror();
         await documentPictureInPictureClose();
-        lS.setLocalStorageDevices(lS.MEDIA_TYPE.video, videoSelect.selectedIndex, videoSelect.value);
+        refreshLsDevices();
     });
     // select video quality
     videoQualitySelect.addEventListener('change', async (e) => {
@@ -4820,6 +4964,10 @@ function loadSettingsFromLocalStorage() {
     switchShare.checked = notify;
     switchAudioPitchBar.checked = isAudioPitchBar;
     switchH264Recording.checked = recPrioritizeH264;
+
+    themeCustom.check.checked = themeCustom.keep;
+    themeSelect.disabled = themeCustom.keep;
+    themeCustom.input.value = themeCustom.color;
 
     switchAutoGainControl.checked = lsSettings.mic_auto_gain_control;
     switchEchoCancellation.checked = lsSettings.mic_echo_cancellations;
@@ -5071,11 +5219,23 @@ async function setLocalVideoQuality() {
 }
 
 /**
- * Change Speaker
+ * Change audio output (Speaker)
  */
-function changeAudioDestination() {
+async function changeAudioDestination(audioElement = false) {
     const audioDestination = audioOutputSelect.value;
-    attachSinkId(myAudio, audioDestination);
+    if (audioElement) {
+        // change audio output to specified participant audio
+        await attachSinkId(audioElement, audioDestination);
+    } else {
+        const audioElements = audioMediaContainer.querySelectorAll('audio');
+        // change audio output for all participants audio
+        audioElements.forEach(async (audioElement) => {
+            // discard my own audio on this device, so I won't hear myself.
+            if (audioElement.id != 'myAudio') {
+                await attachSinkId(audioElement, audioDestination);
+            }
+        });
+    }
 }
 
 /**
@@ -5083,7 +5243,7 @@ function changeAudioDestination() {
  * @param {object} element audio element to attach the audio output
  * @param {string} sinkId uuid audio output device
  */
-function attachSinkId(element, sinkId) {
+async function attachSinkId(element, sinkId) {
     if (typeof element.sinkId !== 'undefined') {
         element
             .setSinkId(sinkId)
@@ -5092,9 +5252,17 @@ function attachSinkId(element, sinkId) {
             })
             .catch((err) => {
                 let errorMessage = err;
-                if (err.name === 'SecurityError')
-                    errorMessage = `You need to use HTTPS for selecting audio output device: ${err}`;
+                if (err.name === 'SecurityError') {
+                    errorMessage = 'SecurityError: You need to use HTTPS for selecting audio output device';
+                } else if (err.name === 'NotAllowedError') {
+                    errorMessage = 'NotAllowedError: Permission to use audio output device is not granted';
+                } else if (err.name === 'NotFoundError') {
+                    errorMessage = 'NotFoundError: The specified audio output device was not found';
+                } else {
+                    errorMessage = `Error: ${err}`;
+                }
                 console.error(errorMessage);
+                userLog('error', `attachSinkId: ${errorMessage}`);
                 // Jump back to first output device in the list as it's the default.
                 audioOutputSelect.selectedIndex = 0;
             });
@@ -5287,9 +5455,10 @@ function shareRoomByEmail() {
  * @returns {url} roomURL
  */
 function getRoomURL() {
-    return isHostProtected && isPeerAuthEnabled
-        ? window.location.origin + '/join/?room=' + roomId + '&username=' + myUsername + '&password=' + myPassword
-        : myRoomUrl;
+    return myRoomUrl;
+    // return isHostProtected && isPeerAuthEnabled
+    //     ? window.location.origin + '/join/?room=' + roomId + '&username=' + myUsername + '&password=' + myPassword
+    //     : myRoomUrl;
 }
 
 /**
@@ -5469,8 +5638,10 @@ async function toggleScreenSharing(init = false) {
     try {
         // Set screen frame rate
         screenMaxFrameRate = parseInt(screenFpsSelect.value, 10);
+
+        // Screen share constraints
         const constraints = {
-            audio: false,
+            audio: myAudioStatus ? false : true,
             video: { frameRate: screenMaxFrameRate },
         };
 
@@ -5510,8 +5681,8 @@ async function toggleScreenSharing(init = false) {
             await emitPeerStatus('screen', myScreenStatus);
 
             await stopLocalVideoTrack();
-            await refreshMyLocalStream(screenMediaPromise);
-            await refreshMyStreamToPeers(screenMediaPromise);
+            await refreshMyLocalStream(screenMediaPromise, !useAudio);
+            await refreshMyStreamToPeers(screenMediaPromise, !useAudio);
 
             if (init) {
                 // Handle init media stream
@@ -5684,11 +5855,31 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
     // Check if the passed stream has an audio track
     const streamHasAudioTrack = hasAudioTrack(stream);
 
+    // Check if the passed stream has an video track
+    const streamHasVideoTrack = hasVideoTrack(stream);
+
+    // Check if the local stream has an audio track
+    const localStreamHasAudioTrack = hasAudioTrack(localAudioMediaStream);
+
+    // Check if the local stream has an video track
+    const localStreamHasVideoTrack = hasVideoTrack(localVideoMediaStream);
+
+    // Determine the audio stream to add to peers
+    const audioStream = streamHasAudioTrack ? stream : localStreamHasAudioTrack && localAudioMediaStream;
+
     // Determine the audio track to replace to peers
-    const myAudioTrack =
+    const audioTrack =
         streamHasAudioTrack && (localAudioTrackChange || isScreenStreaming)
             ? stream.getAudioTracks()[0]
-            : localAudioMediaStream && localAudioMediaStream.getAudioTracks()[0];
+            : localStreamHasAudioTrack && localAudioMediaStream.getAudioTracks()[0];
+
+    // Determine the video stream to add to peers
+    const videoStream = streamHasVideoTrack ? stream : localStreamHasVideoTrack && localVideoMediaStream;
+
+    // Determine the video track to replace to peers
+    const videoTracks = streamHasVideoTrack
+        ? stream.getVideoTracks()[0]
+        : localStreamHasVideoTrack && localVideoMediaStream.getVideoTracks()[0];
 
     // Refresh my stream to connected peers except myself
     for (const peer_id in peerConnections) {
@@ -5698,25 +5889,38 @@ async function refreshMyStreamToPeers(stream, localAudioTrackChange = false) {
         const videoSender = peerConnections[peer_id].getSenders().find((s) => s.track && s.track.kind === 'video');
 
         if (useVideo && videoSender) {
-            videoSender.replaceTrack(stream.getVideoTracks()[0]);
-            console.log('REPLACE VIDEO TRACK TO', { peer_id, peer_name });
+            videoSender.replaceTrack(videoTracks);
+            console.log('REPLACE VIDEO TRACK TO', { peer_id, peer_name, video: videoTracks });
         } else {
-            // Add video track if sender does not exist
-            stream.getTracks().forEach((track) => {
-                if (track.kind === 'video') {
-                    peerConnections[peer_id].addTrack(track);
-                    handleRtcOffer(peer_id); // https://groups.google.com/g/discuss-webrtc/c/Ky3wf_hg1l8?pli=1
-                    console.log('ADD VIDEO TRACK TO', { peer_id, peer_name });
-                }
-            });
+            if (videoStream) {
+                // Add video track if sender does not exist
+                videoStream.getTracks().forEach(async (track) => {
+                    if (track.kind === 'video') {
+                        peerConnections[peer_id].addTrack(track);
+                        await handleRtcOffer(peer_id); // https://groups.google.com/g/discuss-webrtc/c/Ky3wf_hg1l8?pli=1
+                        console.log('ADD VIDEO TRACK TO', { peer_id, peer_name, video: track });
+                    }
+                });
+            }
         }
 
         // Replace audio track
         const audioSender = peerConnections[peer_id].getSenders().find((s) => s.track && s.track.kind === 'audio');
 
-        if (audioSender) {
-            audioSender.replaceTrack(myAudioTrack);
-            console.log('REPLACE AUDIO TRACK TO', { peer_id, peer_name });
+        if (audioSender && audioTrack) {
+            audioSender.replaceTrack(audioTrack);
+            console.log('REPLACE AUDIO TRACK TO', { peer_id, peer_name, audio: audioTrack });
+        } else {
+            if (audioStream) {
+                // Add audio track if sender does not exist
+                audioStream.getTracks().forEach(async (track) => {
+                    if (track.kind === 'audio') {
+                        peerConnections[peer_id].addTrack(track);
+                        await handleRtcOffer(peer_id); // https://groups.google.com/g/discuss-webrtc/c/Ky3wf_hg1l8?pli=1
+                        console.log('ADD AUDIO TRACK TO', { peer_id, peer_name, audio: track });
+                    }
+                });
+            }
         }
     }
 }
@@ -5821,7 +6025,7 @@ function checkRecording() {
  */
 function handleRecordingError(error, popupLog = true) {
     console.error('Recording error', error);
-    if (popupLog) userLog('error', error, 6000);
+    if (popupLog) userLog('error', error);
 }
 
 /**
@@ -9333,15 +9537,6 @@ function showAbout() {
         customClass: { image: 'img-about' },
         html: `
         <br/>
-        <div id="about">
-            <button
-                id="support-button"
-                data-umami-event="Support button"
-                class="pulsate"
-                onclick="window.open('https://github.com/mmguero/mirotalk')">
-                <i class="${className.heart}" ></i>&nbsp;GitHub
-            </button>
-        </div>
         `,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
