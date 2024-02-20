@@ -18,6 +18,7 @@ dependencies: {
     crypto-js               : https://www.npmjs.com/package/crypto-js
     dotenv                  : https://www.npmjs.com/package/dotenv
     express                 : https://www.npmjs.com/package/express
+    jsonwebtoken            : https://www.npmjs.com/package/jsonwebtoken
     ngrok                   : https://www.npmjs.com/package/ngrok
     qs                      : https://www.npmjs.com/package/qs
     openai                  : https://www.npmjs.com/package/openai
@@ -37,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.84
+ * @version 1.2.89
  *
  */
 
@@ -53,6 +54,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 const app = express();
 const checkXSS = require('./xss.js');
 const ServerApi = require('./api');
@@ -66,7 +68,7 @@ const isHttps = process.env.HTTPS == 'true';
 const port = process.env.PORT || 3000; // must be the same to client.js signalingServerPort
 const host = `http${isHttps ? 's' : ''}://${domain}:${port}`;
 
-let io, server, authHost;
+let server, authHost;
 
 if (isHttps) {
     const fs = require('fs');
@@ -79,12 +81,42 @@ if (isHttps) {
     server = http.createServer(app);
 }
 
+// Cors
+
+const cors_origin = process.env.CORS_ORIGIN;
+const cors_methods = process.env.CORS_METHODS;
+
+let corsOrigin = '*';
+let corsMethods = ['GET', 'POST'];
+
+if (cors_origin && cors_origin !== '*') {
+    try {
+        corsOrigin = JSON.parse(cors_origin);
+    } catch (error) {
+        log.error('Error parsing CORS_ORIGIN', error.message);
+    }
+}
+
+if (cors_methods && cors_methods !== '') {
+    try {
+        corsMethods = JSON.parse(cors_methods);
+    } catch (error) {
+        log.error('Error parsing CORS_METHODS', error.message);
+    }
+}
+
+const corsOptions = {
+    origin: corsOrigin,
+    methods: corsMethods,
+};
+
 /*  
     Set maxHttpBufferSize from 1e6 (1MB) to 1e7 (10MB)
 */
-io = new Server({
+const io = new Server({
     maxHttpBufferSize: 1e7,
     transports: ['websocket'],
+    cors: corsOptions,
 }).listen(server);
 
 // console.log(io);
@@ -99,6 +131,12 @@ const hostCfg = {
     user_auth: userAuth,
     users: hostUsers,
     authenticated: !hostProtected,
+};
+
+// JWT config
+const jwtCfg = {
+    JWT_KEY: process.env.JWT_KEY || 'mirotalk_jwt_secret',
+    JWT_EXP: process.env.JWT_EXP || '1h',
 };
 
 // Room presenters
@@ -234,7 +272,7 @@ const sockets = {}; // collect sockets
 const peers = {}; // collect peers info grp by channels
 const presenters = {}; // collect presenters grp by channels
 
-app.use(cors()); // Enable All CORS Requests for all origins
+app.use(cors(corsOptions)); // Enable CORS with options
 app.use(compression()); // Compress all HTTP responses using GZip
 app.use(express.json()); // Api parse body data as json
 app.use(express.static(dir.public)); // Use all static files from the public folder
@@ -341,24 +379,43 @@ app.get('/join/', (req, res) => {
     if (Object.keys(req.query).length > 0) {
         log.debug('Request Query', req.query);
         /* 
-            http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=1&username=username&password=password
+            http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=1&token=token
             https://p2p.mirotalk.com/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=0
             https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=0
         */
-        const { room, name, audio, video, screen, notify, hide, username, password } = checkXSS(req.query);
+        const { room, name, audio, video, screen, notify, hide, token } = checkXSS(req.query);
 
-        // check if valid peer
-        const isPeerValid = isAuthPeer(username, password);
+        let peerUsername,
+            peerPassword = '';
+        let isPeerValid = false;
+        let isPeerPresenter = false;
+
+        if (token) {
+            try {
+                const { username, password, presenter } = checkXSS(jwt.verify(token, jwtCfg.JWT_KEY));
+                // Peer credentials
+                peerUsername = username;
+                peerPassword = password;
+                // Check if valid peer
+                isPeerValid = isAuthPeer(username, password);
+                // Check if presenter
+                isPeerPresenter = presenter === '1' || presenter === 'true';
+            } catch (err) {
+                // Invalid token
+                log.error('Direct Join JWT error', err.message);
+                return hostCfg.protected || hostCfg.user_auth ? res.sendFile(views.login) : res.sendFile(views.landing);
+            }
+        }
 
         // Peer valid going to auth as host
-        if (hostCfg.protected && isPeerValid && !hostCfg.authenticated) {
+        if (hostCfg.protected && isPeerValid && isPeerPresenter && !hostCfg.authenticated) {
             const ip = getIP(req);
             hostCfg.authenticated = true;
             authHost = new Host(ip, true);
             log.debug('Direct Join user auth as host done', {
                 ip: ip,
-                username: username,
-                password: password,
+                username: peerUsername,
+                password: peerPassword,
             });
         }
 
@@ -428,13 +485,19 @@ app.post(['/login'], (req, res) => {
         hostCfg.authenticated = true;
         authHost = new Host(ip, true);
         log.debug('HOST LOGIN OK', { ip: ip, authorized: authHost.isAuthorized(ip) });
-        return res.status(200).json({ message: 'authorized' });
+        const token = jwt.sign({ username: username, password: password, presenter: true }, jwtCfg.JWT_KEY, {
+            expiresIn: jwtCfg.JWT_EXP,
+        });
+        return res.status(200).json({ message: token });
     }
 
     // Peer auth valid
     if (isPeerValid) {
         log.debug('PEER LOGIN OK', { ip: ip, authorized: true });
-        return res.status(200).json({ message: 'authorized' });
+        const token = jwt.sign({ username: username, password: password, presenter: false }, jwtCfg.JWT_KEY, {
+            expiresIn: jwtCfg.JWT_EXP,
+        });
+        return res.status(200).json({ message: token });
     } else {
         return res.status(401).json({ message: 'unauthorized' });
     }
@@ -447,8 +510,7 @@ app.post(['/login'], (req, res) => {
 
 // API request meeting room endpoint
 app.post([`${apiBasePath}/meeting`], (req, res) => {
-    const host = req.headers.host;
-    const authorization = req.headers.authorization;
+    const { host, authorization } = req.headers;
     const api = new ServerApi(host, authorization, api_key_secret);
     if (!api.isAuthorized()) {
         log.debug('MiroTalk get meeting - Unauthorized', {
@@ -458,8 +520,7 @@ app.post([`${apiBasePath}/meeting`], (req, res) => {
         return res.status(403).json({ error: 'Unauthorized!' });
     }
     const meetingURL = api.getMeetingURL();
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ meeting: meetingURL }));
+    res.json({ meeting: meetingURL });
     log.debug('MiroTalk get meeting - Authorized', {
         header: req.headers,
         body: req.body,
@@ -469,8 +530,7 @@ app.post([`${apiBasePath}/meeting`], (req, res) => {
 
 // API request join room endpoint
 app.post([`${apiBasePath}/join`], (req, res) => {
-    const host = req.headers.host;
-    const authorization = req.headers.authorization;
+    const { host, authorization } = req.headers;
     const api = new ServerApi(host, authorization, api_key_secret);
     if (!api.isAuthorized()) {
         log.debug('MiroTalk get join - Unauthorized', {
@@ -480,8 +540,7 @@ app.post([`${apiBasePath}/join`], (req, res) => {
         return res.status(403).json({ error: 'Unauthorized!' });
     }
     const joinURL = api.getJoinURL(req.body);
-    res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ join: joinURL }));
+    res.json({ join: joinURL });
     log.debug('MiroTalk get join - Authorized', {
         header: req.headers,
         body: req.body,
@@ -541,6 +600,44 @@ app.get('*', function (req, res) {
 });
 
 /**
+ * Get Server config
+ * @param {string} tunnel
+ * @returns server config
+ */
+function getServerConfig(tunnel = false) {
+    return {
+        iceServers: iceServers,
+        stats: statsData,
+        host: hostCfg,
+        jwtCfg: jwtCfg,
+        presenters: roomPresenters,
+        ip_whitelist: ipWhitelist,
+        ngrok: {
+            ngrok_enabled: ngrokEnabled,
+            ngrok_token: ngrokEnabled ? ngrokAuthToken : '',
+        },
+        server: host,
+        cors: corsOptions,
+        server_tunnel: tunnel,
+        test_ice_servers: testStunTurn,
+        api_docs: api_docs,
+        api_key_secret: api_key_secret,
+        use_self_signed_certificate: isHttps,
+        turn_enabled: turnServerEnabled,
+        ip_lookup_enabled: IPLookupEnabled,
+        chatGPT_enabled: configChatGPT.enabled,
+        slack_enabled: slackEnabled,
+        sentry_enabled: sentryEnabled,
+        survey_enabled: surveyEnabled,
+        redirect_enabled: redirectEnabled,
+        survey_url: surveyURL,
+        redirect_url: redirectURL,
+        node_version: process.versions.node,
+        app_version: packageJson.version,
+    };
+}
+
+/**
  * Expose server to external with https tunnel using ngrok
  * https://ngrok.com
  */
@@ -549,39 +646,9 @@ async function ngrokStart() {
         await ngrok.authtoken(ngrokAuthToken);
         await ngrok.connect(port);
         const api = ngrok.getApi();
-        //const data = JSON.parse(await api.get('api/tunnels')); // v3
-        const data = await api.listTunnels(); // v4
-        const pu0 = data.tunnels[0].public_url;
-        const pu1 = data.tunnels[1].public_url;
-        const tunnelHttps = pu0.startsWith('https') ? pu0 : pu1;
-        // server settings
-        log.debug('settings', {
-            iceServers: iceServers,
-            host: hostCfg,
-            presenters: roomPresenters,
-            ip_whitelist: ipWhitelist,
-            ngrok: {
-                ngrok_enabled: ngrokEnabled,
-                ngrok_token: ngrokAuthToken,
-            },
-            server: host,
-            server_tunnel: tunnelHttps,
-            test_ice_servers: testStunTurn,
-            api_docs: api_docs,
-            api_key_secret: api_key_secret,
-            use_self_signed_certificate: isHttps,
-            turn_enabled: turnServerEnabled,
-            ip_lookup_enabled: IPLookupEnabled,
-            chatGPT_enabled: configChatGPT.enabled,
-            slack_enabled: slackEnabled,
-            sentry_enabled: sentryEnabled,
-            survey_enabled: surveyEnabled,
-            redirect_enabled: redirectEnabled,
-            survey_url: surveyURL,
-            redirect_url: redirectURL,
-            node_version: process.versions.node,
-            app_version: packageJson.version,
-        });
+        const list = await api.listTunnels();
+        const tunnel = list.tunnels[0].public_url;
+        log.info('Server config', getServerConfig(tunnel));
     } catch (err) {
         log.warn('[Error] ngrokStart', err.body);
         process.exit(1);
@@ -610,29 +677,7 @@ server.listen(port, null, () => {
     if (ngrokEnabled && isHttps === false) {
         ngrokStart();
     } else {
-        // server settings
-        log.debug('settings', {
-            iceServers: iceServers,
-            host: hostCfg,
-            presenters: roomPresenters,
-            ip_whitelist: ipWhitelist,
-            server: host,
-            test_ice_servers: testStunTurn,
-            api_docs: api_docs,
-            api_key_secret: api_key_secret,
-            use_self_signed_certificate: isHttps,
-            turn_enabled: turnServerEnabled,
-            ip_lookup_enabled: IPLookupEnabled,
-            chatGPT_enabled: configChatGPT.enabled,
-            slack_enabled: slackEnabled,
-            sentry_enabled: sentryEnabled,
-            survey_enabled: surveyEnabled,
-            redirect_enabled: redirectEnabled,
-            survey_url: surveyURL,
-            redirect_url: redirectURL,
-            node_version: process.versions.node,
-            app_version: packageJson.version,
-        });
+        log.info('Server config', getServerConfig());
     }
 });
 
@@ -712,7 +757,7 @@ io.sockets.on('connect', async (socket) => {
                         temperature: configChatGPT.temperature || 0,
                     });
                     const response = completion.choices[0].text;
-                    log.debug('ChatGPT', {
+                    log.info('ChatGPT', {
                         time: params.time,
                         room: room_id,
                         name: peer_name,
@@ -768,8 +813,7 @@ io.sockets.on('connect', async (socket) => {
             channel_password,
             peer_uuid,
             peer_name,
-            peer_username,
-            peer_password,
+            peer_token,
             peer_video,
             peer_audio,
             peer_video_status,
@@ -792,18 +836,37 @@ io.sockets.on('connect', async (socket) => {
         // no presenter aka host in presenters init
         if (!(channel in presenters)) presenters[channel] = {};
 
+        let is_presenter = true;
+
         // User Auth required, we check if peer valid
         if (hostCfg.user_auth) {
-            const isPeerValid = isAuthPeer(peer_username, peer_password);
+            // Check JWT
+            if (peer_token) {
+                try {
+                    const { username, password, presenter } = checkXSS(jwt.verify(peer_token, jwtCfg.JWT_KEY));
 
-            log.debug('[' + socket.id + '] JOIN ROOM - HOST PROTECTED - USER AUTH check peer', {
-                ip: peer_ip,
-                peer_username: peer_username,
-                peer_password: peer_password,
-                peer_valid: isPeerValid,
-            });
+                    const isPeerValid = isAuthPeer(username, password);
 
-            if (!isPeerValid) {
+                    is_presenter = presenter === '1' || presenter === 'true';
+
+                    log.debug('[' + socket.id + '] JOIN ROOM - USER AUTH check peer', {
+                        ip: peer_ip,
+                        peer_username: username,
+                        peer_password: password,
+                        peer_valid: isPeerValid,
+                        peer_presenter: is_presenter,
+                    });
+
+                    if (!isPeerValid) {
+                        // redirect peer to login page
+                        return socket.emit('unauthorized');
+                    }
+                } catch (err) {
+                    // redirect peer to login page
+                    log.error('[' + socket.id + '] [Warning] Join Room JWT error', err.message);
+                    return socket.emit('unauthorized');
+                }
+            } else {
                 // redirect peer to login page
                 return socket.emit('unauthorized');
             }
@@ -820,7 +883,7 @@ io.sockets.on('connect', async (socket) => {
             peer_ip: peer_ip,
             peer_name: peer_name,
             peer_uuid: peer_uuid,
-            is_presenter: true,
+            is_presenter: is_presenter,
         };
         // first we check if the username match the presenters username
         if (roomPresenters && roomPresenters.includes(peer_name)) {
@@ -832,8 +895,8 @@ io.sockets.on('connect', async (socket) => {
             }
         }
 
-        // Check if peer is presenter
-        const isPresenter = await isPeerPresenter(channel, socket.id, peer_name, peer_uuid);
+        // Check if peer is presenter, if token check the presenter key
+        const isPresenter = peer_token ? is_presenter : await isPeerPresenter(channel, socket.id, peer_name, peer_uuid);
 
         // collect peers info grp by channels
         peers[channel][socket.id] = {
