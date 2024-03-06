@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.89
+ * @version 1.2.97
  *
  */
 
@@ -356,6 +356,11 @@ const tabVideoShareBtn = getId('tabVideoShareBtn');
 const tabRecordingBtn = getId('tabRecordingBtn');
 const tabParticipantsBtn = getId('tabParticipantsBtn');
 const tabProfileBtn = getId('tabProfileBtn');
+const tabNetworkBtn = getId('tabNetworkBtn');
+const networkIP = getId('networkIP');
+const networkHost = getId('networkHost');
+const networkStun = getId('networkStun');
+const networkTurn = getId('networkTurn');
 const tabRoomBtn = getId('tabRoomBtn');
 const roomSendEmailBtn = getId('roomSendEmailBtn');
 const tabStylingBtn = getId('tabStylingBtn');
@@ -782,6 +787,22 @@ function setButtonsToolTip() {
     setTippy(
         switchH264Recording,
         'Prioritize h.264 with AAC or h.264 with Opus codecs over VP8 with Opus or VP9 with Opus codecs',
+        'right',
+    );
+    setTippy(networkIP, 'IP address associated with the ICE candidate', 'right');
+    setTippy(
+        networkHost,
+        'This type of ICE candidate represents a candidate that corresponds to an interface on the local device. Host candidates are typically generated based on the local IP addresses of the device and can be used for direct peer-to-peer communication within the same network',
+        'right',
+    );
+    setTippy(
+        networkStun,
+        'Server reflexive candidates are obtained by the ICE agent when it sends a request to a STUN (Session Traversal Utilities for NAT) server. These candidates reflect the public IP address and port of the client as observed by the STUN server. They are useful for traversing NATs (Network Address Translators) and establishing connectivity between peers across different networks',
+        'right',
+    );
+    setTippy(
+        networkTurn,
+        'Relay candidates are obtained when communication between peers cannot be established directly due to symmetric NATs or firewall restrictions. In such cases, communication is relayed through a TURN (Traversal Using Relays around NAT) server. TURN servers act as intermediaries, relaying data between peers, allowing them to communicate even when direct connections are not possible. This is typically the fallback mechanism for establishing connectivity when direct peer-to-peer communication fails',
         'right',
     );
     // Whiteboard buttons
@@ -1858,19 +1879,64 @@ async function handlePeersConnectionStatus(peer_id) {
 }
 
 /**
+ * Handle ICE candidate
  * https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/onicecandidate
+ * https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/icecandidateerror_event
  * @param {string} peer_id socket.id
  */
 async function handleOnIceCandidate(peer_id) {
     peerConnections[peer_id].onicecandidate = (event) => {
-        if (!event.candidate) return;
+        if (!event.candidate || !event.candidate.candidate) return;
+
+        const { type, candidate, address, sdpMLineIndex } = event.candidate;
+
+        //console.log('[ICE-CANDIDATE] ---->', { type, address, candidate });
+
         sendToServer('relayICE', {
-            peer_id: peer_id,
+            peer_id,
             ice_candidate: {
-                sdpMLineIndex: event.candidate.sdpMLineIndex,
-                candidate: event.candidate.candidate,
+                sdpMLineIndex,
+                candidate,
             },
         });
+
+        // Get Ice address
+        const ipRegex = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/;
+        let addressInfo = candidate.match(ipRegex);
+        if (!addressInfo && address) addressInfo = [address];
+
+        // IP
+        if (addressInfo) {
+            networkIP.innerText = addressInfo;
+        }
+
+        // Display network information based on candidate type
+        switch (type) {
+            case 'host':
+                networkHost.innerText = '🟢';
+                break;
+            case 'srflx':
+                networkStun.innerText = '🟢';
+                break;
+            case 'relay':
+                networkTurn.innerText = '🟢';
+                break;
+            default:
+                console.warn(`[ICE candidate] unknown type: ${type}`, candidate);
+        }
+    };
+
+    // handle ICE candidate errors
+    peerConnections[peer_id].onicecandidateerror = (event) => {
+        const { url, errorText } = event;
+
+        console.warn('[ICE candidate] error', { url, error: errorText });
+
+        if (url.startsWith('host:')) networkHost.innerText = '🔴';
+        if (url.startsWith('stun:')) networkStun.innerText = '🔴';
+        if (url.startsWith('turn:')) networkTurn.innerText = '🔴';
+
+        //msgPopup('warning', `${url}: ${errorText}`, 'top-end', 6000);
     };
 }
 
@@ -2623,6 +2689,7 @@ async function loadLocalMedia(stream, kind) {
             // session time
             mySessionTime.setAttribute('id', 'mySessionTime');
             mySessionTime.className = 'notranslate';
+            mySessionTime.style.cursor = 'default';
 
             // my peer name
             myPeerName.setAttribute('id', 'myVideoParagraph');
@@ -2640,10 +2707,12 @@ async function loadLocalMedia(stream, kind) {
             // my video status element
             myVideoStatusIcon.setAttribute('id', 'myVideoStatusIcon');
             myVideoStatusIcon.className = className.videoOn;
+            myVideoStatusIcon.style.cursor = 'default';
 
             // my audio status element
             myAudioStatusIcon.setAttribute('id', 'myAudioStatusIcon');
             myAudioStatusIcon.className = className.audioOn;
+            myAudioStatusIcon.style.cursor = 'default';
 
             // my video to image
             myVideoToImgBtn.setAttribute('id', 'myVideoToImgBtn');
@@ -2891,6 +2960,11 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             const remotePitchBar = document.createElement('div');
             const remoteAudioVolume = document.createElement('input');
 
+            // Expand button UI/UX
+            const remoteExpandBtnDiv = document.createElement('div');
+            const remoteExpandBtn = document.createElement('button');
+            const remoteExpandContainerDiv = document.createElement('div');
+
             // remote peer name element
             remotePeerName.setAttribute('id', peer_id + '_name');
             remotePeerName.className = 'videoPeerName';
@@ -2906,10 +2980,12 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             // remote video status element
             remoteVideoStatusIcon.setAttribute('id', peer_id + '_videoStatus');
             remoteVideoStatusIcon.className = className.videoOn;
+            remoteVideoStatusIcon.style.cursor = 'default';
 
             // remote audio status element
             remoteAudioStatusIcon.setAttribute('id', peer_id + '_audioStatus');
             remoteAudioStatusIcon.className = className.audioOn;
+            remoteAudioStatusIcon.style.cursor = 'default';
 
             // remote audio volume element
             remoteAudioVolume.setAttribute('id', peer_id + '_audioVolume');
@@ -2996,6 +3072,12 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             // remote video nav bar
             remoteVideoNavBar.className = 'navbar fadein';
 
+            // remote expand buttons div
+            remoteExpandBtnDiv.className = 'expand-video';
+            remoteExpandBtn.id = peer_id + '_videoExpandBtn';
+            remoteExpandBtn.className = 'fas fa-ellipsis-vertical';
+            remoteExpandContainerDiv.className = 'expand-video-content';
+
             // attach to remote video nav bar
             !isMobileDevice && remoteVideoNavBar.appendChild(remoteVideoPinBtn);
 
@@ -3003,10 +3085,18 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
 
             buttons.remote.showVideoPipBtn && remoteVideoNavBar.appendChild(remoteVideoPiPBtn);
 
+            // Add to expand container div...
             if (buttons.remote.showZoomInOutBtn) {
-                remoteVideoNavBar.appendChild(remoteVideoZoomInBtn);
-                remoteVideoNavBar.appendChild(remoteVideoZoomOutBtn);
+                remoteExpandContainerDiv.appendChild(remoteVideoZoomInBtn);
+                remoteExpandContainerDiv.appendChild(remoteVideoZoomOutBtn);
             }
+            buttons.remote.showPrivateMessageBtn && remoteExpandContainerDiv.appendChild(remotePrivateMsgBtn);
+            buttons.remote.showFileShareBtn && remoteExpandContainerDiv.appendChild(remoteFileShareBtn);
+            buttons.remote.showShareVideoAudioBtn && remoteExpandContainerDiv.appendChild(remoteVideoAudioUrlBtn);
+            buttons.remote.showKickOutBtn && remoteExpandContainerDiv.appendChild(remotePeerKickOut);
+
+            remoteExpandBtnDiv.appendChild(remoteExpandBtn);
+            remoteExpandBtnDiv.appendChild(remoteExpandContainerDiv);
 
             isVideoFullScreenSupported && remoteVideoNavBar.appendChild(remoteVideoFullScreenBtn);
 
@@ -3021,10 +3111,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             }
             remoteVideoNavBar.appendChild(remoteHandStatusIcon);
 
-            buttons.remote.showPrivateMessageBtn && remoteVideoNavBar.appendChild(remotePrivateMsgBtn);
-            buttons.remote.showFileShareBtn && remoteVideoNavBar.appendChild(remoteFileShareBtn);
-            buttons.remote.showShareVideoAudioBtn && remoteVideoNavBar.appendChild(remoteVideoAudioUrlBtn);
-            buttons.remote.showKickOutBtn && remoteVideoNavBar.appendChild(remotePeerKickOut);
+            remoteVideoNavBar.appendChild(remoteExpandBtnDiv);
 
             remoteMedia.setAttribute('id', peer_id + '___video');
             remoteMedia.setAttribute('playsinline', true);
@@ -4759,6 +4846,9 @@ function setupMySettings() {
     });
     tabProfileBtn.addEventListener('click', (e) => {
         openTab(e, 'tabProfile');
+    });
+    tabNetworkBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabNetwork');
     });
     tabStylingBtn.addEventListener('click', (e) => {
         openTab(e, 'tabStyling');

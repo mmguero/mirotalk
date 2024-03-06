@@ -38,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.89
+ * @version 1.2.97
  *
  */
 
@@ -152,7 +152,7 @@ const swaggerDocument = yamlJS.load(path.join(__dirname + '/../api/swagger.yaml'
 const { v4: uuidV4 } = require('uuid');
 const apiBasePath = '/api/v1'; // api endpoint path
 const api_docs = host + apiBasePath + '/docs'; // api docs
-const api_key_secret = process.env.API_KEY_SECRET || 'mirotalk_default_secret';
+const api_key_secret = process.env.API_KEY_SECRET || 'mirotalkp2p_default_secret';
 
 // Ngrok config
 const ngrok = require('ngrok');
@@ -494,7 +494,8 @@ app.post(['/login'], (req, res) => {
     // Peer auth valid
     if (isPeerValid) {
         log.debug('PEER LOGIN OK', { ip: ip, authorized: true });
-        const token = jwt.sign({ username: username, password: password, presenter: false }, jwtCfg.JWT_KEY, {
+        const isPresenter = roomPresenters && roomPresenters.includes(username).toString();
+        const token = jwt.sign({ username: username, password: password, presenter: isPresenter }, jwtCfg.JWT_KEY, {
             expiresIn: jwtCfg.JWT_EXP,
         });
         return res.status(200).json({ message: token });
@@ -847,7 +848,9 @@ io.sockets.on('connect', async (socket) => {
 
                     const isPeerValid = isAuthPeer(username, password);
 
-                    is_presenter = presenter === '1' || presenter === 'true';
+                    // Presenter if token 'presenter' is '1'/'true' or first to join room
+                    is_presenter =
+                        presenter === '1' || presenter === 'true' || Object.keys(presenters[channel]).length === 0;
 
                     log.debug('[' + socket.id + '] JOIN ROOM - USER AUTH check peer', {
                         ip: peer_ip,
