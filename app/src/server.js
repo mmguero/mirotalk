@@ -38,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.97
+ * @version 1.3.00
  *
  */
 
@@ -227,8 +227,8 @@ let chatGPT;
 const configChatGPT = {
     enabled: getEnvBoolean(process.env.CHATGPT_ENABLED),
     basePath: process.env.CHATGPT_BASE_PATH,
-    apiKey: process.env.CHATGTP_APIKEY,
-    model: process.env.CHATGTP_MODEL,
+    apiKey: process.env.CHATGPT_APIKEY,
+    model: process.env.CHATGPT_MODEL,
     max_tokens: parseInt(process.env.CHATGPT_MAX_TOKENS),
     temperature: parseInt(process.env.CHATGPT_TEMPERATURE),
 };
@@ -748,24 +748,32 @@ io.sockets.on('connect', async (socket) => {
                 break;
             case 'getChatGPT':
                 // https://platform.openai.com/docs/introduction
-                if (!configChatGPT.enabled) return cb('ChatGPT seems disabled, try later!');
+                if (!configChatGPT.enabled) return cb({ message: 'ChatGPT seems disabled, try later!' });
+                // https://platform.openai.com/docs/api-reference/completions/create
                 try {
-                    // https://platform.openai.com/docs/api-reference/completions/create
-                    const completion = await chatGPT.completions.create({
-                        model: configChatGPT.model || 'gpt-3.5-turbo-instruct',
-                        prompt: params.prompt,
+                    const { time, prompt, context } = params;
+                    // Add the prompt to the context
+                    context.push({ role: 'user', content: prompt });
+                    // Call OpenAI's API to generate response
+                    const completion = await chatGPT.chat.completions.create({
+                        model: configChatGPT.model || 'gpt-3.5-turbo',
+                        messages: context,
                         max_tokens: configChatGPT.max_tokens || 1000,
                         temperature: configChatGPT.temperature || 0,
                     });
-                    const response = completion.choices[0].text;
+                    // Extract message from completion
+                    const message = completion.choices[0].message.content.trim();
+                    // Add response to context
+                    context.push({ role: 'assistant', content: message });
+                    // Log conversation details
                     log.info('ChatGPT', {
-                        time: params.time,
+                        time: time,
                         room: room_id,
                         name: peer_name,
-                        prompt: params.prompt,
-                        response: response,
+                        context: context,
                     });
-                    cb(response);
+                    // Callback response to client
+                    cb({ message: message, context: context });
                 } catch (error) {
                     if (error.name === 'APIError') {
                         log.error('ChatGPT', {
@@ -775,11 +783,11 @@ io.sockets.on('connect', async (socket) => {
                             code: error.code,
                             type: error.type,
                         });
-                        cb(error.message);
+                        cb({ message: error.message });
                     } else {
                         // Non-API error
                         log.error('ChatGPT', error);
-                        cb(error.message);
+                        cb({ message: error.message });
                     }
                 }
                 break;

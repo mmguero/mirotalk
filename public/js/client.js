@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.2.97
+ * @version 1.3.00
  *
  */
 
@@ -646,6 +646,7 @@ let speechInMessages = false;
 let isSpeechSynthesisSupported = 'speechSynthesis' in window;
 let transcripts = []; // collect all the transcripts to save it later if you need
 let chatMessages = []; // collect chat messages to save it later if want
+let chatGPTcontext = []; // keep chatGPT messages context
 
 // settings
 let videoMaxFrameRate = 30;
@@ -1652,6 +1653,41 @@ async function changeInitCamera(deviceId) {
     navigator.mediaDevices
         .getUserMedia({ video: videoConstraints })
         .then((camStream) => {
+            updateLocalVideoMediaStream(camStream);
+        })
+        .catch(async (err) => {
+            console.error('Error accessing init video device', err);
+            // If error is due to constraints, fallback to default constraints or no constraints or something else
+            if (
+                err.name === 'OverconstrainedError' ||
+                err.name === 'ConstraintNotSatisfiedError' ||
+                err.name === 'DOMException'
+            ) {
+                console.warn('Fallback to default or no constraints for init video');
+                try {
+                    const camStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            deviceId: {
+                                exact: deviceId, // Specify the exact device ID you want to access
+                            },
+                        },
+                    }); // Fallback to default constraints
+                    updateLocalVideoMediaStream(camStream);
+                } catch (fallbackErr) {
+                    console.error('Error accessing init video device with default constraints', fallbackErr);
+                    reloadBrowser(err);
+                }
+            } else {
+                reloadBrowser(err);
+            }
+        });
+
+    /**
+     * Update Local Video Stream
+     * @param {MediaStream} camStream
+     */
+    function updateLocalVideoMediaStream(camStream) {
+        if (camStream) {
             // We going to update init video stream
             initVideo.srcObject = camStream;
             initStream = camStream;
@@ -1660,18 +1696,24 @@ async function changeInitCamera(deviceId) {
             myVideo.srcObject = camStream;
             localVideoMediaStream = camStream;
             console.log('Success attached local video stream', localVideoMediaStream.getVideoTracks()[0].getSettings());
-        })
-        .catch((err) => {
-            console.error('[Error] changeInitCamera', err);
-            userLog('error', 'Error while swapping init camera' + err);
-            initVideoSelect.selectedIndex = 0;
-            videoSelect.selectedIndex = 0;
-            refreshLsDevices();
-            // Refresh page...
-            setTimeout(function () {
-                location.reload();
-            }, 3000);
-        });
+        }
+    }
+
+    /**
+     * Something going wrong
+     * @param {object} err
+     */
+    function reloadBrowser(err) {
+        console.error('[Error] changeInitCamera', err);
+        userLog('error', 'Error while swapping init camera' + err);
+        initVideoSelect.selectedIndex = 0;
+        videoSelect.selectedIndex = 0;
+        refreshLsDevices();
+        // Refresh page...
+        setTimeout(function () {
+            location.reload();
+        }, 3000);
+    }
 }
 
 /**
@@ -1691,16 +1733,51 @@ async function changeLocalCamera(deviceId) {
     navigator.mediaDevices
         .getUserMedia({ video: videoConstraints })
         .then((camStream) => {
+            updateLocalVideoMediaStream(camStream);
+        })
+        .catch(async (err) => {
+            console.error('Error accessing local video device:', err);
+            // If error is due to constraints, fallback to default constraints or no constraints or something else
+            if (
+                err.name === 'OverconstrainedError' ||
+                err.name === 'ConstraintNotSatisfiedError' ||
+                err.name === 'DOMException'
+            ) {
+                console.warn('Fallback to default or no constraints for local video');
+                try {
+                    const camStream = await navigator.mediaDevices.getUserMedia({ video: true }); // Fallback to default constraints
+                    updateLocalVideoMediaStream(camStream);
+                } catch (fallbackErr) {
+                    console.error('Error accessing init video device with default constraints', fallbackErr);
+                    printError(err);
+                }
+            } else {
+                printError(err);
+            }
+        });
+
+    /**
+     * Update Local Video Media Stream
+     * @param {MediaStream} camStream
+     */
+    function updateLocalVideoMediaStream(camStream) {
+        if (camStream) {
             myVideo.srcObject = camStream;
             localVideoMediaStream = camStream;
             logStreamSettingsInfo('Success attached local video stream', camStream);
             refreshMyStreamToPeers(camStream);
             setLocalMaxFps(videoMaxFrameRate);
-        })
-        .catch((err) => {
-            console.error('[Error] changeLocalCamera', err);
-            userLog('error', 'Error while swapping local camera' + err);
-        });
+        }
+    }
+
+    /**
+     * SOmething going wrong
+     * @param {object} err
+     */
+    function printError(err) {
+        console.error('[Error] changeLocalCamera', err);
+        userLog('error', 'Error while swapping local camera ' + err);
+    }
 }
 
 /**
@@ -1923,6 +2000,7 @@ async function handleOnIceCandidate(peer_id) {
                 break;
             default:
                 console.warn(`[ICE candidate] unknown type: ${type}`, candidate);
+                break;
         }
     };
 
@@ -2040,6 +2118,8 @@ async function handleRTCDataChannels(peer_id) {
                             case 'micVolume':
                                 handlePeerVolume(dataMessage);
                                 break;
+                            default:
+                                break;
                         }
                     } catch (err) {
                         console.error('mirotalk_chat_channel', err);
@@ -2065,6 +2145,8 @@ async function handleRTCDataChannels(peer_id) {
                     } catch (err) {
                         console.error('mirotalk_file_sharing_channel', err);
                     }
+                    break;
+                default:
                     break;
             }
         };
@@ -2403,7 +2485,8 @@ function setTheme() {
             break;
         // ...
         default:
-            return console.log('No theme found');
+            console.log('No theme found');
+            break;
     }
     //setButtonsBarPosition(mainButtonsBarPosition);
 }
@@ -2597,19 +2680,43 @@ async function setupLocalVideoMedia() {
         return;
     }
 
-    console.log('Requesting access to local video inputs');
+    console.log('Requesting access to video inputs');
 
     const videoConstraints = useVideo ? await getVideoConstraints('default') : false;
 
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+        await updateLocalVideoMediaStream(stream);
+    } catch (err) {
+        console.error('Error accessing video device', err);
+        // If error is due to constraints, fallback to default constraints or no constraints or something else
+        if (
+            err.name === 'OverconstrainedError' ||
+            err.name === 'ConstraintNotSatisfiedError' ||
+            err.name === 'DOMException'
+        ) {
+            console.warn('Fallback to default or no constraints for video');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true }); // Fallback to default constraints
+                await updateLocalVideoMediaStream(stream);
+            } catch (fallbackErr) {
+                console.error('Error accessing video device with default constraints', fallbackErr);
+                handleMediaError('video', fallbackErr);
+            }
+        } else {
+            handleMediaError('video', err);
+        }
+    }
+    /**
+     * Update Local Media Stream
+     * @param {MediaStream} stream
+     */
+    async function updateLocalVideoMediaStream(stream) {
         if (stream) {
             localVideoMediaStream = stream;
             await loadLocalMedia(stream, 'video');
-            console.log('10. Access granted to video device');
+            console.log('Access granted to video device');
         }
-    } catch (err) {
-        handleMediaError('video', err);
     }
 }
 
@@ -2623,7 +2730,7 @@ async function setupLocalAudioMedia() {
         return;
     }
 
-    console.log('Requesting access to local audio inputs');
+    console.log('Requesting access to audio inputs');
 
     const audioConstraints = useAudio ? await getAudioConstraints() : false;
 
@@ -2644,11 +2751,55 @@ async function setupLocalAudioMedia() {
 
 /**
  * Handle media access error.
+ * https://blog.addpipe.com/common-getusermedia-errors/
+ *
  * @param {string} mediaType - 'video' or 'audio'
  * @param {Error} err - The error object
  */
 function handleMediaError(mediaType, err) {
-    console.error(`[Error] - Access denied for ${mediaType} device`, err);
+    let errMessage = '';
+    switch (err.name) {
+        case 'NotFoundError':
+        case 'DevicesNotFoundError':
+            errMessage = 'Required track is missing';
+            break;
+        case 'NotReadableError':
+        case 'TrackStartError':
+            errMessage = 'Already in use';
+            break;
+        case 'OverconstrainedError':
+        case 'ConstraintNotSatisfiedError':
+            errMessage = 'Constraints cannot be satisfied by available devices';
+            break;
+        case 'NotAllowedError':
+        case 'PermissionDeniedError':
+            errMessage = 'Permission denied in browser';
+            break;
+        case 'TypeError':
+            errMessage = 'Empty constraints object';
+            break;
+        default:
+            break;
+    }
+
+    // Print message to inform user
+    const $html = `
+        <ul style="text-align: left">
+            <li>Media type: ${mediaType}</li>
+            <li>Error name: ${err.name}</li>
+            <li>Error message: ${errMessage}</li>
+            <li>Common: <a href="https://blog.addpipe.com/common-getusermedia-errors" target="_blank">Common getUserMedia errors</a></li>
+        </ul>
+    `;
+    msgHTML(null, images.forbidden, 'Access denied', $html, 'center');
+
+    /*
+        it immediately stops the execution of the current function and jumps to the nearest enclosing try...catch block or, 
+        if none exists, it interrupts the script execution and displays an error message in the console.
+    */
+    throw new Error(
+        `Access denied for ${mediaType} device [${err.name}]: ${errMessage} \ncheck the common getUserMedia errors: https://blog.addpipe.com/common-getusermedia-errors/`,
+    );
 }
 
 /**
@@ -3427,6 +3578,8 @@ function setPeerChatAvatarImgName(avatar, peerName) {
             // console.log("Set My chat avatar image");
             rightChatAvatar = avatarImg;
             break;
+        default:
+            break;
     }
 }
 
@@ -3722,6 +3875,8 @@ function toggleVideoPin(position) {
             videoMediaContainer.style.width = null;
             videoMediaContainer.style.width = '100% !important';
             videoMediaContainer.style.height = '25%';
+            break;
+        default:
             break;
     }
     resizeVideoMedia();
@@ -5156,60 +5311,73 @@ async function getAudioVideoConstraints() {
  */
 async function getVideoConstraints(videoQuality) {
     const frameRate = videoMaxFrameRate;
+    let constraints = {};
 
     switch (videoQuality) {
         case 'default':
             if (forceCamMaxResolutionAndFps) {
                 // This will make the browser use the maximum resolution available as default, `up to 4K and 60fps`.
-                return {
+                constraints = {
                     width: { ideal: 3840 },
                     height: { ideal: 2160 },
                     frameRate: { ideal: 60 },
                 }; // video cam constraints default
+            } else {
+                // This will make the browser use hdVideo and 30fps.
+                constraints = {
+                    width: { exact: 1280 },
+                    height: { exact: 720 },
+                    frameRate: { exact: 30 },
+                }; // on default as hdVideo
             }
-            // This will make the browser use hdVideo and 30fps.
-            return {
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
-                frameRate: { ideal: 30 },
-            }; // on default as hdVideo
+            break;
         case 'qvgaVideo':
-            return {
+            constraints = {
                 width: { exact: 320 },
                 height: { exact: 240 },
                 frameRate: frameRate,
             }; // video cam constraints low bandwidth
+            break;
         case 'vgaVideo':
-            return {
+            constraints = {
                 width: { exact: 640 },
                 height: { exact: 480 },
                 frameRate: frameRate,
             }; // video cam constraints medium bandwidth
+            break;
         case 'hdVideo':
-            return {
+            constraints = {
                 width: { exact: 1280 },
                 height: { exact: 720 },
                 frameRate: frameRate,
             }; // video cam constraints high bandwidth
+            break;
         case 'fhdVideo':
-            return {
+            constraints = {
                 width: { exact: 1920 },
                 height: { exact: 1080 },
                 frameRate: frameRate,
             }; // video cam constraints very high bandwidth
+            break;
         case '2kVideo':
-            return {
+            constraints = {
                 width: { exact: 2560 },
                 height: { exact: 1440 },
                 frameRate: frameRate,
             }; // video cam constraints ultra high bandwidth
+            break;
         case '4kVideo':
-            return {
+            constraints = {
                 width: { exact: 3840 },
                 height: { exact: 2160 },
                 frameRate: frameRate,
             }; // video cam constraints ultra high bandwidth
+            break;
+        default:
+            break;
     }
+    console.log('Video constraints', constraints);
+    return constraints;
 }
 
 /**
@@ -5238,6 +5406,7 @@ async function getAudioConstraints() {
             video: false,
         };
     }
+    console.log('Audio constraints', constraints);
     return constraints;
     // return {
     //     echoCancellation: true,
@@ -6652,8 +6821,10 @@ function cleanMessages() {
                 msgerChat.removeChild(msgs);
                 msgs = msgerChat.firstChild;
             }
-            // clean object
+            // clean chat messages
             chatMessages = [];
+            // clean chatGPT context
+            chatGPTcontext = [];
             playSound('delete');
         }
     });
@@ -6890,6 +7061,8 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
 
     const isValidPrivateMessage = getPrivateMsg && getMsgId != null && getMsgId != myPeerId;
 
+    const message = getFrom === 'ChatGPT' ? `<pre>${getMsg}</pre>` : getMsg;
+
     let msgHTML = `
 	<div id="msg-${chatMessagesId}" class="msg ${getSide}-msg">
         <img class="msg-img" src="${getImg}" />
@@ -6898,7 +7071,7 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                 <div class="msg-info-name">${getFrom}</div>
                 <div class="msg-info-time">${time}</div>
             </div>
-            <div id="${chatMessagesId}" class="msg-text">${getMsg}
+            <div id="${chatMessagesId}" class="msg-text">${message}
                 <hr/>
     `;
     // add btn direct reply to private message
@@ -6930,7 +7103,7 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                     id="msg-speech-${chatMessagesId}"
                     class="${className.speech}" 
                     style="color:#fff; border:none; background:transparent;"
-                    onclick="speechMessage(false, '${getFrom}', '${checkMsg(getMsg)}')"
+                    onclick="speechMessage(false, '${getFrom}', '${checkMsg(message)}')"
                 ></button>`;
     }
     msgHTML += ` 
@@ -7363,15 +7536,18 @@ async function getChatGPTmessage(msg) {
             params: {
                 time: getDataTimeString(),
                 prompt: msg,
+                context: chatGPTcontext,
             },
         })
         .then(
             function (completion) {
                 if (!completion) return;
+                const { message, context } = completion;
+                chatGPTcontext = context ? context : [];
                 setPeerChatAvatarImgName('left', 'ChatGPT');
-                appendMessage('ChatGPT', leftChatAvatar, 'left', completion, true);
+                appendMessage('ChatGPT', leftChatAvatar, 'left', message, true);
                 cleanMessageInput();
-                speechInMessages ? speechMessage(true, 'ChatGPT', completion) : playSound('message');
+                speechInMessages ? speechMessage(true, 'ChatGPT', message) : playSound('message');
             }.bind(this),
         )
         .catch((err) => {
@@ -7660,6 +7836,8 @@ function handlePeerStatus(config) {
         case 'privacy':
             setVideoPrivacyStatus(peer_id + '___video', status);
             break;
+        default:
+            break;
     }
 }
 
@@ -7917,6 +8095,8 @@ function handlePeerAction(config) {
         case 'ejectAll':
             handleKickedOut(config);
             break;
+        default:
+            break;
     }
 }
 
@@ -8086,6 +8266,8 @@ function disableAllPeers(element) {
                     userLog('toast', 'Hide everyone 👍');
                     emitPeersAction('hideVideo');
                     break;
+                default:
+                    break;
             }
         }
     });
@@ -8150,6 +8332,8 @@ function disablePeer(peer_id, element) {
                     userLog('toast', 'Hide video 👍');
                     emitPeerAction(peer_id, 'hideVideo');
                     break;
+                default:
+                    break;
             }
         }
     });
@@ -8203,6 +8387,8 @@ function handleRoomAction(config, emit = false) {
                 sendToServer('roomAction', thisConfig);
                 handleRoomStatus(thisConfig);
                 break;
+            default:
+                break;
         }
     } else {
         // data coming from signaling server
@@ -8234,6 +8420,8 @@ function handleRoomStatus(config) {
         case 'checkPassword':
             isRoomLocked = true;
             password == 'OK' ? joinToChannel() : handleRoomLocked();
+            break;
+        default:
             break;
     }
 }
@@ -8932,6 +9120,8 @@ function handleWhiteboardAction(config, logMe = true) {
             }
             break;
         //...
+        default:
+            break;
     }
 }
 
@@ -9499,6 +9689,8 @@ function handleVideoPlayer(config) {
             userLog('toast', `${icons.user} ${peer_name} \n close video player`);
             closeVideoUrlPlayer();
             break;
+        default:
+            break;
     }
 }
 
@@ -9835,6 +10027,7 @@ function userLog(type, message, timer = 3000) {
         // ......
         default:
             alert(message);
+            break;
     }
 }
 
