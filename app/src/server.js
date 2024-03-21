@@ -38,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.00
+ * @version 1.3.06
  *
  */
 
@@ -153,6 +153,8 @@ const { v4: uuidV4 } = require('uuid');
 const apiBasePath = '/api/v1'; // api endpoint path
 const api_docs = host + apiBasePath + '/docs'; // api docs
 const api_key_secret = process.env.API_KEY_SECRET || 'mirotalkp2p_default_secret';
+const apiDisabledString = process.env.API_DISABLED || '[]';
+const api_disabled = JSON.parse(apiDisabledString);
 
 // Ngrok config
 const ngrok = require('ngrok');
@@ -392,7 +394,7 @@ app.get('/join/', (req, res) => {
 
         if (token) {
             try {
-                const { username, password, presenter } = checkXSS(jwt.verify(token, jwtCfg.JWT_KEY));
+                const { username, password, presenter } = checkXSS(decryptPayload(token));
                 // Peer credentials
                 peerUsername = username;
                 peerPassword = password;
@@ -509,8 +511,43 @@ app.post(['/login'], (req, res) => {
     For api docs we use: https://swagger.io/
 */
 
+// request token endpoint
+app.post([`${apiBasePath}/token`], (req, res) => {
+    // Check if endpoint allowed
+    if (api_disabled.includes('token')) {
+        return res.status(403).json({
+            error: 'This endpoint has been disabled. Please contact the administrator for further information.',
+        });
+    }
+    // check if user was authorized for the api call
+    const { host, authorization } = req.headers;
+    const api = new ServerApi(host, authorization, api_key_secret);
+    if (!api.isAuthorized()) {
+        log.debug('MiroTalk get token - Unauthorized', {
+            header: req.headers,
+            body: req.body,
+        });
+        return res.status(403).json({ error: 'Unauthorized!' });
+    }
+    // Get Token
+    const token = api.getToken(req.body);
+    res.json({ token: token });
+    // log.debug the output if all done
+    log.debug('MiroTalk get token - Authorized', {
+        header: req.headers,
+        body: req.body,
+        token: token,
+    });
+});
+
 // API request meeting room endpoint
 app.post([`${apiBasePath}/meeting`], (req, res) => {
+    // Check if endpoint allowed
+    if (api_disabled.includes('meeting')) {
+        return res.status(403).json({
+            error: 'This endpoint has been disabled. Please contact the administrator for further information.',
+        });
+    }
     const { host, authorization } = req.headers;
     const api = new ServerApi(host, authorization, api_key_secret);
     if (!api.isAuthorized()) {
@@ -531,6 +568,12 @@ app.post([`${apiBasePath}/meeting`], (req, res) => {
 
 // API request join room endpoint
 app.post([`${apiBasePath}/join`], (req, res) => {
+    // Check if endpoint allowed
+    if (api_disabled.includes('join')) {
+        return res.status(403).json({
+            error: 'This endpoint has been disabled. Please contact the administrator for further information.',
+        });
+    }
     const { host, authorization } = req.headers;
     const api = new ServerApi(host, authorization, api_key_secret);
     if (!api.isAuthorized()) {
@@ -557,6 +600,11 @@ app.post([`${apiBasePath}/join`], (req, res) => {
 //Slack request meeting room endpoint
 app.post('/slack', (req, res) => {
     if (!slackEnabled) return res.end('`Under maintenance` - Please check back soon.');
+
+    // Check if endpoint allowed
+    if (api_disabled.includes('slack')) {
+        return res.end('`This endpoint has been disabled`. Please contact the administrator for further information.');
+    }
 
     log.debug('Slack', req.headers);
 
@@ -852,7 +900,7 @@ io.sockets.on('connect', async (socket) => {
             // Check JWT
             if (peer_token) {
                 try {
-                    const { username, password, presenter } = checkXSS(jwt.verify(peer_token, jwtCfg.JWT_KEY));
+                    const { username, password, presenter } = checkXSS(decryptPayload(peer_token));
 
                     const isPeerValid = isAuthPeer(username, password);
 
@@ -1501,6 +1549,29 @@ async function isPeerPresenter(room_id, peer_id, peer_name, peer_uuid) {
  */
 function isAuthPeer(username, password) {
     return hostCfg.users && hostCfg.users.some((user) => user.username === username && user.password === password);
+}
+
+/**
+ * Decode JWT Payload data
+ * @param {object} jwtToken
+ * @returns mixed
+ */
+function decryptPayload(jwtToken) {
+    if (!jwtToken) return null;
+
+    // Verify and decode the JWT token
+    const decodedToken = jwt.verify(jwtToken, jwtCfg.JWT_KEY);
+    if (!decodedToken || !decodedToken.data) {
+        throw new Error('Invalid token');
+    }
+
+    // Decrypt the payload using AES decryption
+    const decryptedPayload = CryptoJS.AES.decrypt(decodedToken.data, jwtCfg.JWT_KEY).toString(CryptoJS.enc.Utf8);
+
+    // Parse the decrypted payload as JSON
+    const payload = JSON.parse(decryptedPayload);
+
+    return payload;
 }
 
 /**

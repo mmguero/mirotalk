@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.00
+ * @version 1.3.06
  *
  */
 
@@ -177,6 +177,7 @@ const buttons = {
         showTabRoomPeerName: true,
         showTabRoomParticipants: true,
         showTabRoomSecurity: true,
+        showTabEmailInvitation: true,
         showMuteEveryoneBtn: true,
         showHideEveryoneBtn: true,
         showEjectEveryoneBtn: true,
@@ -398,6 +399,7 @@ const pinVideoPositionSelect = getId('pinVideoPositionSelect');
 const tabRoomPeerName = getId('tabRoomPeerName');
 const tabRoomParticipants = getId('tabRoomParticipants');
 const tabRoomSecurity = getId('tabRoomSecurity');
+const tabEmailInvitation = getId('tabEmailInvitation');
 const isPeerPresenter = getId('isPeerPresenter');
 const peersCount = getId('peersCount');
 const screenFpsDiv = getId('screenFpsDiv');
@@ -1287,18 +1289,22 @@ function roomIsBusy() {
 function handleRules(isPresenter) {
     console.log('14. Peer isPresenter: ' + isPresenter + ' Reconnected to signaling server: ' + isPeerReconnected);
     if (!isPresenter) {
+        buttons.main.showShareRoomBtn = false;
         buttons.settings.showMicOptionsBtn = false;
         buttons.settings.showTabRoomParticipants = false;
         buttons.settings.showTabRoomSecurity = false;
+        buttons.settings.showTabEmailInvitation = false;
         // buttons.remote.audioBtnClickAllowed = false;
         // buttons.remote.videoBtnClickAllowed = false;
         buttons.remote.showKickOutBtn = false;
         buttons.whiteboard.whiteboardLockBtn = false;
         //...
     } else {
+        buttons.main.showShareRoomBtn = true;
         buttons.settings.showMicOptionsBtn = true;
         buttons.settings.showTabRoomParticipants = true;
         buttons.settings.showTabRoomSecurity = true;
+        buttons.settings.showTabEmailInvitation = true;
         buttons.settings.showLockRoomBtn = !isRoomLocked;
         buttons.settings.showUnlockRoomBtn = isRoomLocked;
         buttons.remote.audioBtnClickAllowed = true;
@@ -1351,6 +1357,7 @@ function handleButtonsRule() {
     elemDisplay(tabRoomPeerName, buttons.settings.showTabRoomPeerName);
     elemDisplay(tabRoomParticipants, buttons.settings.showTabRoomParticipants);
     elemDisplay(tabRoomSecurity, buttons.settings.showTabRoomSecurity);
+    elemDisplay(tabEmailInvitation, buttons.settings.showTabEmailInvitation);
     // Whiteboard
     buttons.whiteboard.whiteboardLockBtn
         ? elemDisplay(whiteboardLockBtn, true)
@@ -1657,27 +1664,18 @@ async function changeInitCamera(deviceId) {
         })
         .catch(async (err) => {
             console.error('Error accessing init video device', err);
-            // If error is due to constraints, fallback to default constraints or no constraints or something else
-            if (
-                err.name === 'OverconstrainedError' ||
-                err.name === 'ConstraintNotSatisfiedError' ||
-                err.name === 'DOMException'
-            ) {
-                console.warn('Fallback to default or no constraints for init video');
-                try {
-                    const camStream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            deviceId: {
-                                exact: deviceId, // Specify the exact device ID you want to access
-                            },
+            console.warn('Fallback to default constraints');
+            try {
+                const camStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: {
+                            exact: deviceId, // Specify the exact device ID you want to access
                         },
-                    }); // Fallback to default constraints
-                    updateLocalVideoMediaStream(camStream);
-                } catch (fallbackErr) {
-                    console.error('Error accessing init video device with default constraints', fallbackErr);
-                    reloadBrowser(err);
-                }
-            } else {
+                    },
+                }); // Fallback to default constraints
+                updateLocalVideoMediaStream(camStream);
+            } catch (fallbackErr) {
+                console.error('Error accessing init video device with default constraints', fallbackErr);
                 reloadBrowser(err);
             }
         });
@@ -1737,21 +1735,18 @@ async function changeLocalCamera(deviceId) {
         })
         .catch(async (err) => {
             console.error('Error accessing local video device:', err);
-            // If error is due to constraints, fallback to default constraints or no constraints or something else
-            if (
-                err.name === 'OverconstrainedError' ||
-                err.name === 'ConstraintNotSatisfiedError' ||
-                err.name === 'DOMException'
-            ) {
-                console.warn('Fallback to default or no constraints for local video');
-                try {
-                    const camStream = await navigator.mediaDevices.getUserMedia({ video: true }); // Fallback to default constraints
-                    updateLocalVideoMediaStream(camStream);
-                } catch (fallbackErr) {
-                    console.error('Error accessing init video device with default constraints', fallbackErr);
-                    printError(err);
-                }
-            } else {
+            console.warn('Fallback to default constraints');
+            try {
+                const camStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: {
+                            exact: deviceId, // Specify the exact device ID you want to access
+                        },
+                    },
+                });
+                updateLocalVideoMediaStream(camStream);
+            } catch (fallbackErr) {
+                console.error('Error accessing init video device with default constraints', fallbackErr);
                 printError(err);
             }
         });
@@ -2689,24 +2684,16 @@ async function setupLocalVideoMedia() {
         await updateLocalVideoMediaStream(stream);
     } catch (err) {
         console.error('Error accessing video device', err);
-        // If error is due to constraints, fallback to default constraints or no constraints or something else
-        if (
-            err.name === 'OverconstrainedError' ||
-            err.name === 'ConstraintNotSatisfiedError' ||
-            err.name === 'DOMException'
-        ) {
-            console.warn('Fallback to default or no constraints for video');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true }); // Fallback to default constraints
-                await updateLocalVideoMediaStream(stream);
-            } catch (fallbackErr) {
-                console.error('Error accessing video device with default constraints', fallbackErr);
-                handleMediaError('video', fallbackErr);
-            }
-        } else {
-            handleMediaError('video', err);
+        console.warn('Fallback to default constraints');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            await updateLocalVideoMediaStream(stream);
+        } catch (fallbackErr) {
+            console.error('Error accessing video device with default constraints', fallbackErr);
+            handleMediaError('video', fallbackErr);
         }
     }
+
     /**
      * Update Local Media Stream
      * @param {MediaStream} stream
@@ -2754,10 +2741,13 @@ async function setupLocalAudioMedia() {
  * https://blog.addpipe.com/common-getusermedia-errors/
  *
  * @param {string} mediaType - 'video' or 'audio'
- * @param {Error} err - The error object
+ * @param {object} err - The error object
  */
 function handleMediaError(mediaType, err) {
-    let errMessage = '';
+    playSound('alert');
+    //
+    let errMessage = err;
+
     switch (err.name) {
         case 'NotFoundError':
         case 'DevicesNotFoundError':
@@ -2787,18 +2777,19 @@ function handleMediaError(mediaType, err) {
         <ul style="text-align: left">
             <li>Media type: ${mediaType}</li>
             <li>Error name: ${err.name}</li>
-            <li>Error message: ${errMessage}</li>
-            <li>Common: <a href="https://blog.addpipe.com/common-getusermedia-errors" target="_blank">Common getUserMedia errors</a></li>
+            <li>Error message: <p style="color: red">${errMessage}</p></li>
+            <li>Common: <a href="https://blog.addpipe.com/common-getusermedia-errors" target="_blank">getUserMedia errors</a></li>
         </ul>
     `;
-    msgHTML(null, images.forbidden, 'Access denied', $html, 'center');
+
+    msgHTML(null, images.forbidden, 'Access denied', $html, 'center', '/');
 
     /*
         it immediately stops the execution of the current function and jumps to the nearest enclosing try...catch block or, 
         if none exists, it interrupts the script execution and displays an error message in the console.
     */
     throw new Error(
-        `Access denied for ${mediaType} device [${err.name}]: ${errMessage} \ncheck the common getUserMedia errors: https://blog.addpipe.com/common-getusermedia-errors/`,
+        `Access denied for ${mediaType} device [${err.name}]: ${errMessage} check the common getUserMedia errors: https://blog.addpipe.com/common-getusermedia-errors/`,
     );
 }
 
@@ -5323,11 +5314,11 @@ async function getVideoConstraints(videoQuality) {
                     frameRate: { ideal: 60 },
                 }; // video cam constraints default
             } else {
-                // This will make the browser use hdVideo and 30fps.
+                // This will make the browser use as ideal hdVideo and 30fps.
                 constraints = {
-                    width: { exact: 1280 },
-                    height: { exact: 720 },
-                    frameRate: { exact: 30 },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 },
                 }; // on default as hdVideo
             }
             break;
@@ -10038,8 +10029,9 @@ function userLog(type, message, timer = 3000) {
  * @param {string} title message title
  * @param {string} html message in html format
  * @param {string} position message position
+ * @param {string} redirectURL if set on press ok will be redirected to the URL
  */
-function msgHTML(icon, imageUrl, title, html, position = 'center') {
+function msgHTML(icon, imageUrl, title, html, position = 'center', redirectURL = false) {
     Swal.fire({
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -10051,6 +10043,10 @@ function msgHTML(icon, imageUrl, title, html, position = 'center') {
         html: html,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+    }).then((result) => {
+        if (result.isConfirmed && redirectURL) {
+            openURL(redirectURL);
+        }
     });
 }
 
