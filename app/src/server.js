@@ -38,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.06
+ * @version 1.3.10
  *
  */
 
@@ -68,7 +68,9 @@ const isHttps = process.env.HTTPS == 'true';
 const port = process.env.PORT || 3000; // must be the same to client.js signalingServerPort
 const host = `http${isHttps ? 's' : ''}://${domain}:${port}`;
 
-let server, authHost;
+const authHost = new Host(); // Authenticated IP by Login
+
+let server;
 
 if (isHttps) {
     const fs = require('fs');
@@ -153,7 +155,7 @@ const { v4: uuidV4 } = require('uuid');
 const apiBasePath = '/api/v1'; // api endpoint path
 const api_docs = host + apiBasePath + '/docs'; // api docs
 const api_key_secret = process.env.API_KEY_SECRET || 'mirotalkp2p_default_secret';
-const apiDisabledString = process.env.API_DISABLED || '[]';
+const apiDisabledString = process.env.API_DISABLED || '["token", "meetings"]';
 const api_disabled = JSON.parse(apiDisabledString);
 
 // Ngrok config
@@ -336,16 +338,16 @@ app.use((err, req, res, next) => {
 // main page
 app.get(['/'], (req, res) => {
     if (hostCfg.protected) {
-        hostCfg.authenticated = false;
-        res.sendFile(views.login);
+        const ip = getIP(req);
+        if (allowedIP(ip)) {
+            res.sendFile(views.landing);
+        } else {
+            hostCfg.authenticated = false;
+            res.sendFile(views.login);
+        }
     } else {
         res.sendFile(views.landing);
     }
-});
-
-// mirotalk about
-app.get(['/about'], (req, res) => {
-    res.sendFile(views.about);
 });
 
 // set new room name and join
@@ -361,6 +363,17 @@ app.get(['/newcall'], (req, res) => {
     } else {
         res.sendFile(views.newCall);
     }
+});
+
+// Get stats endpoint
+app.get(['/stats'], (req, res) => {
+    //log.debug('Send stats', statsData);
+    res.send(statsData);
+});
+
+// mirotalk about
+app.get(['/about'], (req, res) => {
+    res.sendFile(views.about);
 });
 
 // privacy policy
@@ -394,7 +407,7 @@ app.get('/join/', (req, res) => {
 
         if (token) {
             try {
-                const { username, password, presenter } = checkXSS(decryptPayload(token));
+                const { username, password, presenter } = checkXSS(decodeToken(token));
                 // Peer credentials
                 peerUsername = username;
                 peerPassword = password;
@@ -413,7 +426,7 @@ app.get('/join/', (req, res) => {
         if (hostCfg.protected && isPeerValid && isPeerPresenter && !hostCfg.authenticated) {
             const ip = getIP(req);
             hostCfg.authenticated = true;
-            authHost = new Host(ip, true);
+            authHost.setAuthorizedIP(ip, true);
             log.debug('Direct Join user auth as host done', {
                 ip: ip,
                 username: peerUsername,
@@ -485,11 +498,13 @@ app.post(['/login'], (req, res) => {
     if (hostCfg.protected && isPeerValid && !hostCfg.authenticated) {
         const ip = getIP(req);
         hostCfg.authenticated = true;
-        authHost = new Host(ip, true);
-        log.debug('HOST LOGIN OK', { ip: ip, authorized: authHost.isAuthorized(ip) });
-        const token = jwt.sign({ username: username, password: password, presenter: true }, jwtCfg.JWT_KEY, {
-            expiresIn: jwtCfg.JWT_EXP,
+        authHost.setAuthorizedIP(ip, true);
+        log.debug('HOST LOGIN OK', {
+            ip: ip,
+            authorized: authHost.isAuthorizedIP(ip),
+            authorizedIps: authHost.getAuthorizedIPs(),
         });
+        const token = encodeToken({ username: username, password: password, presenter: true });
         return res.status(200).json({ message: token });
     }
 
@@ -497,9 +512,7 @@ app.post(['/login'], (req, res) => {
     if (isPeerValid) {
         log.debug('PEER LOGIN OK', { ip: ip, authorized: true });
         const isPresenter = roomPresenters && roomPresenters.includes(username).toString();
-        const token = jwt.sign({ username: username, password: password, presenter: isPresenter }, jwtCfg.JWT_KEY, {
-            expiresIn: jwtCfg.JWT_EXP,
-        });
+        const token = encodeToken({ username: username, password: password, presenter: isPresenter });
         return res.status(200).json({ message: token });
     } else {
         return res.status(401).json({ message: 'unauthorized' });
@@ -537,6 +550,35 @@ app.post([`${apiBasePath}/token`], (req, res) => {
         header: req.headers,
         body: req.body,
         token: token,
+    });
+});
+
+// request meetings list
+app.get([`${apiBasePath}/meetings`], (req, res) => {
+    // Check if endpoint allowed
+    if (api_disabled.includes('meetings')) {
+        return res.status(403).json({
+            error: 'This endpoint has been disabled. Please contact the administrator for further information.',
+        });
+    }
+    // check if user was authorized for the api call
+    const { host, authorization } = req.headers;
+    const api = new ServerApi(host, authorization, api_key_secret);
+    if (!api.isAuthorized()) {
+        log.debug('MiroTalk get meetings - Unauthorized', {
+            header: req.headers,
+            body: req.body,
+        });
+        return res.status(403).json({ error: 'Unauthorized!' });
+    }
+    // Get meetings
+    const meetings = api.getMeetings(peers);
+    res.json({ meetings: meetings });
+    // log.debug the output if all done
+    log.debug('MiroTalk get meetings - Authorized', {
+        header: req.headers,
+        body: req.body,
+        meetings: meetings,
     });
 });
 
@@ -879,6 +921,7 @@ io.sockets.on('connect', async (socket) => {
             peer_hand_status,
             peer_rec_status,
             peer_privacy_status,
+            peer_info,
         } = config;
 
         if (channel in socket.channels) {
@@ -900,7 +943,7 @@ io.sockets.on('connect', async (socket) => {
             // Check JWT
             if (peer_token) {
                 try {
-                    const { username, password, presenter } = checkXSS(decryptPayload(peer_token));
+                    const { username, password, presenter } = checkXSS(decodeToken(peer_token));
 
                     const isPeerValid = isAuthPeer(username, password);
 
@@ -957,6 +1000,9 @@ io.sockets.on('connect', async (socket) => {
         // Check if peer is presenter, if token check the presenter key
         const isPresenter = peer_token ? is_presenter : await isPeerPresenter(channel, socket.id, peer_name, peer_uuid);
 
+        // Some peer info data
+        const { osName, osVersion, browserName, browserVersion } = peer_info;
+
         // collect peers info grp by channels
         peers[channel][socket.id] = {
             peer_name: peer_name,
@@ -969,6 +1015,8 @@ io.sockets.on('connect', async (socket) => {
             peer_hand_status: peer_hand_status,
             peer_rec_status: peer_rec_status,
             peer_privacy_status: peer_privacy_status,
+            os: osName ? `${osName} ${osVersion}` : '',
+            browser: browserName ? `${browserName} ${browserVersion}` : '',
         };
 
         const activeRooms = getActiveRooms();
@@ -1552,11 +1600,40 @@ function isAuthPeer(username, password) {
 }
 
 /**
+ * Encode JWT token payload
+ * @param {object} token
+ * @returns
+ */
+function encodeToken(token) {
+    if (!token) return '';
+
+    const { username = 'username', password = 'password', presenter = false, expire } = token;
+
+    const expireValue = expire || jwtCfg.JWT_EXP;
+
+    // Constructing payload
+    const payload = {
+        username: String(username),
+        password: String(password),
+        presenter: String(presenter),
+    };
+
+    // Encrypt payload using AES encryption
+    const payloadString = JSON.stringify(payload);
+    const encryptedPayload = CryptoJS.AES.encrypt(payloadString, jwtCfg.JWT_KEY).toString();
+
+    // Constructing JWT token
+    const jwtToken = jwt.sign({ data: encryptedPayload }, jwtCfg.JWT_KEY, { expiresIn: expireValue });
+
+    return jwtToken;
+}
+
+/**
  * Decode JWT Payload data
  * @param {object} jwtToken
  * @returns mixed
  */
-function decryptPayload(jwtToken) {
+function decodeToken(jwtToken) {
     if (!jwtToken) return null;
 
     // Verify and decode the JWT token
@@ -1609,7 +1686,9 @@ function getIP(req) {
  * @returns boolean
  */
 function allowedIP(ip) {
-    return authHost != null && authHost.isAuthorized(ip);
+    const allowedIPs = authHost.getAuthorizedIPs();
+    log.info('[allowedIP] - Allowed IPs', { ip: ip, allowedIPs: allowedIPs });
+    return authHost != null && authHost.isAuthorizedIP(ip);
 }
 
 /**
@@ -1619,11 +1698,14 @@ function allowedIP(ip) {
 function removeIP(socket) {
     if (hostCfg.protected) {
         const ip = socket.handshake.address;
-        log.debug('Host protected check ip', { ip: ip });
+        log.debug('[removeIP] - Host protected check ip', { ip: ip });
         if (ip && allowedIP(ip)) {
             authHost.deleteIP(ip);
             hostCfg.authenticated = false;
-            log.debug('Remove IP from auth', { ip: ip });
+            log.info('[removeIP] - Remove IP from auth', {
+                ip: ip,
+                authorizedIps: authHost.getAuthorizedIPs(),
+            });
         }
     }
 }

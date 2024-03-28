@@ -19,6 +19,18 @@ module.exports = class ServerApi {
         return true;
     }
 
+    getMeetings(peers) {
+        const meetings = {};
+        for (const room_id in peers) {
+            const meeting = peers[room_id];
+            if (!meetings) {
+                meetings = {};
+            }
+            meetings[room_id] = meeting;
+        }
+        return meetings;
+    }
+
     getMeetingURL() {
         return this.getProtocol() + this._host + '/join/' + uuidV4();
     }
@@ -50,20 +62,6 @@ module.exports = class ServerApi {
             jwtToken;
 
         return joinURL;
-    }
-
-    getToken(token) {
-        if (!token) return '';
-
-        const { username = 'username', password = 'password', presenter = false, expire } = token;
-        const expireValue = expire || JWT_EXP;
-        const payload = {
-            username: String(username),
-            password: String(password),
-            presenter: String(presenter),
-        };
-        const jwtToken = jwt.sign(payload, JWT_KEY, { expiresIn: expireValue });
-        return jwtToken;
     }
 
     getToken(token) {
