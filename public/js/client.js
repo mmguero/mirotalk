@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.10
+ * @version 1.3.14
  *
  */
 
@@ -1599,7 +1599,6 @@ async function loadLocalStorage() {
     if (useVideo && initVideoSelect.value) {
         await changeInitCamera(initVideoSelect.value);
         await handleLocalCameraMirror();
-        await checkInitConfig();
     }
     // Refresh audio
     if (useAudio && audioInputSelect.value) {
@@ -1607,6 +1606,9 @@ async function loadLocalStorage() {
     }
     // Refresh speaker
     if (audioOutputSelect.value) await changeAudioDestination();
+
+    // Check init audio/video
+    await checkInitConfig();
 }
 
 /**
@@ -1657,10 +1659,10 @@ async function changeInitCamera(deviceId) {
     const videoConstraints = await getVideoConstraints('default');
     videoConstraints['deviceId'] = { exact: deviceId };
 
-    navigator.mediaDevices
+    await navigator.mediaDevices
         .getUserMedia({ video: videoConstraints })
         .then((camStream) => {
-            updateLocalVideoMediaStream(camStream);
+            updateInitLocalVideoMediaStream(camStream);
         })
         .catch(async (err) => {
             console.error('Error accessing init video device', err);
@@ -1673,7 +1675,7 @@ async function changeInitCamera(deviceId) {
                         },
                     },
                 }); // Fallback to default constraints
-                updateLocalVideoMediaStream(camStream);
+                updateInitLocalVideoMediaStream(camStream);
             } catch (fallbackErr) {
                 console.error('Error accessing init video device with default constraints', fallbackErr);
                 reloadBrowser(err);
@@ -1681,10 +1683,10 @@ async function changeInitCamera(deviceId) {
         });
 
     /**
-     * Update Local Video Stream
+     * Update Init/Local Video Stream
      * @param {MediaStream} camStream
      */
-    function updateLocalVideoMediaStream(camStream) {
+    function updateInitLocalVideoMediaStream(camStream) {
         if (camStream) {
             // We going to update init video stream
             initVideo.srcObject = camStream;
@@ -1728,7 +1730,7 @@ async function changeLocalCamera(deviceId) {
     videoConstraints['deviceId'] = { exact: deviceId };
     console.log('videoConstraints', videoConstraints);
 
-    navigator.mediaDevices
+    await navigator.mediaDevices
         .getUserMedia({ video: videoConstraints })
         .then((camStream) => {
             updateLocalVideoMediaStream(camStream);
@@ -1789,7 +1791,7 @@ async function changeLocalMicrophone(deviceId) {
     audioConstraints['deviceId'] = { exact: deviceId };
     console.log('audioConstraints', audioConstraints);
 
-    navigator.mediaDevices
+    await navigator.mediaDevices
         .getUserMedia({ audio: audioConstraints })
         .then((micStream) => {
             myAudio.srcObject = micStream;
@@ -1925,9 +1927,6 @@ async function handleAddPeer(config) {
     if (!peer_video) {
         await loadRemoteMediaStream(new MediaStream(), peers, peer_id, 'video');
     }
-
-    // Send my audio off...
-    !myAudioStatus && handleAudio(audioBtn, false, false);
 
     await wbUpdate();
     playSound('addPeer');
@@ -2981,7 +2980,7 @@ async function loadLocalMedia(stream, kind) {
 
             handleVideoPinUnpin(myLocalMedia.id, myVideoPinBtn.id, myVideoWrap.id, myLocalMedia.id);
 
-            buttons.local.showVideoPipBtn && handlePictureInPicture(myVideoPiPBtn.id, myLocalMedia.id);
+            buttons.local.showVideoPipBtn && handlePictureInPicture(myVideoPiPBtn.id, myLocalMedia.id, myPeerId);
 
             ZOOM_IN_OUT_ENABLED && handleVideoZoomInOut(myVideoZoomInBtn.id, myVideoZoomOutBtn.id, myLocalMedia.id);
 
@@ -3296,7 +3295,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             handleVideoToggleMirror(remoteMedia.id, remoteVideoMirrorBtn.id);
 
             // handle vide picture in picture
-            buttons.remote.showVideoPipBtn && handlePictureInPicture(remoteVideoPiPBtn.id, remoteMedia.id);
+            buttons.remote.showVideoPipBtn && handlePictureInPicture(remoteVideoPiPBtn.id, remoteMedia.id, peer_id);
 
             // handle video zoomIn/Out
             ZOOM_IN_OUT_ENABLED &&
@@ -3992,14 +3991,23 @@ function handleVideoZoomInOut(zoomInBtnId, zoomOutBtnId, mediaId, peerId = null)
  *
  * @param {string} btnId
  * @param {string} videoId
+ * @param {string} peerId
  */
-function handlePictureInPicture(btnId, videoId) {
+function handlePictureInPicture(btnId, videoId, peerId) {
     const btnPiP = getId(btnId);
     const video = getId(videoId);
+    const myVideoStatus = getId('myVideoStatusIcon');
+    const remoteVideoStatus = getId(peerId + '_videoStatus');
     btnPiP.addEventListener('click', () => {
         if (video.pictureInPictureElement) {
             video.exitPictureInPicture();
         } else if (document.pictureInPictureEnabled) {
+            if (
+                (myVideoStatus && myVideoStatus.className === className.videoOff) ||
+                (remoteVideoStatus && remoteVideoStatus.className === className.videoOff)
+            ) {
+                return msgPopup('warning', 'Prohibit Picture-in-Picture (PIP) on disabled video', 'top-end', 6000);
+            }
             video.requestPictureInPicture().catch((error) => {
                 console.error('Failed to enter Picture-in-Picture mode:', error);
                 msgPopup('warning', error.message, 'top-end', 6000);
