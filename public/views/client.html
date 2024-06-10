@@ -3,9 +3,9 @@
     <head>
         <!-- Title and Icon -->
 
-        <title>MiroTalk WebRTC Video call, Chat Room & Screen Sharing.</title>
-        <link rel="shortcut icon" href="../images/logo.svg" />
-        <link rel="apple-touch-icon" href="../images/logo.svg" />
+        <title id="clientTitle">MiroTalk WebRTC Video call, Chat Room & Screen Sharing.</title>
+        <link id="icon" rel="shortcut icon" href="../images/logo.svg" />
+        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo.svg" />
 
         <!-- Meta Information -->
 
@@ -65,7 +65,7 @@
 
     </head>
 
-    <body onload="initClientPeer()">
+    <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
 
         <!-- just 4SEO Optimization -->
@@ -78,7 +78,7 @@
 
         <div id="loadingDiv" class="center pulsate">
             <h1>Loading</h1>
-            <img src="../images/loading.gif" style="width: 400px" />
+            <img class="loading-img" src="../images/loading.gif" />
             <pre>
 Please allow the camera or microphone
 access to use this app.
@@ -96,18 +96,13 @@ access to use this app.
                     autoplay=""
                     class="mirror"
                     poster="../images/loader.gif"
-                    style="object-fit: contain"
                 ></video>
             </div>
             <div class="initComands">
-                <button id="initVideoBtn" class="fas fa-video" onclick="handleVideo(event, true)"></button>
-                <button id="initAudioBtn" class="fas fa-microphone" onclick="handleAudio(event, true)"></button>
+                <button id="initVideoBtn" class="fas fa-video"></button>
+                <button id="initAudioBtn" class="fas fa-microphone"></button>
                 <button id="initScreenShareBtn" class="fas fa-desktop"></button>
-                <button
-                    id="initVideoMirrorBtn"
-                    class="fas fa-arrow-right-arrow-left"
-                    onclick="toggleInitVideoMirror()"
-                ></button>
+                <button id="initVideoMirrorBtn" class="fas fa-arrow-right-arrow-left"></button>
                 <select id="initVideoSelect" class="form-select text-light bg-dark"></select>
                 <select id="initMicrophoneSelect" class="form-select text-light bg-dark"></select>
                 <select id="initSpeakerSelect" class="form-select text-light bg-dark"></select>
@@ -161,16 +156,16 @@ access to use this app.
                         <button id="msgerClose" class="fas fa-times"></button>
                         <button id="msgerMaxBtn" class="fas fa-expand"></button>
                         <button id="msgerMinBtn" class="fas fa-compress"></button>
-                        <div id="msgerShowChatOnMsgDiv" style="margin-left: 10px" class="title">
+                        <div id="msgerShowChatOnMsgDiv" class="title ml-10">
                             <i class="fa-solid fa-eye"></i>
-                            <label style="margin-left: 10px" class="switch">
+                            <label class="switch ml-10">
                                 <input id="msgerShowChatOnMsg" type="checkbox" checked />
                                 <span class="slider round"></span>
                             </label>
                         </div>
                         <div id="msgerSpeechMsgDiv" class="title">
-                            <i style="margin-left: 10px" class="fas fa-volume-high"></i>
-                            <label style="margin-left: 10px" class="switch">
+                            <i class="fas fa-volume-high ml-10"></i>
+                            <label class="switch ml-10">
                                 <input id="msgerSpeechMsg" type="checkbox" />
                                 <span class="slider round"></span>
                             </label>
@@ -232,7 +227,6 @@ access to use this app.
                                 placeholder=" 🔍 Search peer by name..."
                                 maxlength="32"
                                 name="search"
-                                onkeyup="searchPeer()"
                             />
                         </div>
                         <br />
@@ -324,9 +318,7 @@ access to use this app.
                                 <td>
                                     <div class="title">
                                         <i class="fa-solid fa-person-shelter"></i>
-                                        <p id="myRoomId" style="cursor: pointer">
-                                            xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-                                        </p>
+                                        <p id="myRoomId" class="cp">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</p>
                                     </div>
                                 </td>
                             </tr>
@@ -645,14 +637,14 @@ access to use this app.
                             </table>
                             <hr class="hr" />
                         </div>
-                        <div style="display: table-row">
+                        <div class="trow">
                             <span class="clw notranslate" id="recordingTime"></span>
                             <br />
-                            <button id="pauseRecBtn" class="buttons" style="display: none">
+                            <button id="pauseRecBtn" class="buttons">
                                 <i class="far fa-pause-circle"></i>
                                 <p>Pause recording</p>
                             </button>
-                            <button id="resumeRecBtn" class="buttons" style="display: none">
+                            <button id="resumeRecBtn" class="buttons">
                                 <i class="far fa-play-circle"></i>
                                 <p>Resume recording</p>
                             </button>
@@ -938,7 +930,7 @@ access to use this app.
             </div> -->
         </div>
 
-        <div id="audioMediaContainer" style="display: none">
+        <div id="audioMediaContainer">
             <!-- <div>
                 <audio></audio>
             </div>-->
@@ -989,6 +981,8 @@ access to use this app.
         <script defer src="../js/detectSpeaking.js"></script>
         <script defer src="../js/speechRecognition.js"></script>
         <script defer src="../js/videoGrid.js"></script>
+        <script defer src="../js/brand.js"></script>
+        <script defer src="../js/translate.js"></script>
 
         <!-- end of Js scripts -->
 
@@ -996,19 +990,5 @@ access to use this app.
 		the <video> and <audio> tags are all added and removed dynamically
 		in 'onAddStream', 'setupLocalMedia', and 'removePeer'/'disconnect'
 		-->
-
-        <!-- 
-            Start Google Translate 
-            https://www.w3schools.com/howto/howto_google_translate.asp
-        -->
-
-        <script>
-            function googleTranslateElementInit() {
-                new google.translate.TranslateElement({ pageLanguage: 'en' }, 'google_translate_element');
-            }
-        </script>
-        <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
-        <!-- End Google Translate -->
     </body>
 </html>

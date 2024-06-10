@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.23
+ * @version 1.3.34
  *
  */
 
@@ -336,6 +336,7 @@ const msgerCP = getId('msgerCP');
 const msgerCPHeader = getId('msgerCPHeader');
 const msgerCPCloseBtn = getId('msgerCPCloseBtn');
 const msgerCPList = getId('msgerCPList');
+const searchPeerBarName = getId('searchPeerBarName');
 
 // Caption section
 const captionDraggable = getId('captionDraggable');
@@ -1079,6 +1080,13 @@ function countPeerConnections() {
 }
 
 /**
+ * Get Started...
+ */
+document.addEventListener('DOMContentLoaded', function () {
+    initClientPeer();
+});
+
+/**
  * On body load Get started
  */
 function initClientPeer() {
@@ -1393,6 +1401,18 @@ async function whoAreYou() {
     }
 
     playSound('newMessage');
+
+    // init buttons click events
+
+    initVideoBtn.onclick = async (e) => {
+        await handleVideo(e, true);
+    };
+    initAudioBtn.onclick = (e) => {
+        handleAudio(e, true);
+    };
+    initVideoMirrorBtn.onclick = (e) => {
+        toggleInitVideoMirror();
+    };
 
     await loadLocalStorage();
 
@@ -4295,6 +4315,11 @@ function setFullScreenBtn() {
 function setChatRoomBtn() {
     // adapt chat room size for mobile
     setChatRoomAndCaptionForMobile();
+
+    // Search peer by name
+    searchPeerBarName.addEventListener('keyup', () => {
+        searchPeer();
+    });
 
     // open hide chat room
     chatRoomBtn.addEventListener('click', (e) => {
