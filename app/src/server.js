@@ -39,7 +39,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.34
+ * @version 1.3.37
  *
  */
 
@@ -536,7 +536,7 @@ app.get('/join/', async (req, res) => {
 
         const allowRoomAccess = isAllowedRoomAccess('/join/params', req, hostCfg, authHost, peers, room);
 
-        if (!allowRoomAccess) {
+        if (!allowRoomAccess && !token) {
             return res.status(401).json({ message: 'Direct Room Join Unauthorized' });
         }
 
