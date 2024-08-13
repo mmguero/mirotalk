@@ -9,7 +9,6 @@ http://patorjk.com/software/taag/#p=display&f=ANSI%20Regular&t=Server
 
 dependencies: {
     @sentry/node            : https://www.npmjs.com/package/@sentry/node
-    @sentry/integrations    : https://www.npmjs.com/package/@sentry/integrations
     axios                   : https://www.npmjs.com/package/axios
     body-parser             : https://www.npmjs.com/package/body-parser
     compression             : https://www.npmjs.com/package/compression
@@ -39,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.37
+ * @version 1.3.67
  *
  */
 
@@ -221,7 +220,6 @@ const redirectURL = process.env.REDIRECT_URL || '/newcall';
 
 // Sentry config
 const Sentry = require('@sentry/node');
-const { CaptureConsole } = require('@sentry/integrations');
 const sentryEnabled = getEnvBoolean(process.env.SENTRY_ENABLED);
 const sentryDSN = process.env.SENTRY_DSN;
 const sentryTracesSampleRate = process.env.SENTRY_TRACES_SAMPLE_RATE;
@@ -238,9 +236,8 @@ if (sentryEnabled) {
     Sentry.init({
         dsn: sentryDSN,
         integrations: [
-            new CaptureConsole({
-                // array of methods that should be captured
-                // defaults to ['log', 'info', 'warn', 'error', 'debug', 'assert']
+            Sentry.captureConsoleIntegration({
+                // ['log', 'info', 'warn', 'error', 'debug', 'assert']
                 levels: ['warn', 'error'],
             }),
         ],
@@ -1507,6 +1504,13 @@ io.sockets.on('connect', async (socket) => {
 
         log.debug('[' + socket.id + '] Peer [' + peer_name + '] send fileAbort to room_id [' + room_id + ']');
         await sendToRoom(room_id, socket.id, 'fileAbort');
+    });
+
+    socket.on('fileReceiveAbort', async (cfg) => {
+        const config = checkXSS(cfg);
+        const { room_id, peer_name } = config;
+        log.debug('[' + socket.id + '] Peer [' + peer_name + '] send fileReceiveAbort to room_id [' + room_id + ']');
+        await sendToRoom(room_id, socket.id, 'fileReceiveAbort', config);
     });
 
     /**

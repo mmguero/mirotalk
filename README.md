@@ -2,7 +2,7 @@
 
 <br />
 
-<p align="center">Free WebRTC - P2P - Simple, Secure, Fast Real-Time Video Conferences with support for up to 4k resolution and 60fps. It's compatible with all major browsers and platforms.</p>
+<p align="center">Free WebRTC - P2P - Simple, Secure, Fast Real-Time Video Conferences with support for up to 8k resolution and 60fps. It's compatible with all major browsers and platforms.</p>
 
 <hr />
 
@@ -125,12 +125,12 @@ When [host protection](https://docs.mirotalk.com/mirotalk-p2p/host-protection/) 
 
 </details>
 
-<details>
+<details open>
 <summary>Embed a meeting</summary>
 
 <br/>
 
-To embed a meeting in `your service or app` using an iframe, use the following code:
+To embed a meeting within `your service or app` using an iframe, you can use the following code:
 
 ```html
 <iframe

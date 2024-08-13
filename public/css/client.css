@@ -39,8 +39,8 @@
 
     --tab-btn-active: rgb(30 29 29);
 
-    --btn-bar-bg-color: #fff;
-    --btn-bar-color: #000;
+    --btn-bar-bg-color: #ffffff;
+    --btn-bar-color: #000000;
 
     /* left buttons bar vertical default */
     --btns-top: 50%;
@@ -49,6 +49,16 @@
     --btns-margin-left: 0px;
     --btns-width: 40px;
     --btns-flex-direction: column;
+    --btns-bg-color: rgba(0, 0, 0, 0.7);
+
+    /* bottom buttons bar horizontal default */
+    --bottom-btns-top: auto;
+    --bottom-btns-left: 50%;
+    --bottom-btns-bottom: 0;
+    --bottom-btns-translate-X: -50%;
+    --bottom-btns-translate-Y: 0%;
+    --bottom-btns-margin-bottom: 18px;
+    --bottom-btns-flex-direction: row;
 
     /* left buttons bar horizontal
     --btns-top: 95%;
@@ -190,7 +200,7 @@ body {
     width: 100%;
     margin-top: 15px;
     padding: 10px;
-    background: var(--select-bg);
+    background: var(--select-bg) !important;
     color: white;
     border: var(--border);
     border-radius: 5px;
@@ -211,9 +221,7 @@ body {
 }
 
 .init-user button:hover {
-    background-color: rgb(35, 35, 35);
-    color: white;
-    transform: scale(1);
+    background: var(--body-bg);
 }
 
 /*--------------------------------------------------------------
@@ -225,7 +233,6 @@ body {
     display: none;
     position: fixed;
     padding: 10px;
-
     top: var(--btns-top);
     right: var(--btns-right);
     left: var(--btns-left);
@@ -234,45 +241,100 @@ body {
     flex-direction: var(--btns-flex-direction);
 
     justify-content: center;
-    grid-gap: 0.4rem;
+    grid-gap: 0.5rem;
 
     -webkit-transform: translate(0%, -50%);
     -ms-transform: translate(0%, -50%);
     transform: translate(0%, -50%);
 
     /* background: var(--body-bg); */
-    box-shadow: 0px 8px 16px 0px rgb(33 33 33);
-    border: var(--border);
+    /* box-shadow: 0px 8px 16px 0px rgb(33 33 33);*/
+
     border-radius: 10px;
+    border: var(--border) !important;
+    box-shadow: var(--box-shadow);
     overflow: hidden;
 }
 
 #buttonsBar button {
-    padding: 4px;
-    border: none;
-    background: var(--btn-bar-bg-color);
+    padding: 5px !important;
+    font-size: 1.4rem;
+
+    /* 
+    Use this to maintain the theme colors of buttons while making them less visible during video playback.
+    color: var(--btn-bar-bg-color);
+    background: var(--btns-bg-color); 
+    */
+
     color: var(--btn-bar-color);
-    font-size: 1.5rem;
+    background: var(--btn-bar-bg-color);
+
+    border: none !important;
     border-radius: 5px;
-    transition: all 0.3s ease-in-out;
 }
 
 #buttonsBar button:hover {
-    color: var(--hover-color);
-    transform: var(--btns-hover-scale);
+    /* color: white;
+    background: var(--body-bg); */
+    transform: translateY(-3px);
 }
 
 #buttonsBar button:focus {
     outline: none;
 }
 
-#buttonsBar #leaveRoomBtn {
-    color: #ff2d00;
-}
-
+.fa-phone-slash,
 .fa-microphone-slash,
 .fa-video-slash {
-    color: #e74c3c !important;
+    color: red !important;
+}
+
+/*--------------------------------------------------------------
+# Bottom buttons
+--------------------------------------------------------------*/
+
+#bottomButtons {
+    z-index: 10;
+    display: none;
+    position: fixed;
+    padding: 10px;
+    top: var(--bottom-btns-top);
+    left: var(--bottom-btns-left);
+    bottom: var(--bottom-btns-bottom);
+    transform: translate(var(--bottom-btns-translate-X), var(--bottom-btns-translate-Y));
+    flex-direction: var(--bottom-btns-flex-direction);
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: var(--bottom-btns-margin-bottom);
+    border-radius: 10px;
+    border: none !important;
+    box-shadow: var(--box-shadow);
+}
+
+#bottomButtons button {
+    width: 48px;
+    padding: 10px;
+    font-size: 1.5rem;
+
+    /* 
+    Use this to maintain the theme colors of buttons while making them less visible during video playback.
+    color: var(--btn-bar-bg-color);
+    background: var(--btns-bg-color); 
+    */
+
+    color: var(--btn-bar-color);
+    background: var(--btn-bar-bg-color);
+
+    border: none !important;
+    border-radius: 5px;
+    transition: all 0.3s ease-in-out;
+}
+
+#bottomButtons button:hover {
+    /* color: white;
+    background: var(--body-bg); */
+    transform: var(--btns-hover-scale);
 }
 
 /*--------------------------------------------------------------
@@ -325,7 +387,7 @@ body {
     /* border: var(--border); */
     border: none;
     font-size: 1.1rem;
-    background: rgba(0, 0, 0, 0.2);
+    background: transparent;
     color: #fff;
     border-radius: 5px;
     transition: all 0.3s ease-in-out;
@@ -334,9 +396,7 @@ body {
 
 .caption-header-title button:hover,
 .caption-header-options button:hover {
-    color: var(--hover-color);
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    background: var(--body-bg);
 }
 
 .caption-chat {
@@ -369,6 +429,7 @@ body {
 
 .caption-inputarea select {
     margin: 0 5px;
+    background: var(--select-bg) !important;
     cursor: pointer;
 }
 
@@ -395,9 +456,7 @@ body {
 
 #speechRecognitionStart:hover,
 #speechRecognitionStop:hover {
-    color: var(--hover-color);
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    background: var(--body-bg);
 }
 
 /*--------------------------------------------------------------
@@ -462,7 +521,7 @@ body {
     /* border: var(--border); */
     border: none;
     font-size: 1.1rem;
-    background: rgba(0, 0, 0, 0.2);
+    background: transparent;
     color: #fff;
     border-radius: 5px;
     transition: all 0.3s ease-in-out;
@@ -471,9 +530,7 @@ body {
 
 .msger-header-title button:hover,
 .msger-header-options button:hover {
-    color: var(--hover-color);
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    background: var(--body-bg);
 }
 
 #msgerMaxBtn,
@@ -615,6 +672,10 @@ body {
     hyphens: auto;
 }
 
+.msg-text button {
+    padding: 5px;
+}
+
 .msg-text iframe {
     width: 100%;
 }
@@ -638,8 +699,20 @@ a:hover {
     color: #fff;
 }
 
+button {
+    padding: 10px 20px;
+    cursor: pointer;
+    transition:
+        color 0.3s ease,
+        background-color 0.3s ease,
+        border-color 0.3s ease,
+        transform 0.3s ease;
+    outline: none;
+}
+
 button:hover {
-    transform: var(--btns-hover-scale);
+    /* color: white !important;
+    background: var(--body-bg); */
 }
 
 /*--------------------------------------------------------------
@@ -697,14 +770,12 @@ button:hover {
     border-radius: 5px;
     font-size: 1rem;
     color: #fff;
-    background: var(--msger-bg);
+    background: transparent;
     transition: background 0.23s;
 }
 
 .msger-input-buttons button:hover {
-    color: var(--hover-color);
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    background: var(--body-bg);
 }
 
 .msger-input-buttons input {
@@ -789,15 +860,27 @@ button:hover {
     position: absolute;
     bottom: 105px;
     left: 10px;
+    border: var(--border);
+    border-radius: 5px;
+    --rgb-background: var(--body-bg);
+    --color-border-over: var(--body-bg);
+    --font-family: 'Comfortaa';
 }
 
 .roomEmoji {
     z-index: 18;
     position: absolute;
     display: none;
+    background: var(--body-bg);
+    border: var(--border);
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    --rgb-background: var(--body-bg);
+    --color-border-over: var(--body-bg);
+    --font-family: 'Comfortaa';
 }
 
 .userEmoji {
@@ -805,24 +888,31 @@ button:hover {
     position: absolute;
     left: 80px;
     bottom: 60px;
+    border-radius: 10px;
 }
 
 .emojiPickerHeader {
     display: flex;
     justify-content: flex-start;
-    background: #151616;
-    border-radius: 10px;
-    padding: 10px;
+    padding: 5px;
     color: #fff;
+    background: var(--body-bg);
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
     cursor: move;
 }
 
 #closeEmojiPickerContainer {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     color: #ffffff;
     background: transparent;
     border-radius: 10px;
     border: none;
+    transition: background 0.23s;
+}
+
+#closeEmojiPickerContainer:hover {
+    background: var(--body-bg);
 }
 
 /*--------------------------------------------------------------
@@ -833,8 +923,8 @@ button:hover {
     padding: 10px;
     text-align: center;
     color: white;
-    background: black;
-    border: none;
+    background: var(--body-bg);
+    border: var(--border);
     border-radius: 5px;
 }
 
@@ -859,7 +949,7 @@ button:hover {
     margin: auto;
     padding: 10px;
     width: 50%;
-    min-height: 480px;
+    min-height: 560px !important;
     background: var(--body-bg);
     box-shadow: var(--box-shadow);
     border: var(--border);
@@ -923,7 +1013,7 @@ button:hover {
 }
 
 #mySettingsCloseBtn {
-    font-size: 1.4rem;
+    font-size: 1.2rem;
     color: #fff;
     border: none;
     border-radius: 5px;
@@ -933,9 +1023,7 @@ button:hover {
 }
 
 #mySettingsCloseBtn:hover {
-    color: var(--hover-color);
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    background: var(--body-bg);
 }
 
 .form-check-input {
@@ -984,15 +1072,33 @@ button:hover {
     width: auto !important;
     border: var(--border);
     border-radius: 5px;
-    background-color: rgba(0, 0, 0, 0.2);
+    background: var(--selctt-bg);
     outline: none;
     cursor: pointer;
     transition: 0.3s;
 }
+
 .buttons:hover {
-    background-color: var(--select-bg) !important;
-    transform: scale(0.95);
-    transition: all 0.3s ease-in-out;
+    background-color: var(--body-bg) !important;
+    transform: translateY(-3px) !important;
+}
+
+.extra-info-container {
+    min-height: 175px;
+    max-height: 175px;
+    margin-top: 15px;
+    border-radius: 5px;
+    background: var(--body-bg);
+    overflow-x: none;
+    overflow-y: auto;
+}
+
+#extraInfo {
+    padding: 10px;
+    font-size: 12px;
+    color: #fff;
+    /* background: var(--select-bg); */
+    border-radius: 10px;
 }
 
 /*--------------------------------------------------------------
@@ -1034,6 +1140,15 @@ button:hover {
     background-color: transparent;
 }
 
+#myPeerNameSetBtn:hover,
+#roomSendEmailBtn:hover,
+#lockRoomBtn:hover,
+#unlockRoomBtn:hover {
+    background: var(--body-bg);
+    transform: translateY(-3px);
+    transition: all 0.3s ease-in-out;
+}
+
 #recImage {
     width: 128px;
     height: auto;
@@ -1049,20 +1164,11 @@ button:hover {
     transition: all 0.3s ease-in-out;
 }
 
-#myPeerNameSetBtn:hover,
-#roomSendEmailBtn:hover,
-#lockRoomBtn:hover,
-#unlockRoomBtn:hover {
-    color: var(--hover-color);
-    transform: scale(0.95);
-    transition: all 0.3s ease-in-out;
-}
-
 #muteEveryoneBtn:hover,
 #hideEveryoneBtn:hover,
 #ejectEveryoneBtn:hover {
-    color: #ff2d00;
-    transform: scale(0.95);
+    color: red;
+    transform: translateY(-3px);
     transition: all 0.3s ease-in-out;
 }
 
@@ -1116,15 +1222,11 @@ th {
 .tabActions {
     position: relative;
     width: 65%;
-    background-color: var(--body-bg);
-    min-height: 500px;
-    max-height: 500px;
-    overflow-x: none;
-    overflow-y: auto;
 }
 
 @media screen and (max-width: 830px) {
     .tab {
+        display: inline;
         width: 100%;
         min-height: auto;
         flex-direction: row;
@@ -1156,8 +1258,8 @@ th {
 
 /* Change background color of buttons on hover */
 .tab button:hover {
-    background-color: transparent;
-    transform: scale(0.95);
+    background: var(--body-bg);
+    transform: translateY(-3px);
 }
 
 /* Create an active/current tablink class */
@@ -1168,8 +1270,15 @@ th {
 /* Style the tab content */
 .tabcontent {
     display: none;
+    margin-top: 15px;
     padding: 6px 12px;
+    width: 100%;
+    max-height: 530px;
+    min-height: 480px;
     border-top: none;
+    background-color: var(--body-bg);
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .tabcontent button {
@@ -1179,7 +1288,7 @@ th {
 }
 
 .tabcontent button:hover {
-    background-color: rgba(0, 0, 0, 0.2);
+    background: var(--body-bg);
     transform: scale(1);
 }
 
@@ -1281,6 +1390,15 @@ input:checked + .slider:before {
 # Swal2
 --------------------------------------------------------------*/
 
+.swal2-popup {
+    border: 0.5px solid rgb(255 255 255 / 32%) !important;
+    /* box-shadow: var(--box-shadow) !important; */
+}
+
+.swal2-popup .swal2-styled:focus {
+    box-shadow: none !important;
+}
+
 .swal2-validation-message,
 .swal2-title,
 .swal2-content,
@@ -1301,16 +1419,8 @@ input:checked + .slider:before {
 }
 
 .swal2-html-container {
-    color: rgb(165, 165, 165) !important;
+    color: rgb(195, 195, 195) !important;
     background-color: transparent !important;
-}
-
-.swal2-popup {
-    border: var(--border) !important;
-}
-
-.swal2-popup .swal2-styled:focus {
-    box-shadow: none !important;
 }
 
 .swal2-select {
@@ -1320,7 +1430,7 @@ input:checked + .slider:before {
 }
 
 .swal2-timer-progress-bar-container {
-    background: #376df9;
+    background: var(--body-bg);
 }
 
 .img-about {
@@ -1438,8 +1548,11 @@ input:checked + .slider:before {
 }
 
 #sendAbortBtn,
+#receiveAbortBtn,
 #receiveHideBtn {
+    margin-top: 10px;
     padding: 5px;
+    border: var(--border);
     border-radius: 5px;
     font-size: 1rem;
     color: #fff;
@@ -1448,10 +1561,11 @@ input:checked + .slider:before {
 }
 
 #sendAbortBtn:hover,
+#receiveAbortBtn:hover,
 #receiveHideBtn:hover {
     color: rgb(255, 0, 0);
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    background: var(--body-bg);
+    transform: translateY(-3px);
 }
 
 progress {
@@ -1565,15 +1679,18 @@ progress {
     width: 170px;
     height: 40px;
     font-size: 1.2rem;
-    background: linear-gradient(100deg, #376df9 0, #ff5fa0 var(--msger-bubble-width), #ffc55a 100%);
-    box-shadow: 0 0 6px 0 rgb(251 255 0 / 82%);
+    border-radius: 6px;
     color: #ffffff;
+    background: linear-gradient(65deg, #376df9 0, #ff5fa0 100%);
     transition: background 0.23s;
     cursor: pointer;
 }
 
 #about button:hover {
     font-weight: bold;
+    filter: brightness(1.1) saturate(1.2);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(255, 0, 166, 0.4);
 }
 
 /*--------------------------------------------------------------
@@ -1613,7 +1730,7 @@ progress {
 
 #recognitionDialect,
 #recognitionLanguage {
-    background-color: rgba(0, 0, 0, 0.7);
+    background: var(--select-bg);
     color: #ffffff;
     font-size: small;
     max-width: 135px;
@@ -1652,10 +1769,6 @@ hr {
     background: #dbdbdb;
     margin-top: 15px;
     margin-bottom: 15px;
-}
-
-button {
-    cursor: pointer;
 }
 
 .hidden {
@@ -1762,8 +1875,8 @@ button {
 
 /* Styles for the dropdown button */
 .dropdown-toggle {
-    background-color: var(--body-bg); /* Change this to your desired button background color */
-    color: #fff; /* Change this to your desired text color */
+    background-color: var(--body-bg);
+    color: #fff;
     border: none;
     border-radius: 5px;
     /* padding: 10px 20px; */
@@ -1773,10 +1886,12 @@ button {
 /* Styles for the dropdown menu container */
 .dropdown-menu {
     display: none;
-    background-color: var(--body-bg); /* Change this to your desired menu background color */
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    border: none;
+    margin-top: 5px;
     margin-bottom: 20px;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--body-bg);
+    box-shadow: var(--box-shadow);
 }
 
 /* Styles for table cell with title (td) */
@@ -1786,18 +1901,18 @@ button {
 
 /* Styles for the Apply Options button */
 #applyAudioOptionsBtn {
-    margin: 5px;
     width: 100%;
-    background-color: #0077ff;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
     padding: 10px 20px;
+    margin: 5px;
+    color: #fff;
+    border: var(--border);
+    border-radius: 5px;
+    background: var(--body-bg);
     cursor: pointer;
 }
 
 #applyAudioOptionsBtn:hover {
-    background-color: var(--select-bg) !important;
+    background: var(--select-bg);
     transform: scale(0.95);
     transition: all 0.3s ease-in-out;
 }
