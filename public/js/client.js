@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.68
+ * @version 1.3.72
  *
  */
 
@@ -165,6 +165,7 @@ const buttons = {
         showAboutBtn: true, // Please keep me always true, Thank you!
     },
     chat: {
+        showTogglePinBtn: true,
         showMaxBtn: true,
         showSaveMessageBtn: true,
         showMarkDownBtn: true,
@@ -174,6 +175,7 @@ const buttons = {
         showParticipantsBtn: true,
     },
     caption: {
+        showTogglePinBtn: true,
         showMaxBtn: true,
     },
     settings: {
@@ -264,8 +266,11 @@ const userEmoji = getId(`userEmoji`);
 // Chat room
 const msgerDraggable = getId('msgerDraggable');
 const msgerHeader = getId('msgerHeader');
+const msgerTogglePin = getId('msgerTogglePin');
 const msgerTheme = getId('msgerTheme');
 const msgerCPBtn = getId('msgerCPBtn');
+const msgerDropDownMenuBtn = getId('msgerDropDownMenuBtn');
+const msgerDropDownContent = getId('msgerDropDownContent');
 const msgerClean = getId('msgerClean');
 const msgerSaveBtn = getId('msgerSaveBtn');
 const msgerClose = getId('msgerClose');
@@ -348,6 +353,7 @@ const searchPeerBarName = getId('searchPeerBarName');
 // Caption section
 const captionDraggable = getId('captionDraggable');
 const captionHeader = getId('captionHeader');
+const captionTogglePin = getId('captionTogglePin');
 const captionTheme = getId('captionTheme');
 const captionMaxBtn = getId('captionMaxBtn');
 const captionMinBtn = getId('captionMinBtn');
@@ -651,6 +657,8 @@ let leftChatAvatar;
 let rightChatAvatar;
 let chatMessagesId = 0;
 let showChatOnMessage = true;
+let isChatPinned = false;
+let isCaptionPinned = false;
 let isChatRoomVisible = false;
 let isCaptionBoxVisible = false;
 let isChatEmojiVisible = false;
@@ -763,9 +771,8 @@ function setButtonsToolTip() {
     setTippy(msgerClose, 'Close', 'bottom');
     setTippy(msgerShowChatOnMsgDiv, 'Show chat when you receive a new message', 'bottom');
     setTippy(msgerSpeechMsgDiv, 'Speech the incoming messages', 'bottom');
+    setTippy(msgerTogglePin, 'Toggle chat pin', 'bottom');
     setTippy(msgerTheme, 'Ghost theme', 'bottom');
-    setTippy(msgerClean, 'Clean the messages', 'bottom');
-    setTippy(msgerSaveBtn, 'Save the messages', 'bottom');
     setTippy(msgerMaxBtn, 'Maximize', 'bottom');
     setTippy(msgerMinBtn, 'Minimize', 'bottom');
     setTippy(msgerEmojiBtn, 'Emoji', 'top');
@@ -782,6 +789,7 @@ function setButtonsToolTip() {
     setTippy(captionClose, 'Close', 'bottom');
     setTippy(captionMaxBtn, 'Maximize', 'bottom');
     setTippy(captionMinBtn, 'Minimize', 'bottom');
+    setTippy(captionTogglePin, 'Toggle caption pin', 'bottom');
     setTippy(captionTheme, 'Ghost theme', 'bottom');
     setTippy(captionClean, 'Clean the messages', 'bottom');
     setTippy(captionSaveBtn, 'Save the messages', 'bottom');
@@ -1404,6 +1412,7 @@ function handleButtonsRule() {
     elemDisplay(mySettingsBtn, buttons.main.showMySettingsBtn);
     elemDisplay(aboutBtn, buttons.main.showAboutBtn);
     // chat
+    elemDisplay(msgerTogglePin, !isMobileDevice && buttons.chat.showTogglePinBtn);
     elemDisplay(msgerMaxBtn, !isMobileDevice && buttons.chat.showMaxBtn);
     elemDisplay(msgerSaveBtn, buttons.chat.showSaveMessageBtn);
     elemDisplay(msgerMarkdownBtn, buttons.chat.showMarkDownBtn);
@@ -1412,6 +1421,7 @@ function handleButtonsRule() {
     elemDisplay(msgerVideoUrlBtn, buttons.chat.showShareVideoAudioBtn);
     elemDisplay(msgerCPBtn, buttons.chat.showParticipantsBtn);
     // caption
+    elemDisplay(captionTogglePin, !isMobileDevice && buttons.caption.showTogglePinBtn);
     elemDisplay(captionMaxBtn, !isMobileDevice && buttons.caption.showMaxBtn);
     // Settings
     elemDisplay(dropDownMicOptions, buttons.settings.showMicOptionsBtn && isPresenter); // auto-detected
@@ -2499,6 +2509,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(0, 0, 0, 0.7)');
+            setSP('--dd-color', '#FFFFFF');
             document.body.style.background = 'radial-gradient(#393939, #000000)';
             mirotalkTheme.selectedIndex = 0;
             break;
@@ -2520,6 +2531,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(0, 0, 0, 0.7)');
+            setSP('--dd-color', '#FFFFFF');
             document.body.style.background = 'radial-gradient(#4f4f4f, #1c1c1c)';
             mirotalkTheme.selectedIndex = 1;
             break;
@@ -2541,6 +2553,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(0, 42, 34, 0.7)');
+            setSP('--dd-color', '#00FF00');
             document.body.style.background = 'radial-gradient(#004d40, #001f1c)';
             mirotalkTheme.selectedIndex = 2;
             break;
@@ -2562,6 +2575,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(0, 39, 77, 0.7)');
+            setSP('--dd-color', '#1E90FF');
             document.body.style.background = 'radial-gradient(#1a237e, #0d1b34)';
             mirotalkTheme.selectedIndex = 3;
             break;
@@ -2582,6 +2596,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(42, 13, 13, 0.7)');
+            setSP('--dd-color', '#FF4500');
             document.body.style.background = 'radial-gradient(#8B0000, #320000)';
             mirotalkTheme.selectedIndex = 4;
             break;
@@ -2603,6 +2618,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(42, 0, 29, 0.7)');
+            setSP('--dd-color', '#BF00FF');
             document.body.style.background = 'radial-gradient(#4B0082, #2C003E)';
             mirotalkTheme.selectedIndex = 5;
             break;
@@ -2624,6 +2640,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(61, 26, 0, 0.7)');
+            setSP('--dd-color', '#FFA500');
             document.body.style.background = 'radial-gradient(#FF8C00, #4B1C00)';
             mirotalkTheme.selectedIndex = 6;
             break;
@@ -2645,6 +2662,7 @@ function setTheme() {
             setSP('--btn-bar-bg-color', '#FFFFFF');
             setSP('--btn-bar-color', '#000000');
             setSP('--btns-bg-color', 'rgba(77, 59, 0, 0.7)');
+            setSP('--dd-color', '#FFD700');
             document.body.style.background = 'radial-gradient(#FFD700, #3B3B00)';
             mirotalkTheme.selectedIndex = 7;
             break;
@@ -3743,6 +3761,7 @@ function genAvatarSvg(peerName, avatarImgSize) {
  */
 function setPeerAvatarImgName(videoAvatarImageId, peerName) {
     const videoAvatarImageElement = getId(videoAvatarImageId);
+    videoAvatarImageElement.style.pointerEvents = 'none';
     if (useAvatarSvg) {
         const avatarImgSize = isMobileDevice ? 128 : 256;
         const avatarImgSvg = isValidEmail(peerName) ? genGravatar(peerName) : genAvatarSvg(peerName, avatarImgSize);
@@ -3918,10 +3937,21 @@ function handleFileDragAndDrop(elemId, peer_id, itsMe = false) {
 
     videoPeer.addEventListener('dragover', function (e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.target.parentElement.style.outline = '3px dashed var(--dd-color)';
+        document.querySelector('.Camera').style.outline = 'none';
+    });
+
+    videoPeer.addEventListener('dragleave', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.target.parentElement.style.outline = 'none';
     });
 
     videoPeer.addEventListener('drop', function (e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.target.parentElement.style.outline = 'none';
         if (itsMe) {
             return userLog('warning', 'You cannot send files to yourself.');
         }
@@ -4259,13 +4289,39 @@ function removeVideoPinMediaContainer(peer_id, force_remove = false) {
         force_remove
     ) {
         elemDisplay(videoPinMediaContainer, false);
+        isVideoPinned = false;
+        pinnedVideoPlayerId = null;
+        videoMediaContainerUnpin();
+        if (isChatPinned) {
+            chatPin();
+        }
+        if (isCaptionPinned) {
+            captionPin();
+        }
+        resizeVideoMedia();
+    }
+}
+
+/**
+ * Pin videoMediaContainer
+ */
+function videoMediaContainerPin() {
+    if (!isVideoPinned) {
+        videoMediaContainer.style.top = 0;
+        videoMediaContainer.style.width = '75%';
+        videoMediaContainer.style.height = '100%';
+    }
+}
+
+/**
+ * Unpin videoMediaContainer
+ */
+function videoMediaContainerUnpin() {
+    if (!isVideoPinned) {
         videoMediaContainer.style.top = 0;
         videoMediaContainer.style.right = null;
         videoMediaContainer.style.width = '100%';
         videoMediaContainer.style.height = '100%';
-        pinnedVideoPlayerId = null;
-        isVideoPinned = false;
-        resizeVideoMedia();
     }
 }
 
@@ -4541,6 +4597,11 @@ function setChatRoomBtn() {
         }
     });
 
+    // pin/unpin
+    msgerTogglePin.addEventListener('click', () => {
+        toggleChatPin();
+    });
+
     // ghost theme + undo
     msgerTheme.addEventListener('click', (e) => {
         if (e.target.className == className.ghost) {
@@ -4550,6 +4611,11 @@ function setChatRoomBtn() {
             e.target.className = className.ghost;
             setTheme();
         }
+    });
+
+    // dropdown chat menu
+    msgerDropDownMenuBtn.addEventListener('click', () => {
+        toggleChatDropDownMenu();
     });
 
     // show msger participants section
@@ -4711,6 +4777,11 @@ function setCaptionRoomBtn() {
         // minimize caption
         captionMinBtn.addEventListener('click', (e) => {
             captionMinimize();
+        });
+
+        // toggle caption pin
+        captionTogglePin.addEventListener('click', () => {
+            toggleCaptionPin();
         });
 
         // ghost theme + undo
@@ -7067,9 +7138,7 @@ function showChatRoomDraggable() {
         isButtonsVisible = false;
     }
     chatRoomBtn.className = className.chatOff;
-    msgerDraggable.style.top = '50%';
-    msgerDraggable.style.left = isMobileDevice ? '50%' : '25%';
-    msgerDraggable.style.display = 'flex';
+    chatLeftCenter();
     isChatRoomVisible = true;
     setTippy(chatRoomBtn, 'Close the chat', placement);
 }
@@ -7085,11 +7154,18 @@ function showCaptionDraggable() {
         isButtonsVisible = false;
     }
     captionBtn.className = 'far fa-closed-captioning';
-    captionDraggable.style.top = '50%';
-    captionDraggable.style.left = isMobileDevice ? '50%' : '75%';
-    captionDraggable.style.display = 'flex';
+    captionRightCenter();
     isCaptionBoxVisible = true;
     setTippy(captionBtn, 'Close the caption', placement);
+}
+
+/**
+ * Toggle Chat dropdown menu
+ */
+function toggleChatDropDownMenu() {
+    msgerDropDownContent.style.display === 'block'
+        ? (msgerDropDownContent.style.display = 'none')
+        : (msgerDropDownContent.style.display = 'block');
 }
 
 /**
@@ -7110,16 +7186,93 @@ function chatMinimize() {
     elemDisplay(msgerMinBtn, false);
     elemDisplay(msgerMaxBtn, true);
     chatCenter();
-    setSP('--msger-width', '420px');
-    setSP('--msger-height', '680px');
+    if (!isChatPinned) {
+        if (isMobileDevice) {
+            setSP('--msger-width', '99%');
+            setSP('--msger-height', '99%');
+        } else {
+            setSP('--msger-width', '420px');
+            setSP('--msger-height', '680px');
+        }
+    } else {
+        setSP('--msger-width', '25%');
+        setSP('--msger-height', '100%');
+    }
 }
 
 /**
  * Set chat position
  */
 function chatCenter() {
+    if (!isChatPinned) {
+        msgerDraggable.style.top = '50%';
+        msgerDraggable.style.left = '50%';
+    }
+}
+
+/**
+ * Toggle Chat Pin
+ */
+function toggleChatPin() {
+    if (isCaptionPinned) {
+        return userLog('toast', 'Please unpin the Caption that appears to be currently pinned');
+    }
+    isChatPinned ? chatUnpin() : chatPin();
+    playSound('click');
+}
+
+/**
+ * Handle chat pin
+ */
+function chatPin() {
+    videoMediaContainerPin();
+    chatPinned();
+    isChatPinned = true;
+    setColor(msgerTogglePin, 'lime');
+    resizeVideoMedia();
+    msgerDraggable.style.resize = 'none';
+    if (!isMobileDevice) undragElement(msgerDraggable, msgerHeader);
+}
+
+/**
+ * Handle chat unpin
+ */
+function chatUnpin() {
+    videoMediaContainerUnpin();
+    setSP('--msger-width', '420px');
+    setSP('--msger-height', '680px');
+    elemDisplay(msgerMinBtn, false);
+    buttons.chat.showMaxBtn && elemDisplay(msgerMaxBtn, true);
+    chatLeftCenter();
+    isChatPinned = false;
+    setColor(msgerTogglePin, 'white');
+    resizeVideoMedia();
+    msgerDraggable.style.resize = 'both';
+    if (!isMobileDevice) dragElement(msgerDraggable, msgerHeader);
+}
+
+/**
+ * Move Chat center left
+ */
+function chatLeftCenter() {
+    msgerDraggable.style.position = 'fixed';
+    msgerDraggable.style.display = 'flex';
     msgerDraggable.style.top = '50%';
-    msgerDraggable.style.left = '50%';
+    msgerDraggable.style.left = isMobileDevice ? '50%' : '25%';
+    msgerDraggable.style.transform = 'translate(-50%, -50%)';
+}
+
+/**
+ * Chat is pinned
+ */
+function chatPinned() {
+    msgerDraggable.style.position = 'absolute';
+    msgerDraggable.style.top = 0;
+    msgerDraggable.style.right = 0;
+    msgerDraggable.style.left = null;
+    msgerDraggable.style.transform = null;
+    setSP('--msger-width', '25%');
+    setSP('--msger-height', '100%');
 }
 
 /**
@@ -7140,16 +7293,93 @@ function captionMinimize() {
     elemDisplay(captionMinBtn, false);
     elemDisplay(captionMaxBtn, true);
     captionCenter();
-    setSP('--caption-width', '420px');
-    setSP('--caption-height', '680px');
+    if (!isCaptionPinned) {
+        if (isMobileDevice) {
+            setSP('--caption-width', '99%');
+            setSP('--caption-height', '99%');
+        } else {
+            setSP('--caption-width', '420px');
+            setSP('--caption-height', '680px');
+        }
+    } else {
+        setSP('--caption-width', '25%');
+        setSP('--caption-height', '100%');
+    }
 }
 
 /**
- * Set caption position
+ * Set chat position
  */
 function captionCenter() {
+    if (!isCaptionPinned) {
+        captionDraggable.style.top = '50%';
+        captionDraggable.style.left = '50%';
+    }
+}
+
+/**
+ * Toggle Caption Pin
+ */
+function toggleCaptionPin() {
+    if (isChatPinned) {
+        return userLog('toast', 'Please unpin the Chat that appears to be currently pinned');
+    }
+    isCaptionPinned ? captionUnpin() : captionPin();
+    playSound('click');
+}
+
+/**
+ * Handle caption pin
+ */
+function captionPin() {
+    videoMediaContainerPin();
+    captionPinned();
+    isCaptionPinned = true;
+    setColor(captionTogglePin, 'lime');
+    resizeVideoMedia();
+    captionDraggable.style.resize = 'none';
+    if (!isMobileDevice) undragElement(captionDraggable, captionHeader);
+}
+
+/**
+ * Handle caption unpin
+ */
+function captionUnpin() {
+    videoMediaContainerUnpin();
+    setSP('--caption-width', '420px');
+    setSP('--caption-height', '680px');
+    elemDisplay(captionMinBtn, false);
+    buttons.caption.showMaxBtn && elemDisplay(captionMaxBtn, true);
+    captionRightCenter();
+    isCaptionPinned = false;
+    setColor(captionTogglePin, 'white');
+    resizeVideoMedia();
+    captionDraggable.style.resize = 'both';
+    if (!isMobileDevice) dragElement(captionDraggable, captionHeader);
+}
+
+/**
+ * Move Caption center right
+ */
+function captionRightCenter() {
+    captionDraggable.style.position = 'fixed';
+    captionDraggable.style.display = 'flex';
     captionDraggable.style.top = '50%';
-    captionDraggable.style.left = '50%';
+    captionDraggable.style.left = isMobileDevice ? '50%' : '75%';
+    captionDraggable.style.transform = 'translate(-50%, -50%)';
+}
+
+/**
+ * Caption is pinned
+ */
+function captionPinned() {
+    captionDraggable.style.position = 'absolute';
+    captionDraggable.style.top = 0;
+    captionDraggable.style.right = 0;
+    captionDraggable.style.left = null;
+    captionDraggable.style.transform = null;
+    setSP('--caption-width', '25%');
+    setSP('--caption-height', '100%');
 }
 
 /**
@@ -7218,6 +7448,9 @@ function cleanCaptions() {
  * Hide chat room and emoji picker
  */
 function hideChatRoomAndEmojiPicker() {
+    if (isChatPinned) {
+        chatUnpin();
+    }
     elemDisplay(msgerDraggable, false);
     elemDisplay(msgerEmojiPicker, false);
     setColor(msgerEmojiBtn, '#FFFFFF');
@@ -7231,6 +7464,9 @@ function hideChatRoomAndEmojiPicker() {
  * Hide chat room and emoji picker
  */
 function hideCaptionBox() {
+    if (isCaptionPinned) {
+        captionUnpin();
+    }
     elemDisplay(captionDraggable, false);
     captionBtn.className = className.captionOn;
     isCaptionBoxVisible = false;
@@ -10290,7 +10526,7 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: '<strong>WebRTC P2P v1.3.68</strong>',
+        title: '<strong>WebRTC P2P v1.3.72</strong>',
         imageAlt: 'mirotalk-about',
         imageUrl: images.about,
         customClass: { image: 'img-about' },
@@ -10390,6 +10626,21 @@ function dragElement(elmnt, dragObj) {
         document.onmouseup = null;
         document.onmousemove = null;
     }
+}
+
+/**
+ * Make Obj Undraggable
+ * @param {object} elmnt father element
+ * @param {object} dragObj children element to make father undraggable
+ */
+function undragElement(elmnt, dragObj) {
+    if (dragObj) {
+        dragObj.onmousedown = null;
+    } else {
+        elmnt.onmousedown = null;
+    }
+    elmnt.style.top = '';
+    elmnt.style.left = '';
 }
 
 /**
