@@ -38,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.77
+ * @version 1.3.79
  *
  */
 
@@ -466,14 +466,14 @@ app.get('/logout', (req, res) => {
 
 // main page
 app.get(['/'], OIDCAuth, (req, res) => {
-    if ((!OIDC.enabled && hostCfg.protected && !hostCfg.authenticated) || authHost.isRoomActive()) {
+    if ((!OIDC.enabled && hostCfg.protected) || authHost.isRoomActive()) {
         const ip = getIP(req);
         if (allowedIP(ip)) {
             res.sendFile(views.landing);
             hostCfg.authenticated = true;
         } else {
             hostCfg.authenticated = false;
-            res.sendFile(views.login);
+            res.redirect('/login');
         }
     } else {
         res.sendFile(views.landing);
@@ -482,14 +482,14 @@ app.get(['/'], OIDCAuth, (req, res) => {
 
 // set new room name and join
 app.get(['/newcall'], OIDCAuth, (req, res) => {
-    if ((!OIDC.enabled && hostCfg.protected && !hostCfg.authenticated) || authHost.isRoomActive()) {
+    if ((!OIDC.enabled && hostCfg.protected) || authHost.isRoomActive()) {
         const ip = getIP(req);
         if (allowedIP(ip)) {
             res.sendFile(views.newCall);
             hostCfg.authenticated = true;
         } else {
             hostCfg.authenticated = false;
-            res.sendFile(views.login);
+            res.redirect('/login');
         }
     } else {
         res.sendFile(views.newCall);
