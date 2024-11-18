@@ -235,7 +235,7 @@ body {
     z-index: 10;
     display: none;
     position: fixed;
-    padding: 10px;
+    /* padding: 10px; */
     top: var(--btns-top);
     right: var(--btns-right);
     left: var(--btns-left);
@@ -250,12 +250,7 @@ body {
     -ms-transform: translate(0%, -50%);
     transform: translate(0%, -50%);
 
-    /* background: var(--body-bg); */
-    /* box-shadow: 0px 8px 16px 0px rgb(33 33 33);*/
-
     border-radius: 10px;
-    border: var(--border) !important;
-    box-shadow: var(--box-shadow);
     overflow: hidden;
 }
 
@@ -285,6 +280,10 @@ body {
 #buttonsBar button:focus {
     outline: none;
 }
+
+/* #toggleExtraBtn {
+    color: #66beff !important;
+} */
 
 .fa-phone-slash,
 .fa-microphone-slash,
@@ -316,9 +315,9 @@ body {
 }
 
 #bottomButtons button {
-    width: 48px;
+    width: 50px;
     padding: 10px;
-    font-size: 1.5rem;
+    font-size: 1.6rem;
 
     /* 
     Use this to maintain the theme colors of buttons while making them less visible during video playback.
@@ -990,6 +989,12 @@ button:hover {
     #mySettings {
         width: 90%;
     }
+
+    #bottomButtons button {
+        width: 42px;
+        padding: 10px;
+        font-size: 1.2rem;
+    }
 }
 
 #mySettingsHeader {
@@ -1193,12 +1198,14 @@ button:hover {
     color: #fff;
     border-collapse: collapse;
     border-style: hidden;
+    border-radius: 10px;
+    background: var(--body-bg);
     /* border-radius: 5px; */
     /* box-shadow: 0 0 0 1px #666; */
 }
 #mySettingsTable td,
 th {
-    padding: 5px;
+    padding: 10px;
 }
 #mySettingsTable tr td {
     text-align: left;

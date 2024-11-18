@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.84
+ * @version 1.3.93
  *
  */
 
@@ -85,6 +85,8 @@ const className = {
     heart: 'fas fa-heart',
     pip: 'fas fa-images',
     hideAll: 'fas fa-eye',
+    up: 'fas fa-chevron-up',
+    down: 'fas fa-chevron-down',
 };
 // https://fontawesome.com/search?o=r&m=free
 
@@ -140,80 +142,6 @@ const showVideoPipBtn = document.pictureInPictureEnabled;
 // Check if Document PIP is supported by this browser
 const showDocumentPipBtn = !isEmbedded && 'documentPictureInPicture' in window;
 
-/**
- * Configuration for controlling the visibility of buttons in the MiroTalk P2P client.
- * Set properties to true to show the corresponding buttons, or false to hide them.
- * captionBtn, showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn, showVideoPipBtn, showDocumentPipBtn -> (auto-detected).
- */
-const buttons = {
-    main: {
-        showShareRoomBtn: true,
-        showHideMeBtn: true,
-        showAudioBtn: true,
-        showVideoBtn: true,
-        showScreenBtn: true,
-        showRecordStreamBtn: true,
-        showChatRoomBtn: true,
-        showCaptionRoomBtn: true,
-        showRoomEmojiPickerBtn: true,
-        showMyHandBtn: true,
-        showWhiteboardBtn: true,
-        showSnapshotRoomBtn: true,
-        showFileShareBtn: true,
-        showDocumentPipBtn: showDocumentPipBtn,
-        showMySettingsBtn: true,
-        showAboutBtn: true, // Please keep me always true, Thank you!
-    },
-    chat: {
-        showTogglePinBtn: true,
-        showMaxBtn: true,
-        showSaveMessageBtn: true,
-        showMarkDownBtn: true,
-        showChatGPTBtn: true,
-        showFileShareBtn: true,
-        showShareVideoAudioBtn: true,
-        showParticipantsBtn: true,
-    },
-    caption: {
-        showTogglePinBtn: true,
-        showMaxBtn: true,
-    },
-    settings: {
-        showMicOptionsBtn: true,
-        showTabRoomPeerName: true,
-        showTabRoomParticipants: true,
-        showTabRoomSecurity: true,
-        showTabEmailInvitation: true,
-        showMuteEveryoneBtn: true,
-        showHideEveryoneBtn: true,
-        showEjectEveryoneBtn: true,
-        showLockRoomBtn: true,
-        showUnlockRoomBtn: true,
-    },
-    remote: {
-        showAudioVolume: true,
-        audioBtnClickAllowed: true,
-        videoBtnClickAllowed: true,
-        showKickOutBtn: true,
-        showSnapShotBtn: true,
-        showFileShareBtn: true,
-        showShareVideoAudioBtn: true,
-        showPrivateMessageBtn: true,
-        showZoomInOutBtn: false,
-        showVideoFocusBtn: true,
-        showVideoPipBtn: showVideoPipBtn,
-    },
-    local: {
-        showSnapShotBtn: true,
-        showVideoCircleBtn: true,
-        showZoomInOutBtn: false,
-        showVideoPipBtn: showVideoPipBtn,
-    },
-    whiteboard: {
-        whiteboardLockBtn: false,
-    },
-};
-
 // Loading div
 const loadingDiv = getId('loadingDiv');
 
@@ -238,25 +166,28 @@ const usernameEmoji = getId('usernameEmoji');
 
 // Buttons bar
 const buttonsBar = getId('buttonsBar');
-const bottomButtons = getId('bottomButtons');
 const shareRoomBtn = getId('shareRoomBtn');
-const hideMeBtn = getId('hideMeBtn');
-const videoBtn = getId('videoBtn');
-const swapCameraBtn = getId('swapCameraBtn');
-const audioBtn = getId('audioBtn');
-const screenShareBtn = getId('screenShareBtn');
 const recordStreamBtn = getId('recordStreamBtn');
 const fullScreenBtn = getId('fullScreenBtn');
 const chatRoomBtn = getId('chatRoomBtn');
 const captionBtn = getId('captionBtn');
 const roomEmojiPickerBtn = getId('roomEmojiPickerBtn');
-const myHandBtn = getId('myHandBtn');
 const whiteboardBtn = getId('whiteboardBtn');
 const snapshotRoomBtn = getId('snapshotRoomBtn');
 const fileShareBtn = getId('fileShareBtn');
 const documentPiPBtn = getId('documentPiPBtn');
 const mySettingsBtn = getId('mySettingsBtn');
 const aboutBtn = getId('aboutBtn');
+
+// Buttons bottom
+const bottomButtons = getId('bottomButtons');
+const toggleExtraBtn = getId('toggleExtraBtn');
+const audioBtn = getId('audioBtn');
+const videoBtn = getId('videoBtn');
+const swapCameraBtn = getId('swapCameraBtn');
+const hideMeBtn = getId('hideMeBtn');
+const screenShareBtn = getId('screenShareBtn');
+const myHandBtn = getId('myHandBtn');
 const leaveRoomBtn = getId('leaveRoomBtn');
 
 // Room Emoji Picker
@@ -583,6 +514,7 @@ let swBg = 'rgba(0, 0, 0, 0.7)'; // swAlert background color
 let callElapsedTime; // count time
 let mySessionTime; // conference session time
 let isDocumentOnFullScreen = false;
+let isToggleExtraBtnClicked = false;
 
 // peer
 let myPeerId; // This socket.id
@@ -868,9 +800,9 @@ function refreshMainButtonsToolTipPlacement() {
     bottomButtonsPlacement = btnsBarSelect.options[btnsBarSelect.selectedIndex].value == 'vertical' ? 'top' : 'right';
 
     setTippy(shareRoomBtn, 'Share the Room', placement);
+    setTippy(hideMeBtn, 'Toggle hide myself from the room view', placement);
     setTippy(recordStreamBtn, 'Start recording', placement);
     setTippy(fullScreenBtn, 'View full screen', placement);
-    setTippy(chatRoomBtn, 'Open the chat', placement);
     setTippy(captionBtn, 'Open the caption', placement);
     setTippy(roomEmojiPickerBtn, 'Send reaction', placement);
     setTippy(whiteboardBtn, 'Open the whiteboard', placement);
@@ -880,11 +812,12 @@ function refreshMainButtonsToolTipPlacement() {
     setTippy(mySettingsBtn, 'Open the settings', placement);
     setTippy(aboutBtn, 'About this project', placement);
 
-    setTippy(hideMeBtn, 'Toggle hide myself from the room view', bottomButtonsPlacement);
+    setTippy(toggleExtraBtn, 'Toggle extra buttons', bottomButtonsPlacement);
     setTippy(audioBtn, useAudio ? 'Stop the audio' : 'My audio is disabled', bottomButtonsPlacement);
     setTippy(videoBtn, useVideo ? 'Stop the video' : 'My video is disabled', bottomButtonsPlacement);
     setTippy(screenShareBtn, 'Start screen sharing', bottomButtonsPlacement);
     setTippy(myHandBtn, 'Raise your hand', bottomButtonsPlacement);
+    setTippy(chatRoomBtn, 'Open the chat', bottomButtonsPlacement);
     setTippy(leaveRoomBtn, 'Leave this room', bottomButtonsPlacement);
 }
 
@@ -1261,7 +1194,7 @@ async function handleConnect() {
         getHtmlElementsById();
         setButtonsToolTip();
         handleUsernameEmojiPicker();
-        manageLeftButtons();
+        manageButtons();
         handleButtonsRule();
         setupMySettings();
         loadSettingsFromLocalStorage();
@@ -1450,10 +1383,11 @@ function handleButtonsRule() {
 async function whoAreYou() {
     console.log('11. Who are you?');
 
-    elemDisplay(loadingDiv, false);
     document.body.style.background = 'var(--body-bg)';
 
     if (myPeerName) {
+        elemDisplay(loadingDiv, false);
+
         myPeerName = filterXSS(myPeerName);
 
         console.log(`11.1 Check if ${myPeerName} exist in the room`, roomId);
@@ -1526,6 +1460,9 @@ async function whoAreYou() {
         customClass: { popup: 'init-modal-size' },
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+        willOpen: () => {
+            elemDisplay(loadingDiv, false);
+        },
         inputValidator: async (value) => {
             if (!value) return 'Please enter your email or name';
             // Long name
@@ -4428,26 +4365,30 @@ function refreshMyAudioStatus(localAudioMediaStream) {
 /**
  * Handle WebRTC left buttons
  */
-function manageLeftButtons() {
+function manageButtons() {
+    // Buttons bar
     setShareRoomBtn();
-    setHideMeButton();
-    setAudioBtn();
-    setVideoBtn();
-    setSwapCameraBtn();
-    setScreenShareBtn();
     setRecordStreamBtn();
+    setScreenShareBtn();
     setFullScreenBtn();
     setChatRoomBtn();
     setCaptionRoomBtn();
     setRoomEmojiButton();
     setChatEmojiBtn();
-    setMyHandBtn();
     setMyWhiteboardBtn();
     setSnapshotRoomBtn();
     setMyFileShareBtn();
     setDocumentPiPBtn();
     setMySettingsBtn();
     setAboutBtn();
+
+    // Buttons bottom
+    setToggleExtraButtons();
+    setAudioBtn();
+    setVideoBtn();
+    setSwapCameraBtn();
+    setHideMeButton();
+    setMyHandBtn();
     setLeaveRoomBtn();
 }
 
@@ -4471,6 +4412,39 @@ function setHideMeButton() {
         isHideMeActive = !isHideMeActive;
         handleHideMe(isHideMeActive);
     });
+}
+
+/**
+ * Toggle extra buttons
+ */
+function setToggleExtraButtons() {
+    toggleExtraBtn.addEventListener('click', () => {
+        toggleExtraButtons();
+        if (!isMobileDevice) {
+            isToggleExtraBtnClicked = true;
+            setTimeout(() => {
+                isToggleExtraBtnClicked = false;
+            }, 2000);
+        }
+    });
+    toggleExtraBtn.addEventListener('mouseover', () => {
+        if (isToggleExtraBtnClicked || isMobileDevice) return;
+        if (buttonsBar.style.display === 'none') {
+            toggleExtraButtons();
+        }
+    });
+}
+
+/**
+ * Toggle extra buttons
+ */
+function toggleExtraButtons() {
+    const isButtonsBarHidden = buttonsBar.style.display === 'none' || buttonsBar.style.display === '';
+    const displayValue = isButtonsBarHidden ? 'flex' : 'none';
+    const cName = isButtonsBarHidden ? className.up : className.down;
+
+    elemDisplay(buttonsBar, isButtonsBarHidden, displayValue);
+    toggleExtraBtn.className = cName;
 }
 
 /**
@@ -5847,8 +5821,8 @@ async function getAudioConstraints() {
         constraints = {
             audio: {
                 autoGainControl: switchAutoGainControl.checked,
-                echoCancellation: switchNoiseSuppression.checked,
-                noiseSuppression: switchEchoCancellation.checked,
+                echoCancellation: switchEchoCancellation.checked,
+                noiseSuppression: switchNoiseSuppression.checked,
                 sampleRate: parseInt(sampleRateSelect.value),
                 sampleSize: parseInt(sampleSizeSelect.value),
                 channelCount: parseInt(channelCountSelect.value),
@@ -5993,7 +5967,8 @@ function showButtonsBarAndMenu() {
     )
         return;
     toggleClassElements('navbar', 'block');
-    elemDisplay(buttonsBar, true, 'flex');
+    //elemDisplay(buttonsBar, true, 'flex');
+    toggleExtraBtn.className = className.down;
     elemDisplay(bottomButtons, true, 'flex');
     isButtonsVisible = true;
 }
@@ -6004,6 +5979,7 @@ function showButtonsBarAndMenu() {
 function checkButtonsBarAndMenu() {
     if (!isButtonsBarOver) {
         toggleClassElements('navbar', 'none');
+        toggleExtraBtn.className = className.up;
         elemDisplay(buttonsBar, false);
         elemDisplay(bottomButtons, false);
         isButtonsVisible = false;
@@ -7179,10 +7155,17 @@ function showChatRoomDraggable() {
         elemDisplay(bottomButtons, false);
         isButtonsVisible = false;
     }
+    //chatLeftCenter();
+    chatCenter();
+
     chatRoomBtn.className = className.chatOff;
-    chatLeftCenter();
     isChatRoomVisible = true;
-    setTippy(chatRoomBtn, 'Close the chat', placement);
+
+    if (isDesktopDevice && canBePinned()) {
+        toggleChatPin();
+    }
+
+    setTippy(chatRoomBtn, 'Close the chat', bottomButtonsPlacement);
 }
 
 /**
@@ -7195,9 +7178,15 @@ function showCaptionDraggable() {
         elemDisplay(bottomButtons, false);
         isButtonsVisible = false;
     }
+    //captionRightCenter();
+    captionCenter();
     captionBtn.className = 'far fa-closed-captioning';
-    captionRightCenter();
     isCaptionBoxVisible = true;
+
+    if (isDesktopDevice && canBePinned()) {
+        toggleCaptionPin();
+    }
+
     setTippy(captionBtn, 'Close the caption', placement);
 }
 
@@ -7247,9 +7236,24 @@ function chatMinimize() {
  */
 function chatCenter() {
     if (!isChatPinned) {
+        msgerDraggable.style.position = 'fixed';
+        msgerDraggable.style.display = 'flex';
         msgerDraggable.style.top = '50%';
         msgerDraggable.style.left = '50%';
+        msgerDraggable.style.transform = 'translate(-50%, -50%)';
+        msgerDraggable.style.webkitTransform = 'translate(-50%, -50%)';
+        msgerDraggable.style.mozTransform = 'translate(-50%, -50%)';
     }
+}
+
+/**
+ * Check if the element can be pinned based of viewport size
+ * @returns boolean
+ */
+function canBePinned() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    return viewportWidth >= 1024 && viewportHeight >= 768;
 }
 
 /**
@@ -7285,8 +7289,9 @@ function chatUnpin() {
     setSP('--msger-height', '680px');
     elemDisplay(msgerMinBtn, false);
     buttons.chat.showMaxBtn && elemDisplay(msgerMaxBtn, true);
-    chatLeftCenter();
     isChatPinned = false;
+    //chatLeftCenter();
+    chatCenter();
     setColor(msgerTogglePin, 'white');
     resizeVideoMedia();
     msgerDraggable.style.resize = 'both';
@@ -7354,8 +7359,13 @@ function captionMinimize() {
  */
 function captionCenter() {
     if (!isCaptionPinned) {
+        captionDraggable.style.position = 'fixed';
+        captionDraggable.style.display = 'flex';
         captionDraggable.style.top = '50%';
         captionDraggable.style.left = '50%';
+        captionDraggable.style.transform = 'translate(-50%, -50%)';
+        captionDraggable.style.webkitTransform = 'translate(-50%, -50%)';
+        captionDraggable.style.mozTransform = 'translate(-50%, -50%)';
     }
 }
 
@@ -7392,8 +7402,9 @@ function captionUnpin() {
     setSP('--caption-height', '680px');
     elemDisplay(captionMinBtn, false);
     buttons.caption.showMaxBtn && elemDisplay(captionMaxBtn, true);
-    captionRightCenter();
     isCaptionPinned = false;
+    //captionRightCenter();
+    captionCenter();
     setColor(captionTogglePin, 'white');
     resizeVideoMedia();
     captionDraggable.style.resize = 'both';
@@ -7499,7 +7510,7 @@ function hideChatRoomAndEmojiPicker() {
     chatRoomBtn.className = className.chatOn;
     isChatRoomVisible = false;
     isChatEmojiVisible = false;
-    setTippy(chatRoomBtn, 'Open the chat', placement);
+    setTippy(chatRoomBtn, 'Open the chat', bottomButtonsPlacement);
 }
 
 /**
@@ -10335,6 +10346,24 @@ function sendVideoUrl(peer_id = null) {
             emitVideoPlayer('open', config);
         }
     });
+
+    // Take URL from clipboard ex:
+    // https://www.youtube.com/watch?v=1ZYbU82GVz4
+
+    navigator.clipboard
+        .readText()
+        .then((clipboardText) => {
+            if (!clipboardText) return false;
+            const sanitizedText = filterXSS(clipboardText);
+            const inputElement = Swal.getInput();
+            if (isVideoTypeSupported(sanitizedText) && inputElement) {
+                inputElement.value = sanitizedText;
+            }
+            return false;
+        })
+        .catch(() => {
+            return false;
+        });
 }
 
 /**
@@ -10568,7 +10597,7 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: '<strong>WebRTC P2P v1.3.84</strong>',
+        title: '<strong>WebRTC P2P v1.3.93</strong>',
         imageAlt: 'mirotalk-about',
         imageUrl: images.about,
         customClass: { image: 'img-about' },

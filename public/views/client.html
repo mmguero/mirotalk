@@ -118,9 +118,9 @@ access to use this app.
 
         <div id="buttonsBar" class="fadein">
             <button id="shareRoomBtn" class="fas fa-share-alt"></button>
+            <button id="hideMeBtn" class="fas fa-user"></button>
             <button id="recordStreamBtn" class="fas fa-record-vinyl"></button>
             <button id="fullScreenBtn" class="fas fa-expand-alt"></button>
-            <button id="chatRoomBtn" class="fas fa-comment"></button>
             <button id="captionBtn" class="fas fa-closed-captioning"></button>
             <button id="roomEmojiPickerBtn" class="fas fa-face-smile"></button>
             <button id="whiteboardBtn" class="fas fa-chalkboard-teacher"></button>
@@ -134,12 +134,13 @@ access to use this app.
 
         <!-- Start bottom buttons -->
         <div id="bottomButtons" class="fadein">
+            <button id="toggleExtraBtn" class="fas fa-chevron-down"></button>
             <button id="audioBtn" class="fas fa-microphone"></button>
             <button id="videoBtn" class="fas fa-video"></button>
             <button id="swapCameraBtn" class="fas fa-camera-rotate"></button>
-            <button id="hideMeBtn" class="fas fa-user"></button>
             <button id="screenShareBtn" class="fas fa-desktop"></button>
             <button id="myHandBtn" class="fas fa-hand-paper"></button>
+            <button id="chatRoomBtn" class="fas fa-comment"></button>
             <button id="leaveRoomBtn" class="fa-solid fa-phone-slash"></button>
         </div>
 
@@ -287,11 +288,11 @@ access to use this app.
                     </div>
                     <div class="caption-header-options">
                         <button id="captionTogglePin" class="fas fa-map-pin"></button>
+                        <button id="captionMaxBtn" class="fas fa-expand"></button>
+                        <button id="captionMinBtn" class="fas fa-compress"></button>
                         <button id="captionTheme" class="fas fa-ghost"></button>
                         <button id="captionSaveBtn" class="fas fa-save"></button>
                         <button id="captionClean" class="fas fa-trash"></button>
-                        <button id="captionMaxBtn" class="fas fa-expand"></button>
-                        <button id="captionMinBtn" class="fas fa-compress"></button>
                         <button id="captionClose" class="fas fa-times"></button>
                     </div>
                 </header>
@@ -1041,6 +1042,7 @@ access to use this app.
         <script defer src="../js/localStorage.js"></script>
         <script defer src="../js/helpers.js"></script>
         <script defer src="../js/client.js"></script>
+        <script defer src="../js/config.js"></script>
         <script defer src="../js/detectSpeaking.js"></script>
         <script defer src="../js/speechRecognition.js"></script>
         <script defer src="../js/videoGrid.js"></script>
