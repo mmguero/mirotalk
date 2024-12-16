@@ -5,13 +5,13 @@
  * Set properties to true to show the corresponding buttons, or false to hide them.
  * captionBtn, showSwapCameraBtn, showScreenShareBtn, showFullScreenBtn, showVideoPipBtn, showDocumentPipBtn -> (auto-detected).
  */
-const buttons = {
+let buttons = {
     main: {
         showShareRoomBtn: true,
         showHideMeBtn: true,
         showAudioBtn: true,
         showVideoBtn: true,
-        showScreenBtn: true,
+        showScreenBtn: true, // autodetected
         showRecordStreamBtn: true,
         showChatRoomBtn: true,
         showCaptionRoomBtn: true,

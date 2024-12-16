@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.3.96
+ * @version 1.4.10
  *
  */
 
@@ -32,6 +32,7 @@ const myRoomUrl = window.location.origin + '/join/' + roomId; // share room url
 
 // Images
 const images = {
+    caption: '../images/caption.png',
     confirmation: '../images/image-placeholder.png',
     share: '../images/share.png',
     locked: '../images/locked.png',
@@ -400,6 +401,7 @@ const whiteboardUnlockBtn = getId('whiteboardUnlockBtn');
 const whiteboardCloseBtn = getId('whiteboardCloseBtn');
 
 // Room actions buttons
+const captionEveryoneBtn = getId('captionEveryoneBtn');
 const muteEveryoneBtn = getId('muteEveryoneBtn');
 const hideEveryoneBtn = getId('hideEveryoneBtn');
 const ejectEveryoneBtn = getId('ejectEveryoneBtn');
@@ -1141,6 +1143,7 @@ function initClientPeer() {
     signalingSocket.on('message', handleMessage);
     signalingSocket.on('wbCanvasToJson', handleJsonToWbCanvas);
     signalingSocket.on('whiteboardAction', handleWhiteboardAction);
+    signalingSocket.on('caption', handleCaptionActions);
     signalingSocket.on('kickOut', handleKickedOut);
     signalingSocket.on('fileInfo', handleFileInfo);
     signalingSocket.on('fileAbort', handleFileAbort);
@@ -1194,6 +1197,7 @@ async function handleConnect() {
         getHtmlElementsById();
         setButtonsToolTip();
         handleUsernameEmojiPicker();
+        await getButtons();
         manageButtons();
         handleButtonsRule();
         setupMySettings();
@@ -1362,6 +1366,7 @@ function handleButtonsRule() {
     elemDisplay(captionMaxBtn, !isMobileDevice && buttons.caption.showMaxBtn);
     // Settings
     elemDisplay(dropDownMicOptions, buttons.settings.showMicOptionsBtn && isPresenter); // auto-detected
+    elemDisplay(captionEveryoneBtn, buttons.settings.showCaptionEveryoneBtn);
     elemDisplay(muteEveryoneBtn, buttons.settings.showMuteEveryoneBtn);
     elemDisplay(hideEveryoneBtn, buttons.settings.showHideEveryoneBtn);
     elemDisplay(ejectEveryoneBtn, buttons.settings.showEjectEveryoneBtn);
@@ -1375,6 +1380,31 @@ function handleButtonsRule() {
     buttons.whiteboard.whiteboardLockBtn
         ? elemDisplay(whiteboardLockBtn, true, 'flex')
         : elemDisplay(whiteboardLockBtn, false);
+}
+
+/**
+ * Get Buttons config from server side and apply to current client
+ */
+async function getButtons() {
+    try {
+        const response = await axios.get('/buttons', {
+            timeout: 5000,
+        });
+        const serverButtons = response.data.message;
+        if (serverButtons) {
+            // Merge serverButtons into BUTTONS, keeping the existing keys in BUTTONS if they are not present in serverButtons
+            buttons = {
+                ...buttons, // Spread current BUTTONS first to keep existing keys
+                ...serverButtons, // Overwrite or add new keys from serverButtons
+            };
+            console.log('AXIOS ROOM BUTTONS SETTINGS', {
+                serverButtons: serverButtons,
+                clientButtons: buttons,
+            });
+        }
+    } catch (error) {
+        console.error('AXIOS GET CONFIG ERROR', error.message);
+    }
 }
 
 /**
@@ -1449,7 +1479,7 @@ async function whoAreYou() {
         allowOutsideClick: false,
         allowEscapeKey: false,
         background: swBg,
-        title: 'MiroTalk P2P',
+        title: brand.app.name,
         position: 'center',
         input: 'text',
         inputPlaceholder: 'Enter your email or name',
@@ -5541,6 +5571,17 @@ function setupMySettings() {
         elemDisplay(pinUnpinGridDiv, false);
     }
     // room actions
+    captionEveryoneBtn.addEventListener('click', (e) => {
+        sendToServer('caption', {
+            room_id: roomId,
+            peer_name: myPeerName,
+            action: 'start',
+            data: {
+                recognitionLanguageIndex: recognitionLanguage.selectedIndex,
+                recognitionDialectIndex: recognitionDialect.selectedIndex,
+            },
+        });
+    });
     muteEveryoneBtn.addEventListener('click', (e) => {
         disableAllPeers('audio');
     });
@@ -10542,6 +10583,57 @@ function kickOut(peer_id) {
 }
 
 /**
+ * Start caption if not already started
+ * @param {object} config data
+ */
+function handleCaptionActions(config) {
+    const { peer_name, action } = config;
+
+    switch (action) {
+        case 'start':
+            if (!speechRecognition || !buttons.main.showCaptionRoomBtn) {
+                userLog(
+                    'info',
+                    `${peer_name} wants to start captions for this session, but your browser does not support it. Please use a Chromium-based browser like Google Chrome, Microsoft Edge, or Brave.`,
+                );
+                return;
+            }
+
+            if (recognitionRunning) return;
+
+            Swal.fire({
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showDenyButton: true,
+                background: swBg,
+                imageUrl: images.caption,
+                title: 'Start Captions',
+                text: `${peer_name} wants to start the captions for this session. Would you like to enable them?`,
+                confirmButtonText: `Yes`,
+                denyButtonText: `No`,
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (!isCaptionBoxVisible) {
+                        captionBtn.click();
+                    }
+                    if (!recognitionRunning) {
+                        const { recognitionLanguageIndex, recognitionDialectIndex } = config.data;
+                        recognitionLanguage.selectedIndex = recognitionLanguageIndex;
+                        updateCountry();
+                        recognitionDialect.selectedIndex = recognitionDialectIndex;
+                        speechRecognitionStart.click();
+                    }
+                }
+            });
+            break;
+        default:
+            break;
+    }
+}
+
+/**
  * You will be kicked out from the room and popup the peer name that performed this action
  * @param {object} config data
  */
@@ -10597,7 +10689,7 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: '<strong>WebRTC P2P v1.3.96</strong>',
+        title: '<strong>WebRTC P2P v1.4.10</strong>',
         imageAlt: 'mirotalk-about',
         imageUrl: images.about,
         customClass: { image: 'img-about' },
