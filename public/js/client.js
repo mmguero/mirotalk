@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.4.10
+ * @version 1.4.34
  *
  */
 
@@ -48,6 +48,7 @@ const images = {
     forbidden: '../images/forbidden.png',
     avatar: '../images/mirotalk-logo.png',
     recording: '../images/recording.png',
+    poster: '../images/loader.gif',
 }; // nice free icon: https://www.iconfinder.com
 
 const className = {
@@ -125,6 +126,7 @@ const osName = DetectRTC.osName;
 const osVersion = DetectRTC.osVersion;
 const browserName = DetectRTC.browser.name;
 const browserVersion = DetectRTC.browser.version;
+const isFirefox = browserName === 'Firefox';
 const peerInfo = getPeerInfo();
 const thisInfo = getInfo();
 
@@ -295,6 +297,7 @@ const captionClean = getId('captionClean');
 const captionSaveBtn = getId('captionSaveBtn');
 const captionClose = getId('captionClose');
 const captionChat = getId('captionChat');
+const captionFooter = getId('captionFooter');
 
 // My settings
 const mySettings = getId('mySettings');
@@ -1185,6 +1188,8 @@ async function handleConnect() {
     myPeerId = signalingSocket.id;
     console.log('04. My peer id [ ' + myPeerId + ' ]');
 
+    await getButtons();
+
     if (localVideoMediaStream && localAudioMediaStream) {
         await joinToChannel();
     } else {
@@ -1197,7 +1202,6 @@ async function handleConnect() {
         getHtmlElementsById();
         setButtonsToolTip();
         handleUsernameEmojiPicker();
-        await getButtons();
         manageButtons();
         handleButtonsRule();
         setupMySettings();
@@ -3133,6 +3137,7 @@ async function loadLocalMedia(stream, kind) {
             myLocalMedia.muted = true;
             myLocalMedia.volume = 0;
             myLocalMedia.controls = false;
+            myLocalMedia.poster = images.poster;
 
             myVideoWrap.className = 'Camera';
             myVideoWrap.setAttribute('id', 'myVideoWrap');
@@ -3455,6 +3460,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             remoteMedia.style.objectFit = peer_screen_status ? 'contain' : 'var(--video-object-fit)';
             remoteMedia.style.name = peer_id + (peer_screen_status ? '_typeScreen' : '_typeCam');
             remoteMedia.controls = remoteMediaControls;
+            remoteMedia.poster = images.poster;
 
             remoteVideoWrap.className = 'Camera';
             remoteVideoWrap.setAttribute('id', peer_id + '_videoWrap');
@@ -4311,9 +4317,9 @@ function videoMediaContainerUnpin() {
  * @param {string} peer_id socket.id
  */
 function handleVideoToImg(videoStream, videoToImgBtn, peer_id = null) {
-    const videoBtn = getId(videoToImgBtn);
+    const videoTIBtn = getId(videoToImgBtn);
     const video = getId(videoStream);
-    videoBtn.addEventListener('click', () => {
+    videoTIBtn.addEventListener('click', () => {
         if (video.classList.contains('videoCircle')) {
             return userLog('toast', 'Snapshot not allowed if video on privacy mode');
         }
@@ -4782,7 +4788,7 @@ function setChatRoomBtn() {
  * Caption room buttons click event
  */
 function setCaptionRoomBtn() {
-    if (speechRecognition && buttons.main.showCaptionRoomBtn) {
+    if (buttons.main.showCaptionRoomBtn) {
         // open hide caption
         captionBtn.addEventListener('click', (e) => {
             if (!isCaptionBoxVisible) {
@@ -4843,14 +4849,18 @@ function setCaptionRoomBtn() {
         // hide it
         elemDisplay(speechRecognitionStop, false);
 
-        // start recognition speech
-        speechRecognitionStart.addEventListener('click', (e) => {
-            startSpeech();
-        });
-        // stop recognition speech
-        speechRecognitionStop.addEventListener('click', (e) => {
-            stopSpeech();
-        });
+        if (speechRecognition) {
+            // start recognition speech
+            speechRecognitionStart.addEventListener('click', (e) => {
+                startSpeech();
+            });
+            // stop recognition speech
+            speechRecognitionStop.addEventListener('click', (e) => {
+                stopSpeech();
+            });
+        } else {
+            elemDisplay(captionFooter, false);
+        }
     } else {
         elemDisplay(captionBtn, false);
         // https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility
@@ -4883,12 +4893,13 @@ function setRoomEmojiButton() {
     });
 
     function sendEmojiToRoom(data) {
-        console.log('Selected Emoji:', data.native);
+        console.log('Selected Emoji', data);
         const message = {
             type: 'roomEmoji',
             room_id: roomId,
             peer_name: myPeerName,
             emoji: data.native,
+            shortcodes: data.shortcodes,
         };
         if (thereArePeerConnections()) {
             sendToServer('message', message);
@@ -4899,10 +4910,10 @@ function setRoomEmojiButton() {
     function toggleEmojiPicker() {
         if (emojiPickerContainer.style.display === 'block') {
             elemDisplay(emojiPickerContainer, false);
-            setColor(roomEmojiPickerBtn, 'black');
+            setColor(roomEmojiPickerBtn, 'var(--btn-bar-bg-color)');
         } else {
             emojiPickerContainer.style.display = 'block';
-            setColor(roomEmojiPickerBtn, 'green');
+            setColor(roomEmojiPickerBtn, 'yellow');
         }
     }
 }
@@ -5516,6 +5527,12 @@ function setupMySettings() {
     videoQualitySelect.addEventListener('change', async (e) => {
         await setLocalVideoQuality();
     });
+
+    // Firefox may not handle well...
+    if (isFirefox) {
+        elemDisplay(videoFpsDiv, false);
+    }
+
     // select video fps
     videoFpsSelect.addEventListener('change', (e) => {
         videoMaxFrameRate = parseInt(videoFpsSelect.value, 10);
@@ -5764,86 +5781,57 @@ async function getAudioVideoConstraints() {
  */
 async function getVideoConstraints(videoQuality) {
     const frameRate = videoMaxFrameRate;
+
+    // Function to construct constraints with ideal or exact width/height
+    function createConstraints(width, height, frameRate, isIdeal = false) {
+        const constraints = {
+            width: isIdeal ? { ideal: width } : { exact: width },
+            height: isIdeal ? { ideal: height } : { exact: height },
+        };
+        // Only add frameRate for non-Firefox browsers
+        if (!isFirefox) {
+            constraints.frameRate = isIdeal ? { ideal: frameRate } : frameRate;
+        }
+        return constraints;
+    }
+
     let constraints = {};
 
     switch (videoQuality) {
         case 'default':
-            if (forceCamMaxResolutionAndFps) {
-                // This will make the browser use the maximum resolution available as default, `up to 8K and 60fps`.
-                constraints = {
-                    width: { ideal: 7680 },
-                    height: { ideal: 4320 },
-                    frameRate: { ideal: 60 },
-                }; // video cam constraints default
-            } else {
-                // This will make the browser use as ideal hdVideo and 30fps.
-                constraints = {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 30 },
-                }; // on default as hdVideo
-            }
+            forceCamMaxResolutionAndFps
+                ? (constraints = createConstraints(7680, 4320, 60, true)) // 8K resolution, 60fps (ideal)
+                : (constraints = createConstraints(1280, 720, 30, true)); // HD resolution, 30fps (ideal)
             break;
         case 'qvgaVideo':
-            constraints = {
-                width: { exact: 320 },
-                height: { exact: 240 },
-                frameRate: frameRate,
-            }; // video cam constraints low bandwidth
+            constraints = createConstraints(320, 240, frameRate, isFirefox); // Low bandwidth (exact)
             break;
         case 'vgaVideo':
-            constraints = {
-                width: { exact: 640 },
-                height: { exact: 480 },
-                frameRate: frameRate,
-            }; // video cam constraints medium bandwidth
+            constraints = createConstraints(640, 480, frameRate, isFirefox); // Medium bandwidth (exact)
             break;
         case 'hdVideo':
-            constraints = {
-                width: { exact: 1280 },
-                height: { exact: 720 },
-                frameRate: frameRate,
-            }; // video cam constraints high bandwidth
+            constraints = createConstraints(1280, 720, frameRate, isFirefox); // High bandwidth (exact)
             break;
         case 'fhdVideo':
-            constraints = {
-                width: { exact: 1920 },
-                height: { exact: 1080 },
-                frameRate: frameRate,
-            }; // video cam constraints very high bandwidth
+            constraints = createConstraints(1920, 1080, frameRate, isFirefox); // Very high bandwidth (exact)
             break;
         case '2kVideo':
-            constraints = {
-                width: { exact: 2560 },
-                height: { exact: 1440 },
-                frameRate: frameRate,
-            }; // video cam constraints ultra high bandwidth
+            constraints = createConstraints(2560, 1440, frameRate, isFirefox); // Ultra high bandwidth (exact)
             break;
         case '4kVideo':
-            constraints = {
-                width: { exact: 3840 },
-                height: { exact: 2160 },
-                frameRate: frameRate,
-            }; // video cam constraints ultra high bandwidth
+            constraints = createConstraints(3840, 2160, frameRate, isFirefox); // Ultra high bandwidth (exact)
             break;
         case '6kVideo':
-            constraints = {
-                width: { exact: 6144 },
-                height: { exact: 3456 },
-                frameRate: frameRate,
-            }; // video cam constraints Very ultra high bandwidth
+            constraints = createConstraints(6144, 3456, frameRate, isFirefox); // Very ultra high bandwidth (exact)
             break;
         case '8kVideo':
-            constraints = {
-                width: { exact: 7680 },
-                height: { exact: 4320 },
-                frameRate: frameRate,
-            }; // video cam constraints Very ultra high bandwidth
+            constraints = createConstraints(7680, 4320, frameRate, isFirefox); // Very ultra high bandwidth (exact)
             break;
         default:
             break;
     }
-    console.log('Video constraints', constraints);
+
+    console.log('Get Video constraints', constraints);
     return constraints;
 }
 
@@ -5851,13 +5839,16 @@ async function getVideoConstraints(videoQuality) {
  * Get audio constraints
  */
 async function getAudioConstraints() {
+    // For all guests
     let constraints = {
         audio: {
+            autoGainControl: true,
             echoCancellation: true,
             noiseSuppression: true,
         },
         video: false,
     };
+    // For presenter
     if (isRulesActive && isPresenter) {
         constraints = {
             audio: {
@@ -5875,10 +5866,6 @@ async function getAudioConstraints() {
     }
     console.log('Audio constraints', constraints);
     return constraints;
-    // return {
-    //     echoCancellation: true,
-    //     noiseSuppression: true,
-    // };
 }
 
 /**
@@ -5887,7 +5874,8 @@ async function getAudioConstraints() {
  * @param {string} type camera/screen default camera
  */
 async function setLocalMaxFps(maxFrameRate, type = 'camera') {
-    if (!useVideo || !localVideoMediaStream) return;
+    if (!useVideo || !localVideoMediaStream || isFirefox) return;
+
     localVideoMediaStream
         .getVideoTracks()[0]
         .applyConstraints({ frameRate: maxFrameRate })
@@ -7483,8 +7471,9 @@ function cleanMessages() {
     playSound('newMessage');
     Swal.fire({
         background: swBg,
-        position: 'center',
-        title: 'Clean up chat messages?',
+        position: 'top',
+        title: 'Chat',
+        text: 'Clean up chat messages?',
         imageUrl: images.delete,
         showDenyButton: true,
         confirmButtonText: `Yes`,
@@ -7732,7 +7721,7 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
     const getPrivateMsg = filterXSS(privateMsg);
     const getMsgId = filterXSS(msgId);
 
-    // collect chat msges to save it later
+    // collect chat messages to save it later
     chatMessages.push({
         time: time,
         from: getFrom,
@@ -7745,8 +7734,6 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
 
     const isValidPrivateMessage = getPrivateMsg && getMsgId != null && getMsgId != myPeerId;
 
-    const message = getFrom === 'ChatGPT' ? `<pre>${getMsg}</pre>` : getMsg;
-
     let msgHTML = `
 	<div id="msg-${chatMessagesId}" class="msg ${getSide}-msg">
         <img class="msg-img" src="${getImg}" />
@@ -7755,7 +7742,8 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                 <div class="msg-info-name">${getFrom}</div>
                 <div class="msg-info-time">${time}</div>
             </div>
-            <div id="${chatMessagesId}" class="msg-text">${message}
+            <div class="msg-text">
+            <span id="message-${chatMessagesId}"></span>
                 <hr/>
     `;
     // add btn direct reply to private message
@@ -7779,7 +7767,7 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                     id="msg-copy-${chatMessagesId}"
                     class="${className.copy}"
                     style="color:#fff; border:none; background:transparent;"
-                    onclick="copyToClipboard('${chatMessagesId}')"
+                    onclick="copyToClipboard('message-${chatMessagesId}')"
                 ></button>`;
     if (isSpeechSynthesisSupported) {
         msgHTML += `
@@ -7787,7 +7775,7 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
                     id="msg-speech-${chatMessagesId}"
                     class="${className.speech}" 
                     style="color:#fff; border:none; background:transparent;"
-                    onclick="speechMessage(false, '${getFrom}', '${checkMsg(message)}')"
+                    onclick="speechElementText(false, '${getFrom}', 'message-${chatMessagesId}')"
                 ></button>`;
     }
     msgHTML += ` 
@@ -7795,7 +7783,21 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
         </div>
     </div>
     `;
+
     msgerChat.insertAdjacentHTML('beforeend', msgHTML);
+
+    const message = getId(`message-${chatMessagesId}`);
+    if (message) {
+        if (getFrom === 'ChatGPT') {
+            // Stream the message for ChatGPT
+            streamMessage(message, getMsg, 100);
+        } else {
+            // Process the message for other senders
+            message.innerHTML = processMessage(getMsg);
+            hljs.highlightAll();
+        }
+    }
+
     msgerChat.scrollTop += 500;
     if (!isMobileDevice) {
         setTippy(getId('msg-delete-' + chatMessagesId), 'Delete', 'top');
@@ -7806,6 +7808,71 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
         }
     }
     chatMessagesId++;
+}
+
+/**
+ * Process Messages
+ * @param {string} message
+ * @returns string message processed
+ */
+function processMessage(message) {
+    const codeBlockRegex = /```([a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
+    let parts = [];
+    let lastIndex = 0;
+
+    message.replace(codeBlockRegex, (match, lang, code, offset) => {
+        if (offset > lastIndex) {
+            parts.push({ type: 'text', value: message.slice(lastIndex, offset) });
+        }
+        parts.push({ type: 'code', lang, value: code });
+        lastIndex = offset + match.length;
+    });
+
+    if (lastIndex < message.length) {
+        parts.push({ type: 'text', value: message.slice(lastIndex) });
+    }
+
+    return parts
+        .map((part) => {
+            if (part.type === 'text') {
+                return part.value;
+            } else if (part.type === 'code') {
+                return `<pre><code class="language-${part.lang || ''}">${part.value}</code></pre>`;
+            }
+        })
+        .join('');
+}
+
+/**
+ * Stream message
+ * @param {string} element
+ * @param {string} message
+ * @param {integer} speed
+ */
+function streamMessage(element, message, speed = 100) {
+    const parts = processMessage(message);
+    const words = parts.split(' ');
+
+    let textBuffer = '';
+    let wordIndex = 0;
+
+    const interval = setInterval(() => {
+        if (wordIndex < words.length) {
+            textBuffer += words[wordIndex] + ' ';
+            element.innerHTML = textBuffer;
+            wordIndex++;
+        } else {
+            clearInterval(interval);
+            highlightCodeBlocks(element);
+        }
+    }, speed);
+
+    function highlightCodeBlocks(element) {
+        const codeBlocks = element.querySelectorAll('pre code');
+        codeBlocks.forEach((block) => {
+            hljs.highlightElement(block);
+        });
+    }
 }
 
 /**
@@ -7824,6 +7891,17 @@ function speechMessage(newMsg = true, from, msg) {
 }
 
 /**
+ * Speech element text
+ * @param {boolean} newMsg true/false
+ * @param {string} from peer_name
+ * @param {string} elemId
+ */
+function speechElementText(newMsg = true, from, elemId) {
+    const element = getId(elemId);
+    speechMessage(newMsg, from, element.innerText);
+}
+
+/**
  * Delete message
  * @param {string} id msg id
  */
@@ -7831,8 +7909,9 @@ function deleteMessage(id) {
     playSound('newMessage');
     Swal.fire({
         background: swBg,
-        position: 'center',
-        title: 'Delete this messages?',
+        position: 'top',
+        title: 'Chat',
+        text: 'Delete this messages?',
         imageUrl: images.delete,
         showDenyButton: true,
         confirmButtonText: `Yes`,
@@ -8423,7 +8502,7 @@ function handleHideMe(isHideMeActive) {
     } else {
         elemDisplay(myVideoWrap, true, 'inline-block');
         hideMeBtn.className = className.hideMeOff;
-        setColor(hideMeBtn, 'black');
+        setColor(hideMeBtn, 'var(--btn-bar-bg-color)');
         playSound('on');
     }
     resizeVideoMedia();
@@ -8442,7 +8521,7 @@ function setMyHandStatus() {
         playSound('raiseHand');
     } else {
         // Lower hand
-        setColor(myHandBtn, 'black');
+        setColor(myHandBtn, 'var(--btn-bar-bg-color)');
         elemDisplay(myHandStatusIcon, false);
         setTippy(myHandBtn, 'Lower your hand', bottomButtonsPlacement);
     }
@@ -8818,9 +8897,66 @@ function handleEmoji(message, duration = 5000) {
         emojiDisplay.style.marginBottom = '5px';
         emojiDisplay.innerText = `${message.emoji} ${message.peer_name}`;
         userEmoji.appendChild(emojiDisplay);
+
         setTimeout(() => {
             emojiDisplay.remove();
         }, duration);
+
+        handleEmojiSound(message);
+    }
+}
+
+/**
+ * Play emoji sound
+ * https://freesound.org/
+ * https://cloudconvert.com
+ * @param {object} message
+ */
+function handleEmojiSound(message) {
+    const path = '../sounds/emoji/';
+    switch (message.shortcodes) {
+        case ':+1:':
+        case ':ok_hand:':
+            playSound('ok', true, path);
+            break;
+        case ':clap:':
+            playSound('applause', true, path);
+            break;
+        case ':smiley:':
+        case ':grinning:':
+            playSound('smile', true, path);
+            break;
+        case ':joy:':
+            playSound('laughs', true, path);
+            break;
+        case ':tada:':
+            playSound('congrats', true, path);
+            break;
+        case ':open_mouth:':
+            playSound('woah', true, path);
+            break;
+        case ':trumpet:':
+            playSound('trombone', true, path);
+            break;
+        case ':kissing_heart:':
+            playSound('kiss', true, path);
+            break;
+        case ':heart:':
+        case ':hearts:':
+            playSound('heart', true, path);
+            break;
+        case ':rocket:':
+            playSound('rocket', true, path);
+            break;
+        case ':sparkles:':
+        case ':star:':
+        case ':star2:':
+        case ':dizzy:':
+            playSound('tinkerbell', true, path);
+            break;
+        // ...
+        default:
+            break;
     }
 }
 
@@ -10591,7 +10727,7 @@ function handleCaptionActions(config) {
 
     switch (action) {
         case 'start':
-            if (!speechRecognition || !buttons.main.showCaptionRoomBtn) {
+            if (!speechRecognition) {
                 userLog(
                     'info',
                     `${peer_name} wants to start captions for this session, but your browser does not support it. Please use a Chromium-based browser like Google Chrome, Microsoft Edge, or Brave.`,
@@ -10599,7 +10735,7 @@ function handleCaptionActions(config) {
                 return;
             }
 
-            if (recognitionRunning) return;
+            if (recognitionRunning || !buttons.main.showCaptionRoomBtn) return;
 
             Swal.fire({
                 allowOutsideClick: false,
@@ -10689,12 +10825,17 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: '<strong>WebRTC P2P v1.4.10</strong>',
+        title: '<strong>WebRTC P2P v1.4.34</strong>',
         imageAlt: 'mirotalk-about',
         imageUrl: images.about,
         customClass: { image: 'img-about' },
         html: `
         <br/>
+        <div id="about">
+            <hr />
+            <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
+            <hr />
+        </div>
         `,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -11060,10 +11201,11 @@ function msgPopup(icon, message, position, timer = 1000) {
  * https://notificationsounds.com/notification-sounds
  * @param {string} name audio to play
  * @param {boolean} force audio
+ * @param {string} path of sound files
  */
-async function playSound(name, force = false) {
+async function playSound(name, force = false, path = '../sounds/') {
     if (!notifyBySound && !force) return;
-    const sound = '../sounds/' + name + '.mp3';
+    const sound = path + name + '.mp3';
     const audioToPlay = new Audio(sound);
     try {
         audioToPlay.volume = 0.5;

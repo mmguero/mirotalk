@@ -38,7 +38,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.4.10
+ * @version 1.4.34
  *
  */
 
@@ -208,8 +208,8 @@ if (turnServerEnabled && turnServerUrl && turnServerUsername && turnServerCreden
 }
 
 // Test Stun and Turn connection with query params
-// const testStunTurn = host + '/test?iceServers=' + JSON.stringify(iceServers);
-const testStunTurn = host + '/test';
+// const testStunTurn = host + '/icetest?iceServers=' + JSON.stringify(iceServers);
+const testStunTurn = host + '/icetest';
 
 // IP Lookup
 const IPLookupEnabled = getEnvBoolean(process.env.IP_LOOKUP_ENABLED);
@@ -528,7 +528,7 @@ app.get(['/privacy'], (req, res) => {
 });
 
 // test Stun and Turn connections
-app.get(['/test'], (req, res) => {
+app.get(['/icetest'], (req, res) => {
     if (Object.keys(req.query).length > 0) {
         log.debug('Request Query', req.query);
     }
@@ -545,6 +545,11 @@ app.get('/join/', async (req, res) => {
             https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=0
         */
         const { room, name, audio, video, screen, notify, hide, token } = checkXSS(req.query);
+
+        if (!room) {
+            log.warn('/join/params room empty', room);
+            return res.status(401).json({ message: 'Direct Room Join: Missing mandatory room parameter!' });
+        }
 
         const allowRoomAccess = isAllowedRoomAccess('/join/params', req, hostCfg, peers, room);
 
@@ -632,6 +637,9 @@ app.get('/join/*', function (req, res) {
 
 // Login
 app.get(['/login'], (req, res) => {
+    if (!hostCfg.protected) {
+        return res.redirect('/');
+    }
     res.sendFile(views.login);
 });
 
@@ -693,10 +701,59 @@ app.get('/brand', (req, res) => {
     res.status(200).json({ message: config && config.brand ? config.brand : false });
 });
 
+// Join roomId redirect to /join?room=roomId
+app.get('/:roomId', (req, res) => {
+    const { roomId } = checkXSS(req.params);
+
+    if (!roomId) {
+        log.warn('/:roomId empty', roomId);
+        return res.redirect('/');
+    }
+
+    log.debug('Detected roomId --> redirect to /join?room=roomId');
+    res.redirect(`/join/${roomId}`);
+});
+
 /**
     MiroTalk API v1
     For api docs we use: https://swagger.io/
 */
+
+// request stats list
+app.get([`${apiBasePath}/stats`], (req, res) => {
+    // Check if endpoint allowed
+    if (api_disabled.includes('stats')) {
+        return res.status(403).json({
+            error: 'This endpoint has been disabled. Please contact the administrator for further information.',
+        });
+    }
+    // check if user was authorized for the api call
+    const { host, authorization } = req.headers;
+    const api = new ServerApi(host, authorization, api_key_secret);
+    if (!api.isAuthorized()) {
+        log.debug('MiroTalk get stats - Unauthorized', {
+            header: req.headers,
+            body: req.body,
+        });
+        return res.status(403).json({ error: 'Unauthorized!' });
+    }
+    // Get stats
+    const { timestamp, totalRooms, totalPeers } = api.getStats(peers);
+    res.json({
+        success: true,
+        timestamp,
+        totalRooms,
+        totalPeers,
+    });
+    // log.debug the output if all done
+    log.debug('MiroTalk get stats - Authorized', {
+        header: req.headers,
+        body: req.body,
+        timestamp,
+        totalRooms,
+        totalPeers,
+    });
+});
 
 // request token endpoint
 app.post([`${apiBasePath}/token`], (req, res) => {
