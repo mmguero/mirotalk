@@ -11,22 +11,26 @@ dependencies: {
     @mattermost/client      : https://www.npmjs.com/package/@mattermost/client
     @sentry/node            : https://www.npmjs.com/package/@sentry/node
     axios                   : https://www.npmjs.com/package/axios
-    compression             : https://www.npmjs.com/package/compression
     colors                  : https://www.npmjs.com/package/colors
+    compression             : https://www.npmjs.com/package/compression
     cors                    : https://www.npmjs.com/package/cors
     crypto-js               : https://www.npmjs.com/package/crypto-js
+    dompurify               : https://www.npmjs.com/package/dompurify
     dotenv                  : https://www.npmjs.com/package/dotenv
     express                 : https://www.npmjs.com/package/express
     express-openid-connect  : https://www.npmjs.com/package/express-openid-connect
+    he                      : https://www.npmjs.com/package/he
+    helmet                  : https://www.npmjs.com/package/helmet
+    jsdom                   : https://www.npmjs.com/package/jsdom
     jsonwebtoken            : https://www.npmjs.com/package/jsonwebtoken
     js-yaml                 : https://www.npmjs.com/package/js-yaml
     ngrok                   : https://www.npmjs.com/package/ngrok
-    qs                      : https://www.npmjs.com/package/qs
+    nodemailer              : https://www.npmjs.com/package/nodemailer
     openai                  : https://www.npmjs.com/package/openai
+    qs                      : https://www.npmjs.com/package/qs
     socket.io               : https://www.npmjs.com/package/socket.io
-    swagger                 : https://www.npmjs.com/package/swagger-ui-express
+    swagger-ui-express      : https://www.npmjs.com/package/swagger-ui-express
     uuid                    : https://www.npmjs.com/package/uuid
-    xss                     : https://www.npmjs.com/package/xss
 }
 */
 
@@ -38,7 +42,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.4.34
+ * @version 1.4.80
  *
  */
 
@@ -53,6 +57,7 @@ const https = require('https');
 const compression = require('compression');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
@@ -60,7 +65,9 @@ const app = express();
 const fs = require('fs');
 const checkXSS = require('./xss.js');
 const ServerApi = require('./api');
-const mattermostCli = require('./mattermost.js');
+const mattermostCli = require('./mattermost');
+const Validate = require('./validate');
+const HtmlInjector = require('./htmlInjector');
 const Host = require('./host');
 const Logs = require('./logs');
 const log = new Logs('server');
@@ -110,6 +117,9 @@ if (isHttps) {
 } else {
     server = http.createServer(app);
 }
+
+// Trust Proxy
+const trustProxy = !!getEnvBoolean(process.env.TRUST_PROXY);
 
 // Cors
 
@@ -304,7 +314,7 @@ const OIDC = {
             scope: 'openid profile email',
         },
         authRequired: process.env.OIDC_AUTH_REQUIRED ? getEnvBoolean(process.env.OIDC_AUTH_REQUIRED) : false, // Set to true if authentication is required for all routes
-        auth0Logout: true, // Set to true to enable logout with Auth0
+        auth0Logout: process.env.OIDC_AUTH_LOGOUT ? getEnvBoolean(process.env.OIDC_AUTH_LOGOUT) : true, // Set to true to enable logout with Auth0
         routes: {
             callback: '/auth/callback', // Indicating the endpoint where your application will handle the callback from the authentication provider after a user has been authenticated.
             login: false, // Dedicated route in your application for user login.
@@ -316,23 +326,32 @@ const OIDC = {
 // Custom middleware function for OIDC authentication
 function OIDCAuth(req, res, next) {
     if (OIDC.enabled) {
+        function handleHostProtected(req) {
+            if (!hostCfg.protected) return;
+
+            const ip = authHost.getIP(req);
+            hostCfg.authenticated = true;
+            authHost.setAuthorizedIP(ip, true);
+            // Check...
+            log.debug('OIDC ------> Host protected', {
+                authenticated: hostCfg.authenticated,
+                authorizedIPs: authHost.getAuthorizedIPs(),
+            });
+        }
+
+        if (req.oidc.isAuthenticated()) {
+            log.debug('OIDC ------> User already Authenticated');
+            handleHostProtected(req);
+            return next();
+        }
+
         // Apply requiresAuth() middleware conditionally
         requiresAuth()(req, res, function () {
-            log.debug('[OIDC] ------> requiresAuth');
+            log.debug('OIDC ------> requiresAuth');
             // Check if user is authenticated
             if (req.oidc.isAuthenticated()) {
                 log.debug('[OIDC] ------> User isAuthenticated');
-                // User is authenticated
-                if (hostCfg.protected) {
-                    const ip = authHost.getIP(req);
-                    hostCfg.authenticated = true;
-                    authHost.setAuthorizedIP(ip, true);
-                    // Check...
-                    log.debug('[OIDC] ------> Host protected', {
-                        authenticated: hostCfg.authenticated,
-                        authorizedIPs: authHost.getAuthorizedIPs(),
-                    });
-                }
+                handleHostProtected(req);
                 next();
             } else {
                 // User is not authenticated
@@ -367,11 +386,17 @@ const views = {
     stunTurn: path.join(__dirname, '../../', 'public/views/testStunTurn.html'),
 };
 
+// File to cache and inject custom HTML data like OG tags and any other elements.
+const filesPath = [views.landing, views.newCall, views.client, views.login];
+const htmlInjector = new HtmlInjector(filesPath, config?.brand || null);
+
 const channels = {}; // collect channels
 const sockets = {}; // collect sockets
 const peers = {}; // collect peers info grp by channels
 const presenters = {}; // collect presenters grp by channels
 
+app.set('trust proxy', trustProxy); // Enables trust for proxy headers (e.g., X-Forwarded-For) based on the trustProxy setting
+app.use(helmet.noSniff()); // Enable content type sniffing prevention
 app.use(express.static(dir.public)); // Use all static files from the public folder
 app.use(cors(corsOptions)); // Enable CORS with options
 app.use(compression()); // Compress all HTTP responses using GZip
@@ -435,14 +460,29 @@ app.use((err, req, res, next) => {
     }
 });
 
-// OpenID Connect
+// OpenID Connect - Dynamically set baseURL based on incoming host and protocol
 if (OIDC.enabled) {
-    try {
-        app.use(auth(OIDC.config));
-    } catch (err) {
-        log.error(err);
-        process.exit(1);
-    }
+    const getDynamicConfig = (host, protocol) => {
+        const baseURL = `${protocol}://${host}`;
+        log.debug('OIDC baseURL', baseURL);
+        return {
+            ...OIDC.config,
+            baseURL,
+        };
+    };
+
+    // Apply the authentication middleware using dynamic baseURL configuration
+    app.use((req, res, next) => {
+        const host = req.headers.host;
+        const protocol = req.protocol === 'https' ? 'https' : 'http';
+        const dynamicOIDCConfig = getDynamicConfig(host, protocol);
+        try {
+            auth(dynamicOIDCConfig)(req, res, next);
+        } catch (err) {
+            log.error('OIDC Auth Middleware Error', err);
+            process.exit(1);
+        }
+    });
 }
 
 // Route to display user information
@@ -480,23 +520,23 @@ app.get('/logout', (req, res) => {
 });
 
 // main page
-app.get(['/'], OIDCAuth, (req, res) => {
+app.get('/', OIDCAuth, (req, res) => {
     if (!OIDC.enabled && hostCfg.protected) {
         const ip = getIP(req);
         if (allowedIP(ip)) {
-            res.sendFile(views.landing);
+            htmlInjector.injectHtml(views.landing, res);
             hostCfg.authenticated = true;
         } else {
             hostCfg.authenticated = false;
             res.redirect('/login');
         }
     } else {
-        res.sendFile(views.landing);
+        return htmlInjector.injectHtml(views.landing, res);
     }
 });
 
 // set new room name and join
-app.get(['/newcall'], OIDCAuth, (req, res) => {
+app.get('/newcall', OIDCAuth, (req, res) => {
     if (!OIDC.enabled && hostCfg.protected) {
         const ip = getIP(req);
         if (allowedIP(ip)) {
@@ -507,12 +547,12 @@ app.get(['/newcall'], OIDCAuth, (req, res) => {
             res.redirect('/login');
         }
     } else {
-        res.sendFile(views.newCall);
+        htmlInjector.injectHtml(views.newCall, res);
     }
 });
 
 // Get stats endpoint
-app.get(['/stats'], (req, res) => {
+app.get('/stats', (req, res) => {
     //log.debug('Send stats', statsData);
     res.send(statsData);
 });
@@ -551,6 +591,12 @@ app.get('/join/', async (req, res) => {
             return res.status(401).json({ message: 'Direct Room Join: Missing mandatory room parameter!' });
         }
 
+        if (!Validate.isValidRoomName(room)) {
+            return res.status(400).json({
+                message: 'Invalid Room name!\nPath traversal pattern detected!',
+            });
+        }
+
         const allowRoomAccess = isAllowedRoomAccess('/join/params', req, hostCfg, peers, room);
 
         if (!allowRoomAccess && !token) {
@@ -583,7 +629,9 @@ app.get('/join/', async (req, res) => {
             } catch (err) {
                 // Invalid token
                 log.error('Direct Join JWT error', err.message);
-                return hostCfg.protected || hostCfg.user_auth ? res.sendFile(views.login) : res.sendFile(views.landing);
+                return hostCfg.protected || hostCfg.user_auth
+                    ? htmlInjector.injectHtml(views.login, res)
+                    : htmlInjector.injectHtml(views.landing, res);
             }
         }
 
@@ -604,9 +652,9 @@ app.get('/join/', async (req, res) => {
         // Check if peer authenticated or valid
         if (room && (hostCfg.authenticated || isPeerValid)) {
             // only room mandatory
-            return res.sendFile(views.client);
+            return htmlInjector.injectHtml(views.client, res);
         } else {
-            return res.sendFile(views.login);
+            return htmlInjector.injectHtml(views.login, res);
         }
     }
 });
@@ -621,10 +669,15 @@ app.get('/join/:roomId', function (req, res) {
         return res.redirect('/');
     }
 
+    if (!Validate.isValidRoomName(roomId)) {
+        log.warn('/join/:roomId invalid', roomId);
+        return res.redirect('/');
+    }
+
     const allowRoomAccess = isAllowedRoomAccess('/join/:roomId', req, hostCfg, peers, roomId);
 
     if (allowRoomAccess) {
-        res.sendFile(views.client);
+        htmlInjector.injectHtml(views.client, res);
     } else {
         !OIDC.enabled && hostCfg.protected ? res.redirect('/login') : res.redirect('/');
     }
@@ -637,14 +690,14 @@ app.get('/join/*', function (req, res) {
 
 // Login
 app.get(['/login'], (req, res) => {
-    if (!hostCfg.protected) {
-        return res.redirect('/');
+    if (hostCfg.protected || hostCfg.user_auth) {
+        return htmlInjector.injectHtml(views.login, res);
     }
-    res.sendFile(views.login);
+    res.redirect('/');
 });
 
 // Logged
-app.get(['/logged'], (req, res) => {
+app.get('/logged', (req, res) => {
     const ip = getIP(req);
     if (allowedIP(ip)) {
         res.redirect('/');
@@ -657,7 +710,7 @@ app.get(['/logged'], (req, res) => {
 /* AXIOS */
 
 // handle login on host protected
-app.post(['/login'], (req, res) => {
+app.post('/login', (req, res) => {
     //
     const ip = getIP(req);
     log.debug(`Request login to host from: ${ip}`, req.body);
@@ -720,7 +773,7 @@ app.get('/:roomId', (req, res) => {
 */
 
 // request stats list
-app.get([`${apiBasePath}/stats`], (req, res) => {
+app.get(`${apiBasePath}/stats`, (req, res) => {
     // Check if endpoint allowed
     if (api_disabled.includes('stats')) {
         return res.status(403).json({
@@ -756,7 +809,7 @@ app.get([`${apiBasePath}/stats`], (req, res) => {
 });
 
 // request token endpoint
-app.post([`${apiBasePath}/token`], (req, res) => {
+app.post(`${apiBasePath}/token`, (req, res) => {
     // Check if endpoint allowed
     if (api_disabled.includes('token')) {
         return res.status(403).json({
@@ -785,7 +838,7 @@ app.post([`${apiBasePath}/token`], (req, res) => {
 });
 
 // request meetings list
-app.get([`${apiBasePath}/meetings`], (req, res) => {
+app.get(`${apiBasePath}/meetings`, (req, res) => {
     // Check if endpoint allowed
     if (api_disabled.includes('meetings')) {
         return res.status(403).json({
@@ -814,7 +867,7 @@ app.get([`${apiBasePath}/meetings`], (req, res) => {
 });
 
 // API request meeting room endpoint
-app.post([`${apiBasePath}/meeting`], (req, res) => {
+app.post(`${apiBasePath}/meeting`, (req, res) => {
     // Check if endpoint allowed
     if (api_disabled.includes('meeting')) {
         return res.status(403).json({
@@ -840,7 +893,7 @@ app.post([`${apiBasePath}/meeting`], (req, res) => {
 });
 
 // API request join room endpoint
-app.post([`${apiBasePath}/join`], (req, res) => {
+app.post(`${apiBasePath}/join`, (req, res) => {
     // Check if endpoint allowed
     if (api_disabled.includes('join')) {
         return res.status(403).json({
@@ -931,6 +984,7 @@ function getServerConfig(tunnel = false) {
         // General Server Information
         server: host,
         server_tunnel: tunnel,
+        trust_proxy: trustProxy,
         api_docs: api_docs,
 
         // Core Configurations
@@ -1175,6 +1229,11 @@ io.sockets.on('connect', async (socket) => {
             peer_info,
         } = config;
 
+        if (!Validate.isValidRoomName(channel)) {
+            log.warn('[' + socket.id + '] - Invalid room name', channel);
+            return socket.emit('unauthorized');
+        }
+
         if (channel in socket.channels) {
             return log.debug('[' + socket.id + '] [Warning] already joined', channel);
         }
@@ -1256,7 +1315,7 @@ io.sockets.on('connect', async (socket) => {
         }
 
         // Check if peer is presenter, if token check the presenter key
-        const isPresenter = peer_token ? is_presenter : await isPeerPresenter(channel, socket.id, peer_name, peer_uuid);
+        const isPresenter = peer_token ? is_presenter : isPeerPresenter(channel, socket.id, peer_name, peer_uuid);
 
         // Some peer info data
         const { osName, osVersion, browserName, browserVersion } = peer_info;
@@ -1363,7 +1422,7 @@ io.sockets.on('connect', async (socket) => {
         const { room_id, peer_id, peer_name, peer_uuid, password, action } = config;
 
         // Check if peer is presenter
-        const isPresenter = await isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
+        const isPresenter = isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
 
         let room_is_locked = false;
         //
@@ -1516,7 +1575,7 @@ io.sockets.on('connect', async (socket) => {
         const presenterActions = ['muteAudio', 'hideVideo', 'ejectAll'];
         if (presenterActions.some((v) => peer_action === v)) {
             // Check if peer is presenter
-            const isPresenter = await isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
+            const isPresenter = isPeerPresenter(room_id, peer_id, peer_name, peer_uuid);
             // if not presenter do nothing
             if (!isPresenter) return;
         }
@@ -1851,7 +1910,7 @@ async function getPeerGeoLocation(ip) {
  * @param {string} peer_uuid
  * @returns boolean
  */
-async function isPeerPresenter(room_id, peer_id, peer_name, peer_uuid) {
+function isPeerPresenter(room_id, peer_id, peer_name, peer_uuid) {
     try {
         if (!presenters[room_id] || !presenters[room_id][peer_id]) {
             // Presenter not in the presenters config list, disconnected, or peer_id changed...
@@ -2079,15 +2138,11 @@ function removeIP(socket) {
  * @returns
  */
 function safeRequire(filePath) {
+    let data = null;
     try {
-        // Resolve the absolute path of the module
-        const resolvedPath = require.resolve(filePath);
-        // Check if the file exists
-        if (fs.existsSync(resolvedPath)) {
-            return require(resolvedPath);
-        }
+        data = require(filePath);
     } catch (error) {
-        log.error('Module not found', filePath);
+        log.error(error);
     }
-    return null;
+    return data;
 }

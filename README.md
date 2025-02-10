@@ -12,9 +12,11 @@
 
 <hr />
 
-<p align="center">
-    Join our community for questions, discussions, and support on <a href="https://discord.gg/rgGYfeYW3N">Discord</a>
-</p>
+<strong>
+    <p align="center">
+        Join our Community for questions, help, support, ideas, and discussions on <a href='https://discord.gg/rgGYfeYW3N'>Discord</a>
+    </p>
+</strong>
 
 <hr />
 
@@ -40,7 +42,7 @@
 - File sharing with drag-and-drop support.
 - Choose your audio input, output, and video source.
 - Supports video quality up to 8K and 60 FPS.
-- Supports advance Picture-in-Picture (PiP) offering a more streamlined and flexible viewing experience.
+- Supports advance Video/Document Picture-in-Picture (PiP) offering a more streamlined and flexible viewing experience.
 - Record your screen, audio, and video.
 - Snapshot video frames and save them as PNG images.
 - Chat with an Emoji Picker for expressing feelings, private messages, Markdown support, and conversation saving.
@@ -223,9 +225,9 @@ $ curl -X GET "http://localhost:3000/api/v1/stats" -H "authorization: mirotalkp2
 $ curl -X GET "https://p2p.mirotalk.com/api/v1/stats" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"
 $ curl -X GET "https://mirotalk.up.railway.app/api/v1/stats" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"
 # The response will give you the active meetings (default disabled).
-$ curl -X GET "http://localhost:3000/api/v1/meetings" -H "authorization: mirotalksfu_default_secret" -H "Content-Type: application/json"
-$ curl -X GET "https://p2p.mirotalk.com/api/v1/meetings" -H "authorization: mirotalksfu_default_secret" -H "Content-Type: application/json"
-$ curl -X GET "mirotalk.up.railway.app/api/v1/meetings" -H "authorization: mirotalksfu_default_secret" -H "Content-Type: application/json"
+$ curl -X GET "http://localhost:3000/api/v1/meetings" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"
+$ curl -X GET "https://p2p.mirotalk.com/api/v1/meetings" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"
+$ curl -X GET "mirotalk.up.railway.app/api/v1/meetings" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"
 # The response will give you a entrypoint / Room URL for your meeting.
 $ curl -X POST "http://localhost:3000/api/v1/meeting" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"
 $ curl -X POST "https://p2p.mirotalk.com/api/v1/meeting" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json"

@@ -2424,6 +2424,10 @@ textarea.form-input {
     }
 }
 
+.hero-content p {
+    color: gainsboro;
+}
+
 .hero-inner > .hero-content + .hero-figure,
 .hero-inner > .hero-figure + .hero-content {
     margin-top: 48px;
@@ -2433,6 +2437,10 @@ textarea.form-input {
     display: inline-flex;
     align-items: center;
     vertical-align: top;
+}
+
+.hero-inner a {
+    color: lime;
 }
 
 @media (max-width: 640px) {

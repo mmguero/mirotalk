@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.4.34
+ * @version 1.4.80
  *
  */
 
@@ -33,6 +33,7 @@ const myRoomUrl = window.location.origin + '/join/' + roomId; // share room url
 // Images
 const images = {
     caption: '../images/caption.png',
+    chatgpt: '../images/chatgpt.png',
     confirmation: '../images/image-placeholder.png',
     share: '../images/share.png',
     locked: '../images/locked.png',
@@ -115,18 +116,20 @@ const wbHeight = 768;
 
 // Peer infos
 const extraInfo = getId('extraInfo');
-const userAgent = navigator.userAgent.toLowerCase();
-const detectRtcVersion = DetectRTC.version;
-const isWebRTCSupported = DetectRTC.isWebRTCSupported;
-const isMobileDevice = DetectRTC.isMobileDevice;
-const isTabletDevice = isTablet(userAgent);
-const isIPadDevice = isIpad(userAgent);
-const isDesktopDevice = !isMobileDevice && !isTabletDevice && !isIPadDevice;
-const osName = DetectRTC.osName;
-const osVersion = DetectRTC.osVersion;
-const browserName = DetectRTC.browser.name;
-const browserVersion = DetectRTC.browser.version;
-const isFirefox = browserName === 'Firefox';
+const isWebRTCSupported = checkWebRTCSupported();
+const userAgent = navigator.userAgent;
+const parser = new UAParser(userAgent);
+const parserResult = parser.getResult();
+const deviceType = parserResult.device.type || 'desktop';
+const isMobileDevice = deviceType === 'mobile';
+const isTabletDevice = deviceType === 'tablet';
+const isIPadDevice = parserResult.device.model?.toLowerCase() === 'ipad';
+const isDesktopDevice = deviceType === 'desktop';
+const osName = parserResult.os.name;
+const osVersion = parserResult.os.version;
+const browserName = parserResult.browser.name;
+const browserVersion = parserResult.browser.version;
+const isFirefox = browserName.toLowerCase().includes('firefox');
 const peerInfo = getPeerInfo();
 const thisInfo = getInfo();
 
@@ -308,6 +311,7 @@ const tabVideoShareBtn = getId('tabVideoShareBtn');
 const tabRecordingBtn = getId('tabRecordingBtn');
 const tabParticipantsBtn = getId('tabParticipantsBtn');
 const tabProfileBtn = getId('tabProfileBtn');
+const tabShortcutsBtn = getId('tabShortcutsBtn');
 const tabNetworkBtn = getId('tabNetworkBtn');
 const networkIP = getId('networkIP');
 const networkHost = getId('networkHost');
@@ -322,6 +326,7 @@ const myPeerNameSet = getId('myPeerNameSet');
 const myPeerNameSetBtn = getId('myPeerNameSetBtn');
 const switchSounds = getId('switchSounds');
 const switchShare = getId('switchShare');
+const switchKeepButtonsVisible = getId('switchKeepButtonsVisible');
 const switchPushToTalk = getId('switchPushToTalk');
 const switchAudioPitchBar = getId('switchAudioPitchBar');
 const audioInputSelect = getId('audioSource');
@@ -354,6 +359,7 @@ const tabEmailInvitation = getId('tabEmailInvitation');
 const isPeerPresenter = getId('isPeerPresenter');
 const peersCount = getId('peersCount');
 const screenFpsDiv = getId('screenFpsDiv');
+const switchShortcuts = getId('switchShortcuts');
 
 // Audio options
 const dropDownMicOptions = getId('dropDownMicOptions');
@@ -619,9 +625,11 @@ let screenFpsSelectedIndex = 1; // 30 fps
 let isMySettingsVisible = false;
 let thisRoomPassword = null;
 let isRoomLocked = false;
+let isKeepButtonsVisible = false;
 let isAudioPitchBar = true;
 let isPushToTalkActive = false;
 let isSpaceDown = false;
+let isShortcutsEnabled = false;
 
 // recording
 let mediaRecorder;
@@ -747,6 +755,7 @@ function setButtonsToolTip() {
     );
     setTippy(switchSounds, 'Toggle room notify sounds', 'right');
     setTippy(switchShare, "Show 'Share Room' popup on join.", 'right');
+    setTippy(switchKeepButtonsVisible, 'Keep buttons always visible', 'right');
     setTippy(recImage, 'Toggle recording', 'right');
     setTippy(
         switchH264Recording,
@@ -813,8 +822,7 @@ function refreshMainButtonsToolTipPlacement() {
     setTippy(whiteboardBtn, 'Open the whiteboard', placement);
     setTippy(snapshotRoomBtn, 'Snapshot screen, windows or tab', placement);
     setTippy(fileShareBtn, 'Share file', placement);
-    setTippy(documentPiPBtn, 'Toggle picture in picture', placement);
-    setTippy(mySettingsBtn, 'Open the settings', placement);
+    setTippy(documentPiPBtn, 'Toggle Document picture in picture', placement);
     setTippy(aboutBtn, 'About this project', placement);
 
     setTippy(toggleExtraBtn, 'Toggle extra buttons', bottomButtonsPlacement);
@@ -823,6 +831,7 @@ function refreshMainButtonsToolTipPlacement() {
     setTippy(screenShareBtn, 'Start screen sharing', bottomButtonsPlacement);
     setTippy(myHandBtn, 'Raise your hand', bottomButtonsPlacement);
     setTippy(chatRoomBtn, 'Open the chat', bottomButtonsPlacement);
+    setTippy(mySettingsBtn, 'Open the settings', bottomButtonsPlacement);
     setTippy(leaveRoomBtn, 'Leave this room', bottomButtonsPlacement);
 }
 
@@ -852,14 +861,11 @@ function setTippy(element, content, placement) {
 }
 
 /**
- * Get peer info using DetectRTC
- * https://github.com/muaz-khan/DetectRTC
+ * Get peer info using D
  * @returns {object} peer info
  */
 function getPeerInfo() {
     return {
-        detectRTCversion: detectRtcVersion,
-        isWebRTCSupported: isWebRTCSupported,
         isDesktopDevice: isDesktopDevice,
         isMobileDevice: isMobileDevice,
         isTabletDevice: isTabletDevice,
@@ -876,10 +882,7 @@ function getPeerInfo() {
  * @returns object info
  */
 function getInfo() {
-    const parser = new UAParser(userAgent);
-
     try {
-        const parserResult = parser.getResult();
         console.log('Info', parserResult);
 
         // Filter out properties with 'Unknown' values
@@ -1240,6 +1243,9 @@ function handleServerInfo(config) {
     isPresenter = isPeerReconnected ? isPresenter : is_presenter;
     isPeerPresenter.innerText = isPresenter;
 
+    // Peer identified if presenter or not then....
+    handleShortcuts();
+
     if (isRulesActive) {
         handleRules(isPresenter);
     }
@@ -1261,7 +1267,7 @@ function handleUnauthorized() {
         allowEscapeKey: false,
         background: swBg,
         imageUrl: images.forbidden,
-        title: 'Oops, Unauthorized',
+        title: 'Ops, Unauthorized',
         text: 'The host has user authentication enabled',
         confirmButtonText: `Login`,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
@@ -1353,7 +1359,7 @@ function handleButtonsRule() {
     elemDisplay(whiteboardBtn, buttons.main.showWhiteboardBtn);
     elemDisplay(snapshotRoomBtn, buttons.main.showSnapshotRoomBtn && !isMobileDevice);
     elemDisplay(fileShareBtn, buttons.main.showFileShareBtn);
-    elemDisplay(documentPiPBtn, buttons.main.showDocumentPipBtn);
+    elemDisplay(documentPiPBtn, showDocumentPipBtn && buttons.main.showDocumentPipBtn);
     elemDisplay(mySettingsBtn, buttons.main.showMySettingsBtn);
     elemDisplay(aboutBtn, buttons.main.showAboutBtn);
     // chat
@@ -1483,7 +1489,7 @@ async function whoAreYou() {
         allowOutsideClick: false,
         allowEscapeKey: false,
         background: swBg,
-        title: brand.app.name,
+        title: brand.app?.name || 'MiroTalk P2P',
         position: 'center',
         input: 'text',
         inputPlaceholder: 'Enter your email or name',
@@ -3109,7 +3115,7 @@ async function loadLocalMedia(stream, kind) {
 
             myVideoNavBar.appendChild(myVideoMirrorBtn);
 
-            buttons.local.showVideoPipBtn && myVideoNavBar.appendChild(myVideoPiPBtn);
+            if (showVideoPipBtn && buttons.local.showVideoPipBtn) myVideoNavBar.appendChild(myVideoPiPBtn);
 
             if (buttons.local.showZoomInOutBtn) {
                 myVideoNavBar.appendChild(myVideoZoomInBtn);
@@ -3168,7 +3174,8 @@ async function loadLocalMedia(stream, kind) {
 
             handleVideoPinUnpin(myLocalMedia.id, myVideoPinBtn.id, myVideoWrap.id, myLocalMedia.id);
 
-            buttons.local.showVideoPipBtn && handlePictureInPicture(myVideoPiPBtn.id, myLocalMedia.id, myPeerId);
+            if (showVideoPipBtn && buttons.local.showVideoPipBtn)
+                handlePictureInPicture(myVideoPiPBtn.id, myLocalMedia.id, myPeerId);
 
             ZOOM_IN_OUT_ENABLED && handleVideoZoomInOut(myVideoZoomInBtn.id, myVideoZoomOutBtn.id, myLocalMedia.id);
 
@@ -3423,7 +3430,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
 
             remoteVideoNavBar.appendChild(remoteVideoMirrorBtn);
 
-            buttons.remote.showVideoPipBtn && remoteVideoNavBar.appendChild(remoteVideoPiPBtn);
+            if (showVideoPipBtn && buttons.remote.showVideoPipBtn) remoteVideoNavBar.appendChild(remoteVideoPiPBtn);
 
             // Add to expand container div...
             if (buttons.remote.showZoomInOutBtn) {
@@ -3496,7 +3503,8 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             handleVideoToggleMirror(remoteMedia.id, remoteVideoMirrorBtn.id);
 
             // handle vide picture in picture
-            buttons.remote.showVideoPipBtn && handlePictureInPicture(remoteVideoPiPBtn.id, remoteMedia.id, peer_id);
+            if (showVideoPipBtn && buttons.remote.showVideoPipBtn)
+                handlePictureInPicture(remoteVideoPiPBtn.id, remoteMedia.id, peer_id);
 
             // handle video zoomIn/Out
             ZOOM_IN_OUT_ENABLED &&
@@ -4260,6 +4268,18 @@ function handlePictureInPicture(btnId, videoId, peerId) {
             });
         }
     });
+    if (video) {
+        video.addEventListener('leavepictureinpicture', (event) => {
+            console.log('Exited PiP mode');
+            // Check if the video is paused
+            if (video.paused) {
+                // Play the video again
+                video.play().catch((error) => {
+                    console.error('Error playing video after exit PIP mode:', error);
+                });
+            }
+        });
+    }
 }
 
 /**
@@ -5143,6 +5163,18 @@ function setDocumentPiPBtn() {
 }
 
 /**
+ * Restart documentPictureInPicture
+ * @returns void
+ */
+async function documentPictureInPictureRestart() {
+    if (!showDocumentPipBtn || !documentPictureInPicture.window) return;
+    documentPictureInPictureClose();
+    setTimeout(async () => {
+        await documentPictureInPictureOpen();
+    }, 300);
+}
+
+/**
  *  Close documentPictureInPicture
  */
 async function documentPictureInPictureClose() {
@@ -5197,35 +5229,21 @@ async function documentPictureInPictureOpen() {
                 // No video stream detected or is video share from URL...
                 if (!video.srcObject || video.id === 'videoAudioUrlElement') return;
 
-                let videoPIPAllowed = false;
-
                 // get video element
                 const videoPlayer = getId(video.id);
 
+                const isLocalVideo = video.id === 'myVideo';
+
+                const isPIPAllowed = !videoPlayer.classList.contains('videoCircle'); // not in privacy mode
+
                 // Check if video can be add on pipVideo
-                if (video.id === 'myVideo') {
-                    const localVideoStatus = getId('myVideoStatusIcon');
+                isLocalVideo
+                    ? console.log('DOCUMENT PIP LOCAL: PiP allowed? -----> ' + isPIPAllowed)
+                    : console.log('DOCUMENT PIP REMOTE: PiP allowed? -----> ' + isPIPAllowed);
 
-                    videoPIPAllowed =
-                        localVideoStatus.className === className.videoOn && // video is ON
-                        !videoPlayer.classList.contains('videoCircle'); // not in privacy mode
+                if (!isPIPAllowed) return;
 
-                    console.log('DOCUMENT PIP LOCAL videoPIPAllowed -----> ' + videoPIPAllowed);
-                } else {
-                    const parts = video.id.split('___'); // peerId___video
-                    const peer_id = parts[0];
-                    const remoteVideoStatus = getId(peer_id + '_videoStatus');
-
-                    videoPIPAllowed =
-                        remoteVideoStatus.className === className.videoOn && // video is ON
-                        !videoPlayer.classList.contains('videoCircle'); // not in privacy mode
-
-                    console.log('DOCUMENT PIP REMOTE videoPIPAllowed -----> ' + videoPIPAllowed);
-                }
-
-                if (!videoPIPAllowed) return;
-
-                // Video is ON not in privacy mode continue....
+                // Video is ON and not in privacy mode continue....
 
                 foundVideo = true;
 
@@ -5238,6 +5256,34 @@ async function documentPictureInPictureOpen() {
                 pipVideo.muted = true;
 
                 pipVideoContainer.append(pipVideo);
+
+                function observeElementClassChanges(element, observerName) {
+                    const observer = new MutationObserver((mutations) => {
+                        mutations.forEach((mutation) => {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                                console.log(
+                                    `${observerName}: Element ${mutation.target.id} class changed:`,
+                                    mutation.target.className,
+                                );
+                                cloneVideoElements(); // Or other desired function
+                            }
+                        });
+                    });
+
+                    observer.observe(element, { attributes: true, attributeFilter: ['class'] });
+                    return observer;
+                }
+
+                // Start observing for new videos and class changes (Video Privacy ON/OFF)
+                if (video) observeElementClassChanges(video, 'Video');
+
+                // Get videoStatus...
+                const parts = video.id.split('___');
+                const peer_id = parts[0];
+                const videoStatus = getId(isLocalVideo ? 'myVideoStatusIcon' : peer_id + '_videoStatus');
+
+                // Start observing for new videosStatus and class changes (video ON/OFF)
+                if (videoStatus) observeElementClassChanges(videoStatus, 'VideoStatus');
             });
 
             return foundVideo;
@@ -5307,6 +5353,14 @@ function setMySettingsBtn() {
         lsSettings.share_on_join = notify;
         lS.setSettings(lsSettings);
         userLog('toast', `${icons.share} Share room on join ` + (notify ? 'ON' : 'OFF'));
+        playSound('switch');
+    });
+    switchKeepButtonsVisible.addEventListener('change', (e) => {
+        isButtonsBarOver = isKeepButtonsVisible = e.currentTarget.checked;
+        lsSettings.keep_buttons_visible = isButtonsBarOver;
+        lS.setSettings(lsSettings);
+        const status = isButtonsBarOver ? 'enabled' : 'disabled';
+        userLog('toast', `Buttons always visible ${status}`);
         playSound('switch');
     });
 
@@ -5431,6 +5485,9 @@ function setupMySettings() {
     tabProfileBtn.addEventListener('click', (e) => {
         openTab(e, 'tabProfile');
     });
+    tabShortcutsBtn.addEventListener('click', (e) => {
+        openTab(e, 'tabShortcuts');
+    });
     tabNetworkBtn.addEventListener('click', (e) => {
         openTab(e, 'tabNetwork');
     });
@@ -5520,7 +5577,7 @@ function setupMySettings() {
     videoSelect.addEventListener('change', async () => {
         await changeLocalCamera(videoSelect.value);
         await handleLocalCameraMirror();
-        await documentPictureInPictureClose();
+        await documentPictureInPictureRestart();
         refreshLsDevices();
     });
     // select video quality
@@ -5617,6 +5674,152 @@ function setupMySettings() {
 }
 
 /**
+ * Handle keyboard shortcuts
+ */
+function handleShortcuts() {
+    if (!isDesktopDevice || !buttons.settings.showShortcutsBtn) {
+        elemDisplay(tabShortcutsBtn, false);
+        setKeyboardShortcuts(false);
+    } else {
+        switchShortcuts.addEventListener('change', (e) => {
+            const status = setKeyboardShortcuts(e.currentTarget.checked);
+            userLog('toast', `Keyboard shortcuts ${status}`);
+            playSound('switch');
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (!isShortcutsEnabled || isChatRoomVisible || wbIsOpen) return;
+
+            const notPresenter = isRulesActive && !isPresenter;
+
+            const key = event.key.toLowerCase(); // Convert to lowercase for simplicity
+
+            console.log(`Detected shortcut: ${key}`);
+
+            switch (key) {
+                case 'a':
+                    if (notPresenter && !buttons.main.showAudioBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to enable audio');
+                        break;
+                    }
+                    audioBtn.click();
+                    break;
+                case 'v':
+                    if (notPresenter && !buttons.main.showVideoBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to enable video');
+                        break;
+                    }
+                    videoBtn.click();
+                    break;
+                case 's':
+                    if (notPresenter && !buttons.main.showScreenBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to share the screen');
+                        break;
+                    }
+                    screenShareBtn.click();
+                    break;
+                case 'h':
+                    if (notPresenter && !buttons.main.showMyHandBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to raise your hand');
+                        break;
+                    }
+                    myHandBtn.click();
+                    break;
+                case 'c':
+                    if (notPresenter && !buttons.main.showChatRoomBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to open the chat');
+                        break;
+                    }
+                    chatRoomBtn.click();
+                    break;
+                case 'o':
+                    if (notPresenter && !buttons.main.showMySettingsBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to open the settings');
+                        break;
+                    }
+                    mySettingsBtn.click();
+                    break;
+                case 'x':
+                    if (notPresenter && !button.main.showHideMeBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to hide yourself');
+                        break;
+                    }
+                    hideMeBtn.click();
+                    break;
+                case 'r':
+                    if (notPresenter && !buttons.main.showRecordStreamBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to start recording');
+                        break;
+                    }
+                    recordStreamBtn.click();
+                    break;
+                case 'e':
+                    if (notPresenter && !buttons.main.showRoomEmojiPickerBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to open the room emoji');
+                        break;
+                    }
+                    roomEmojiPickerBtn.click();
+                    break;
+                case 'k':
+                    if (notPresenter && !buttons.main.showCaptionRoomBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to start transcription');
+                        break;
+                    }
+                    captionBtn.click();
+                    break;
+                case 'w':
+                    if (notPresenter && !buttons.main.showWhiteboardBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to open the whiteboard');
+                        break;
+                    }
+                    whiteboardBtn.click();
+                    break;
+                case 'd':
+                    if (!showDocumentPipBtn) {
+                        toastMessage('warning', 'The document PIP is not supported in this browser');
+                        break;
+                    }
+                    if (notPresenter && !buttons.main.showDocumentPipBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to open the document PIP');
+                        break;
+                    }
+                    documentPiPBtn.click();
+                    break;
+                case 't':
+                    if (notPresenter && !buttons.main.showSnapshotRoomBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to take a snapshot');
+                        break;
+                    }
+                    snapshotRoomBtn.click();
+                    break;
+                case 'f':
+                    if (notPresenter && !buttons.settings.showFileShareBtn) {
+                        toastMessage('warning', 'The presenter has disabled your ability to share files');
+                        break;
+                    }
+                    fileShareBtn.click();
+                    break;
+                //...
+                default:
+                    console.log(`Unhandled shortcut key: ${key}`);
+            }
+        });
+    }
+}
+
+/**
+ * Set Keyboard Shortcuts enabled
+ * @param {boolean} enabled
+ * @return {String} enabled/disabled
+ */
+function setKeyboardShortcuts(enabled) {
+    isShortcutsEnabled = enabled;
+    lsSettings.keyboard_shortcuts = isShortcutsEnabled;
+    lS.setSettings(lsSettings);
+    return isShortcutsEnabled ? 'enabled' : 'disabled';
+}
+
+/**
  * Load settings from local storage
  */
 function loadSettingsFromLocalStorage() {
@@ -5631,12 +5834,16 @@ function loadSettingsFromLocalStorage() {
     screenMaxFrameRate = parseInt(getSelectedIndexValue(screenFpsSelect), 10);
     videoMaxFrameRate = parseInt(getSelectedIndexValue(videoFpsSelect), 10);
     notifyBySound = lsSettings.sounds;
+    isKeepButtonsVisible = lsSettings.keep_buttons_visible;
     isAudioPitchBar = lsSettings.pitch_bar;
     recPrioritizeH264 = lsSettings.rec_prioritize_h264;
+    isShortcutsEnabled = lsSettings.keyboard_shortcuts;
     switchSounds.checked = notifyBySound;
     switchShare.checked = notify;
+    switchKeepButtonsVisible.checked = isKeepButtonsVisible;
     switchAudioPitchBar.checked = isAudioPitchBar;
     switchH264Recording.checked = recPrioritizeH264;
+    switchShortcuts.checked = isShortcutsEnabled;
 
     themeCustom.check.checked = themeCustom.keep;
     themeSelect.disabled = themeCustom.keep;
@@ -6006,12 +6213,20 @@ function showButtonsBarAndMenu() {
  * Check every 10 sec if need to hide buttons bar and status menu
  */
 function checkButtonsBarAndMenu() {
-    if (!isButtonsBarOver) {
-        toggleClassElements('navbar', 'none');
+    if (lsSettings.keep_buttons_visible) {
+        toggleClassElements('navbar', 'block');
         toggleExtraBtn.className = className.up;
-        elemDisplay(buttonsBar, false);
-        elemDisplay(bottomButtons, false);
-        isButtonsVisible = false;
+        elemDisplay(buttonsBar, true, 'flex');
+        elemDisplay(bottomButtons, true, 'flex');
+        isButtonsVisible = true;
+    } else {
+        if (!isButtonsBarOver) {
+            toggleClassElements('navbar', 'none');
+            toggleExtraBtn.className = className.up;
+            elemDisplay(buttonsBar, false);
+            elemDisplay(bottomButtons, false);
+            isButtonsVisible = false;
+        }
     }
     setTimeout(() => {
         checkButtonsBarAndMenu();
@@ -6238,21 +6453,14 @@ async function handleVideo(e, init, force = null) {
     if (!videoStatus) {
         if (!isScreenStreaming) {
             // Stop the video track based on the condition
-            if (init) {
-                await stopVideoTracks(initStream); // Stop init video track (camera LED off)
-            } else {
-                await stopVideoTracks(localVideoMediaStream); // Stop local video track (camera LED off)
-                await documentPictureInPictureClose(); // Close doc PIP if open
-            }
+            init
+                ? await stopVideoTracks(initStream) // Stop init video track (camera LED off)
+                : await stopVideoTracks(localVideoMediaStream); // Stop local video track (camera LED off)
         }
     } else {
-        if (init) {
-            // Resume the video track for the init camera (camera LED on)
-            await changeInitCamera(initVideoSelect.value);
-        } else if (!isScreenStreaming) {
-            // Resume the video track for the local camera (camera LED on)
-            await changeLocalCamera(videoSelect.value);
-        }
+        init
+            ? await changeInitCamera(initVideoSelect.value) // Resume the video track for the init camera (camera LED on)
+            : await changeLocalCamera(videoSelect.value); // Resume the video track for the local camera (camera LED on)
     }
 
     setMyVideoStatus(videoStatus);
@@ -7715,8 +7923,8 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
 
     // sanitize all params
     const getFrom = filterXSS(from);
-    const getImg = filterXSS(img);
     const getSide = filterXSS(side);
+    const getImg = isChatGPTOn && getSide === 'left' ? images.chatgpt : filterXSS(img);
     const getMsg = filterXSS(msg);
     const getPrivateMsg = filterXSS(privateMsg);
     const getMsgId = filterXSS(msgId);
@@ -8379,13 +8587,15 @@ function hideShowMySettings() {
         mySettings.style.top = '50%';
         mySettings.style.left = '50%';
         elemDisplay(mySettings, true, 'block');
-        setTippy(mySettingsBtn, 'Close the settings', placement);
+        setTippy(mySettingsBtn, 'Close the settings', bottomButtonsPlacement);
         isMySettingsVisible = true;
+        videoMediaContainer.style.opacity = 0.3;
         return;
     }
     elemDisplay(mySettings, false);
-    setTippy(mySettingsBtn, 'Open the settings', placement);
+    setTippy(mySettingsBtn, 'Open the settings', bottomButtonsPlacement);
     isMySettingsVisible = false;
+    videoMediaContainer.style.opacity = 1;
 }
 
 /**
@@ -8918,6 +9128,9 @@ function handleEmojiSound(message) {
         case ':+1:':
         case ':ok_hand:':
             playSound('ok', true, path);
+            break;
+        case ':-1:':
+            playSound('boo', true, path);
             break;
         case ':clap:':
             playSound('applause', true, path);
@@ -10825,17 +11038,22 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: '<strong>WebRTC P2P v1.4.34</strong>',
-        imageAlt: 'mirotalk-about',
-        imageUrl: images.about,
+        title: brand.about?.title && brand.about.title.trim() !== '' ? brand.about.title : 'WebRTC P2P v1.4.80',
+        imageUrl: brand.about?.imageUrl && brand.about.imageUrl.trim() !== '' ? brand.about.imageUrl : images.about,
         customClass: { image: 'img-about' },
         html: `
-        <br/>
-        <div id="about">
-            <hr />
-            <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
-            <hr />
-        </div>
+            <br/>
+            <div id="about">
+                ${
+                    brand.about?.html && brand.about.html.trim() !== ''
+                        ? brand.about.html
+                        : `
+                        <hr />
+                        <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
+                        <hr />
+                        `
+                }
+            </div>
         `,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -11128,6 +11346,8 @@ function userLog(type, message, timer = 3000) {
  * @param {integer} duration time popup in ms
  */
 function toastMessage(icon, title, html, position = 'top-end', duration = 3000) {
+    if (['warning', 'error'].includes(icon)) playSound('alert');
+
     const Toast = Swal.mixin({
         background: swBg,
         position: position,
@@ -11155,6 +11375,8 @@ function toastMessage(icon, title, html, position = 'top-end', duration = 3000) 
  * @param {string} redirectURL if set on press ok will be redirected to the URL
  */
 function msgHTML(icon, imageUrl, title, html, position = 'center', redirectURL = false) {
+    if (['warning', 'error'].includes(icon)) playSound('alert');
+
     Swal.fire({
         allowOutsideClick: false,
         allowEscapeKey: false,
@@ -11181,6 +11403,8 @@ function msgHTML(icon, imageUrl, title, html, position = 'center', redirectURL =
  * @param {integer} timer ms before to hide
  */
 function msgPopup(icon, message, position, timer = 1000) {
+    if (['warning', 'error'].includes(icon)) playSound('alert');
+
     const Toast = Swal.mixin({
         background: swBg,
         toast: true,
@@ -11249,23 +11473,11 @@ function isValidFileName(fileName) {
 }
 
 /**
- * Check if Tablet device
- * @param {object} userAgent info
+ * Check if WebRTC supported
  * @return {boolean} true/false
  */
-function isTablet(userAgent) {
-    return /(ipad|tablet|(android(?!.*mobile))|(windows(?!.*phone)(.*touch))|kindle|playbook|silk|(puffin(?!.*(IP|AP|WP))))/.test(
-        userAgent,
-    );
-}
-
-/**
- * Check if IPad device
- * @param {object} userAgent
- * @return {boolean} true/false
- */
-function isIpad(userAgent) {
-    return /macintosh/.test(userAgent) && 'ontouchend' in document;
+function checkWebRTCSupported() {
+    return !!(navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function');
 }
 
 /**

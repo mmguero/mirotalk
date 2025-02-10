@@ -7,6 +7,8 @@ const brandData = window.sessionStorage.getItem(brandDataKey);
 // Html pages
 const landingTitle = document.getElementById('landingTitle');
 const newCallTitle = document.getElementById('newCallTitle');
+const newCallRoomTitle = document.getElementById('newCallRoomTitle');
+const newCallRoomDescription = document.getElementById('newCallRoomDescription');
 const loginTitle = document.getElementById('loginTitle');
 const privacyPolicyTitle = document.getElementById('privacyPolicyTitle');
 const stunTurnTitle = document.getElementById('stunTurnTitle');
@@ -18,6 +20,9 @@ const appleTouchIcon = document.getElementById('appleTouchIcon');
 
 const appTitle = document.getElementById('appTitle');
 const appDescription = document.getElementById('appDescription');
+const appJoinDescription = document.getElementById('appJoinDescription');
+const joinRoomBtn = document.getElementById('joinRoomButton');
+const appJoinLastRoom = document.getElementById('appJoinLastRoom');
 
 const features = document.getElementById('features');
 const browsers = document.getElementById('browsers');
@@ -33,21 +38,28 @@ const footer = document.getElementById('footer');
 
 let brand = {
     app: {
+        language: 'en',
         name: 'MiroTalk',
         title: 'MiroTalk',
         description:
-            'MiroTalk',
+            'Start your next video call with a single click. No download, plug-in, or login is required. Just get straight to talking, messaging, and sharing your screen.',
+        joinDescription: 'Pick a room name.<br />How about this one?',
+        joinButtonLabel: 'JOIN ROOM',
+        joinLastLabel: 'Your recent room:',
     },
     site: {
-        landingTitle: 'MiroTalk',
-        newCallTitle: 'MiroTalk',
-        loginTitle: 'MiroTalk - Login required.',
+        shortcutIcon: '../images/logo.svg',
+        appleTouchIcon: '../images/logo.svg',
+        landingTitle: 'MiroTalk a Free Secure Video Calls, Chat & Screen Sharing.',
+        newCallTitle: 'MiroTalk a Free Secure Video Calls, Chat & Screen Sharing.',
+        newCallRoomTitle: 'Pick name. <br />Share URL. <br />Start conference.',
+        newCallRoomDescription:
+            "Each room has its disposable URL. Just pick a room name and share your custom URL. It's that easy.",
+        loginTitle: 'MiroTalk - Host Protected login required.',
         clientTitle: 'MiroTalk WebRTC Video call, Chat Room & Screen Sharing.',
         privacyPolicyTitle: 'MiroTalk - privacy and policy.',
         stunTurnTitle: 'Test Stun/Turn Servers.',
         notFoundTitle: 'MiroTalk - 404 Page not found.',
-        shortcutIcon: '../images/logo.svg',
-        appleTouchIcon: '../images/logo.svg',
     },
     html: {
         features: false,
@@ -58,6 +70,15 @@ let brand = {
         sponsors: false,
         advertisers: false,
         footer: true,
+    },
+    about: {
+        imageUrl: '../images/mirotalk-logo.gif',
+        title: 'WebRTC P2P v1.4.80',
+        html: `
+            <hr />
+            <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
+            <hr />
+        `,
     },
     //...
 };
@@ -112,19 +133,28 @@ function setBrand(data) {
  * Handle Brand
  */
 function handleBrand() {
-    if (landingTitle) landingTitle.textContent = brand.site.landingTitle;
-    if (newCallTitle) newCallTitle.textContent = brand.site.newCallTitle;
-    if (loginTitle) loginTitle.textContent = brand.site.loginTitle;
-    if (privacyPolicyTitle) privacyPolicyTitle.textContent = brand.site.privacyPolicyTitle;
-    if (stunTurnTitle) stunTurnTitle.textContent = brand.site.stunTurnTitle;
-    if (clientTitle) clientTitle.textContent = brand.site.clientTitle;
-    if (notFoundTitle) notFoundTitle.textContent = brand.site.notFoundTitle;
+    if (landingTitle && brand.site?.landingTitle) landingTitle.textContent = brand.site.landingTitle;
 
-    if (shortcutIcon) shortcutIcon.href = brand.site.shortcutIcon;
-    if (appleTouchIcon) appleTouchIcon.href = brand.site.appleTouchIcon;
+    if (newCallTitle && brand.site?.newCallTitle) newCallTitle.textContent = brand.site.newCallTitle;
+    if (newCallRoomTitle && brand.site?.newCallRoomTitle) newCallRoomTitle.innerHTML = brand.site.newCallRoomTitle;
+    if (newCallRoomDescription && brand.site?.newCallRoomDescription)
+        newCallRoomDescription.textContent = brand.site.newCallRoomDescription;
 
-    if (appTitle) appTitle.innerHTML = brand.app.title;
-    if (appDescription) appDescription.textContent = brand.app.description;
+    if (loginTitle && brand.site?.loginTitle) loginTitle.textContent = brand.site.loginTitle;
+    if (privacyPolicyTitle && brand.site?.privacyPolicyTitle)
+        privacyPolicyTitle.textContent = brand.site.privacyPolicyTitle;
+    if (stunTurnTitle && brand.site?.stunTurnTitle) stunTurnTitle.textContent = brand.site.stunTurnTitle;
+    if (clientTitle && brand.site?.clientTitle) clientTitle.textContent = brand.site.clientTitle;
+    if (notFoundTitle && brand.site?.notFoundTitle) notFoundTitle.textContent = brand.site.notFoundTitle;
+
+    if (shortcutIcon && brand.site?.shortcutIcon) shortcutIcon.href = brand.site.shortcutIcon;
+    if (appleTouchIcon && brand.site?.appleTouchIcon) appleTouchIcon.href = brand.site.appleTouchIcon;
+
+    if (appTitle && brand.app?.title) appTitle.innerHTML = brand.app.title;
+    if (appDescription && brand.app?.description) appDescription.textContent = brand.app.description;
+    if (appJoinDescription && brand.app?.joinDescription) appJoinDescription.innerHTML = brand.app.joinDescription;
+    if (joinRoomBtn && brand.app?.joinButtonLabel) joinRoomBtn.innerText = brand.app.joinButtonLabel;
+    if (appJoinLastRoom && brand.app?.joinLastLabel) appJoinLastRoom.innerText = brand.app.joinLastLabel;
 
     !brand.html.features && elementDisplay(features, false);
     !brand.html.browsers && elementDisplay(browsers, false);

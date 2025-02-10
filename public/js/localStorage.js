@@ -29,6 +29,8 @@ class LocalStorage {
             screen_fps: 1, // default 30fps
             pitch_bar: true,
             sounds: true,
+            keep_buttons_visible: false,
+            keyboard_shortcuts: false,
             video_obj_fit: 2, // cover
             theme: 0, // dark
             theme_color: '#000000', // custom theme color

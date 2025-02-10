@@ -24,20 +24,21 @@
 
         <!-- https://ogp.me -->
 
-        <meta property="og:type" content="app-webrtc" />
-        <meta property="og:site_name" content="MiroTalk" />
-        <meta property="og:title" content="Click the link to make a call." />
-        <meta
-            property="og:description"
-            content="MiroTalk calling provides real-time HD quality and latency simply not available with traditional technology."
-        />
-        <meta property="og:image" content="https://p2p.mirotalk.com/images/preview.png" />
-        <meta property="og:url" content="https://p2p.mirotalk.org" />
+        <meta property="og:type" content="{{OG_TYPE}}" />
+        <meta property="og:site_name" content="{{OG_SITE_NAME}}" />
+        <meta property="og:title" content="{{OG_TITLE}}" />
+        <meta property="og:description" content="{{OG_DESCRIPTION}}" />
+        <meta property="og:image" content="{{OG_IMAGE}}" />
+        <meta property="og:url" content="{{OG_URL}}" />
 
         <!-- StyleSheet -->
 
         <link rel="stylesheet" href="../css/landing.css" />
         <link rel="stylesheet" href="../css/newcall.css" />
+
+        <!-- https://animate.style 4 using for swal fadeIn-Out -->
+
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
         <!-- https://cdnjs.com/libraries/font-awesome -->
 
@@ -48,6 +49,10 @@
         <!-- xss -->
 
         <script src="https://cdn.jsdelivr.net/npm/xss/dist/xss.min.js"></script>
+
+        <!-- sweetalert -->
+
+        <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.8"></script>
     </head>
     <body class="has-animations">
         <div class="body-wrap">
@@ -71,12 +76,20 @@
                             <div class="split-wrap invert-mobile">
                                 <div class="split-item">
                                     <div class="hero-content split-item-content center-content-mobile">
-                                        <h1 class="mt-32 mb-16 reveal-from-bottom" data-reveal-delay="150">
+                                        <h1
+                                            id="newCallRoomTitle"
+                                            class="mt-32 mb-16 reveal-from-bottom"
+                                            data-reveal-delay="150"
+                                        >
                                             Pick name. <br />
                                             Share URL. <br />
                                             Start conference.
                                         </h1>
-                                        <p class="mt-0 mb-32 reveal-from-bottom" data-reveal-delay="300">
+                                        <p
+                                            id="newCallRoomDescription"
+                                            class="mt-0 mb-32 reveal-from-bottom"
+                                            data-reveal-delay="300"
+                                        >
                                             Each room has its disposable URL. Just pick a room name and share your
                                             custom URL. It's that easy.
                                         </p>
@@ -98,7 +111,7 @@
                     <div class="container">
                         <div class="cta-inner section-inner cta-split br-12">
                             <div class="cta-slogan">
-                                <h3 class="m-0">
+                                <h3 id="appJoinDescription" class="m-0">
                                     Pick a room name.<br />
                                     How about this one?
                                 </h3>
@@ -118,13 +131,13 @@
                                             id="genRoomButton"
                                             class="button button-primary br-6 mr-8 mb-8 fas fa-arrows-rotate"
                                         ></button>
-                                        <button id="joinRoomButton" class="button button-primary br-6 pulse">
+                                        <button id="joinRoomButton" class="button button-primary br-6">
                                             Join Room
                                         </button>
                                     </div>
                                 </div>
                                 <div id="lastRoomContainer" class="last-room">
-                                    <span>Your recent room:</span>
+                                    <span id="appJoinLastRoom">Your recent room:</span>
                                     <a id="lastRoom"></a>
                                 </div>
                             </div>
@@ -178,6 +191,7 @@
             </footer>
         </div>
 
+        <script defer src="../js/utils.js"></script>
         <script defer src="../js/brand.js"></script>
         <script defer src="../js/landing.js"></script>
         <script defer src="../js/common.js"></script>

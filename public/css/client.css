@@ -121,7 +121,13 @@ body {
 --------------------------------------------------------------*/
 
 .skiptranslate iframe,
-.goog-te-banner-frame.skiptranslate {
+.goog-te-banner-frame.skiptranslate,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-ZVi9od-aZ2wEe-OiiCO,
+#goog-gt-tt,
+#goog-gt-tt *,
+#goog-gt-vt,
+#goog-gt-vt * {
     display: none !important;
 }
 
@@ -973,9 +979,15 @@ button:hover {
     }
 
     #bottomButtons button {
-        width: 42px;
-        padding: 10px;
-        font-size: 1.2rem;
+        width: 36px;
+        font-size: 1rem;
+    }
+}
+
+@media screen and (max-width: 350px) {
+    #bottomButtons button {
+        width: 30px;
+        font-size: 0.6rem;
     }
 }
 
@@ -1037,8 +1049,6 @@ button:hover {
 .inline-check-box {
     margin-bottom: 20px;
     display: inline-flex;
-    justify-content: center; /* Vertical centering */
-    align-items: center; /* Horizontal centering */
     text-align: left;
     color: white;
 }
@@ -1081,8 +1091,6 @@ button:hover {
 }
 
 .extra-info-container {
-    min-height: 175px;
-    max-height: 175px;
     margin-top: 15px;
     border-radius: 5px;
     background: var(--body-bg);
@@ -1092,7 +1100,7 @@ button:hover {
 
 #extraInfo {
     padding: 10px;
-    font-size: 12px;
+    font-size: 14px;
     color: #fff;
     /* background: var(--select-bg); */
     border-radius: 10px;
@@ -1182,32 +1190,72 @@ button:hover {
 --------------------------------------------------------------*/
 
 #mySettingsTable {
-    /* margin-top: 5px; */
     width: 100%;
     color: #fff;
+    table-layout: auto;
     border-collapse: collapse;
-    border-style: hidden;
     border-radius: 10px;
     background: var(--body-bg);
-    /* border-radius: 5px; */
-    /* box-shadow: 0 0 0 1px #666; */
-}
-#mySettingsTable td,
-th {
-    padding: 10px;
-}
-#mySettingsTable tr td {
-    text-align: left;
-}
-#mySettingsTable tr:nth-child(even) {
-    /* background-color: #2b2b2b; */
 }
 
-.width-130 {
-    width: 130px;
+#mySettingsTable td,
+#mySettingsTable th {
+    padding: 10px;
+    text-align: left;
 }
-.width-180 {
-    width: 160px;
+
+#mySettingsTable td:first-child {
+    width: auto;
+}
+
+#mySettingsTable td:last-child {
+    width: 140px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Optional alternating row background */
+/* #mySettingsTable tr:nth-child(even) {
+    background: var(--select-bg);
+} */
+
+#mySettingsTable i {
+    border: none;
+    border-radius: 5px;
+}
+
+#mySettingsTable select {
+    width: 100px !important;
+}
+
+/*--------------------------------------------------------------
+# Shortcut Table
+--------------------------------------------------------------*/
+
+#shortcutsTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 16px;
+    text-align: left;
+    color: #fff;
+    border-radius: 10px;
+    background: var(--body-bg);
+}
+#shortcutsTable th,
+#shortcutsTable td {
+    padding: 5px;
+    /* border: var(--border); */
+}
+#shortcutsTable th {
+    background: var(--body-bg);
+    font-weight: bold;
+}
+#shortcutsTable td i {
+    color: #007bff;
+}
+#shortcutsTable tr:nth-child(even) {
+    background: var(--body-bg);
 }
 
 /*--------------------------------------------------------------
@@ -1281,7 +1329,7 @@ th {
     margin-top: 15px;
     padding: 6px 12px;
     width: 100%;
-    max-height: 530px;
+    max-height: 585px;
     min-height: 480px;
     border-top: none;
     background-color: var(--body-bg);
@@ -1399,7 +1447,7 @@ input:checked + .slider:before {
 --------------------------------------------------------------*/
 
 .swal2-popup {
-    border: 0.5px solid rgb(255 255 255 / 32%) !important;
+    border: var(--border) !important;
     /* box-shadow: var(--box-shadow) !important; */
 }
 
@@ -2008,6 +2056,10 @@ hr {
 /*--------------------------------------------------------------
 # Common
 --------------------------------------------------------------*/
+
+/* strong {
+    color: #007bff;
+} */
 
 .ml-10 {
     margin: 10px;

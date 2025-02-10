@@ -1,24 +1,42 @@
 'use strict';
 
+const packageJson = require('../../package.json');
+
 module.exports = {
     // Branding and customizations require a license: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
     brand: {
         app: {
+            language: 'en', // https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
             name: 'MiroTalk',
             title: 'MiroTalk<br />Free browser based Real-time video calls.<br />Simple, Secure, Fast.',
             description:
                 'Start your next video call with a single click. No download, plug-in, or login is required. Just get straight to talking, messaging, and sharing your screen.',
+            joinDescription: 'Pick a room name.<br />How about this one?',
+            joinButtonLabel: 'JOIN ROOM',
+            joinLastLabel: 'Your recent room:',
+        },
+        og: {
+            type: 'app-webrtc',
+            siteName: 'MiroTalk',
+            title: 'Click the link to make a call.',
+            description:
+                'MiroTalk calling provides real-time HD quality and latency simply not available with traditional technology.',
+            image: 'https://p2p.mirotalk.com/images/preview.png',
+            url: 'https://p2p.mirotalk.com',
         },
         site: {
+            shortcutIcon: '../images/logo.svg',
+            appleTouchIcon: '../images/logo.svg',
             landingTitle: 'MiroTalk a Free Secure Video Calls, Chat & Screen Sharing.',
             newCallTitle: 'MiroTalk a Free Secure Video Calls, Chat & Screen Sharing.',
+            newCallRoomTitle: 'Pick name. <br />Share URL. <br />Start conference.',
+            newCallRoomDescription:
+                "Each room has its disposable URL. Just pick a room name and share your custom URL. It's that easy.",
             loginTitle: 'MiroTalk - Host Protected login required.',
             clientTitle: 'MiroTalk WebRTC Video call, Chat Room & Screen Sharing.',
             privacyPolicyTitle: 'MiroTalk - privacy and policy.',
             stunTurnTitle: 'Test Stun/Turn Servers.',
             notFoundTitle: 'MiroTalk - 404 Page not found.',
-            shortcutIcon: '../images/logo.svg',
-            appleTouchIcon: '../images/logo.svg',
         },
         html: {
             features: true,
@@ -29,6 +47,15 @@ module.exports = {
             sponsors: true,
             advertisers: true,
             footer: true,
+        },
+        about: {
+            imageUrl: '../images/mirotalk-logo.gif',
+            title: `WebRTC P2P v${packageJson.version}`,
+            html: `
+                <hr />
+                <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
+                <hr />
+            `,
         },
         //...
     },
@@ -52,6 +79,7 @@ module.exports = {
             showWhiteboardBtn: true,
             showSnapshotRoomBtn: true,
             showFileShareBtn: true,
+            showDocumentPipBtn: true,
             showMySettingsBtn: true,
             showAboutBtn: true, // Please keep me always true, Thank you!
         },
@@ -81,11 +109,13 @@ module.exports = {
             showEjectEveryoneBtn: true,
             showLockRoomBtn: true,
             showUnlockRoomBtn: true,
+            showShortcutsBtn: true,
         },
         remote: {
             showAudioVolume: true,
             audioBtnClickAllowed: true,
             videoBtnClickAllowed: true,
+            showVideoPipBtn: true,
             showKickOutBtn: true,
             showSnapShotBtn: true,
             showFileShareBtn: true,
@@ -95,6 +125,7 @@ module.exports = {
             showVideoFocusBtn: true,
         },
         local: {
+            showVideoPipBtn: true,
             showSnapShotBtn: true,
             showVideoCircleBtn: true,
             showZoomInOutBtn: false,
