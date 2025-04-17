@@ -73,7 +73,7 @@ let brand = {
     },
     about: {
         imageUrl: '../images/mirotalk-logo.gif',
-        title: 'WebRTC P2P v1.4.85',
+        title: 'WebRTC P2P v1.5.02',
         html: `
             <hr />
             <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>

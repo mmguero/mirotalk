@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.4.85
+ * @version 1.5.02
  *
  */
 
@@ -155,6 +155,9 @@ const loadingDiv = getId('loadingDiv');
 const videoMediaContainer = getId('videoMediaContainer');
 const videoPinMediaContainer = getId('videoPinMediaContainer');
 const audioMediaContainer = getId('audioMediaContainer');
+
+// Share Room QR popup
+const qrRoomPopupContainer = getId('qrRoomPopupContainer');
 
 // Init audio-video
 const initUser = getId('initUser');
@@ -531,6 +534,7 @@ let isToggleExtraBtnClicked = false;
 let myPeerId; // This socket.id
 let myPeerUUID = getUUID(); // Unique peer id
 let myPeerName = getPeerName();
+let myPeerAvatar = getPeerAvatar();
 let myToken = getPeerToken(); // peer JWT
 let isPresenter = false; // True Who init the room (aka first peer joined)
 let myHandStatus = false;
@@ -1031,6 +1035,23 @@ function getPeerName() {
     }
     console.log('Direct join', { name: name });
     return name;
+}
+
+/**
+ * Check if peer avatar is set
+ * @returns {string} Peer Avatar
+ */
+function getPeerAvatar() {
+    const qs = new URLSearchParams(window.location.search);
+    const avatar = filterXSS(qs.get('avatar'));
+    const avatarDisabled = avatar === '0' || avatar === 'false';
+
+    console.log('Direct join', { avatar: avatar });
+
+    if (avatarDisabled || !isImageURL(avatar)) {
+        return false;
+    }
+    return avatar;
 }
 
 /**
@@ -1720,6 +1741,25 @@ async function checkInitConfig() {
 }
 
 /**
+ * Detects whether the camera stream is front-facing ('user') or rear-facing ('environment').
+ * Defaults to 'user' (front-facing) if detection fails (e.g., desktop cameras).
+ * @param {MediaStream} stream - The video stream from `getUserMedia`.
+ * @returns {string} 'user' (front) or 'environment' (rear).
+ */
+function detectCameraFacingMode(stream) {
+    if (!stream || !stream.getVideoTracks().length) {
+        console.warn("No video track found in the stream. Defaulting to 'user'.");
+        return 'user';
+    }
+    const videoTrack = stream.getVideoTracks()[0];
+    const settings = videoTrack.getSettings();
+    const capabilities = videoTrack.getCapabilities?.() || {};
+    // Priority: settings.facingMode (actual) → capabilities.facingMode (possible) → default 'user'
+    const facingMode = settings.facingMode || capabilities.facingMode?.[0] || 'user';
+    return facingMode === 'environment' ? 'environment' : 'user'; // Force valid output
+}
+
+/**
  * Change init camera by device id
  * @param {string} deviceId
  */
@@ -1765,6 +1805,9 @@ async function changeInitCamera(deviceId) {
      */
     function updateInitLocalVideoMediaStream(camStream) {
         if (camStream) {
+            // Detect camera
+            camera = detectCameraFacingMode(camStream);
+            console.log('Detect Camera facing mode', camera);
             // We going to update init video stream
             initVideo.srcObject = camStream;
             initStream = camStream;
@@ -1836,6 +1879,8 @@ async function changeLocalCamera(deviceId) {
      */
     function updateLocalVideoMediaStream(camStream) {
         if (camStream) {
+            camera = detectCameraFacingMode(camStream);
+            console.log('Detect Camera facing mode', camera);
             myVideo.srcObject = camStream;
             localVideoMediaStream = camStream;
             logStreamSettingsInfo('Success attached local video stream', camStream);
@@ -1912,9 +1957,9 @@ function checkPeerAudioVideo() {
  */
 async function whoAreYouJoin() {
     myVideoParagraph.innerText = myPeerName + ' (me)';
-    setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
-    setPeerAvatarImgName('myProfileAvatar', myPeerName);
-    setPeerChatAvatarImgName('right', myPeerName);
+    setPeerAvatarImgName('myVideoAvatarImage', myPeerName, myPeerAvatar);
+    setPeerAvatarImgName('myProfileAvatar', myPeerName, myPeerAvatar);
+    setPeerChatAvatarImgName('right', myPeerName, myPeerAvatar);
     joinToChannel();
     handleHideMe(isHideMeActive);
 }
@@ -1931,6 +1976,7 @@ async function joinToChannel() {
         peer_info: peerInfo,
         peer_uuid: myPeerUUID,
         peer_name: myPeerName,
+        peer_avatar: myPeerAvatar,
         peer_token: myToken,
         peer_video: useVideo,
         peer_audio: useAudio,
@@ -1943,6 +1989,7 @@ async function joinToChannel() {
         userAgent: userAgent,
     });
     handleBodyOnMouseMove(); // show/hide buttonsBar, bottomButtons ...
+    makeRoomPopupQR();
 }
 
 /**
@@ -3257,6 +3304,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
     console.log('REMOTE PEER INFO', peers[peer_id]);
 
     const peer_name = peers[peer_id]['peer_name'];
+    const peer_avatar = peers[peer_id]['peer_avatar'];
     const peer_audio = peers[peer_id]['peer_audio'];
     const peer_video = peers[peer_id]['peer_video'];
     const peer_video_status = peers[peer_id]['peer_video_status'];
@@ -3511,7 +3559,9 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
                 handleVideoZoomInOut(remoteVideoZoomInBtn.id, remoteVideoZoomOutBtn.id, remoteMedia.id, peer_id);
 
             // pin video on screen share detected
-            if (peer_video_status && peer_screen_status) remoteVideoPinBtn.click();
+            if (peer_video_status && peer_screen_status) {
+                remoteVideoPinBtn.click();
+            }
 
             // handle video full screen mode
             isVideoFullScreenSupported && handleVideoPlayerFs(remoteMedia.id, remoteVideoFullScreenBtn.id, peer_id);
@@ -3526,7 +3576,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             peer_privacy_status && setVideoPrivacyStatus(remoteMedia.id, peer_privacy_status);
 
             // refresh remote peers avatar name
-            setPeerAvatarImgName(remoteVideoAvatarImage.id, peer_name);
+            setPeerAvatarImgName(remoteVideoAvatarImage.id, peer_name, peer_avatar);
             // refresh remote peers hand icon status and title
             setPeerHandStatus(peer_id, peer_name, peer_hand_status);
             // refresh remote peers video icon status and title
@@ -3549,7 +3599,7 @@ async function loadRemoteMediaStream(stream, peers, peer_id, kind) {
             toggleClassElements('statusMenu', 'inline');
 
             // notify if peer started to recording own screen + audio
-            if (peer_rec_status) notifyRecording(peer_id, peer_name, 'Started');
+            if (peer_rec_status) notifyRecording(peer_id, peer_name, peer_avatar, 'Started');
 
             // Peer without camera, screen sharing OFF
             if (!peer_video && !peer_screen_status) {
@@ -3751,15 +3801,24 @@ function genAvatarSvg(peerName, avatarImgSize) {
  * Refresh video - chat image avatar on name changes: https://eu.ui-avatars.com/
  * @param {string} videoAvatarImageId element id
  * @param {string} peerName
+ * @param {string} peerAvatar
  */
-function setPeerAvatarImgName(videoAvatarImageId, peerName) {
+function setPeerAvatarImgName(videoAvatarImageId, peerName, peerAvatar) {
     const videoAvatarImageElement = getId(videoAvatarImageId);
     videoAvatarImageElement.style.pointerEvents = 'none';
-    if (useAvatarSvg) {
+
+    // If a valid avatar image URL is provided
+    if (peerAvatar && isImageURL(peerAvatar)) {
+        videoAvatarImageElement.setAttribute('src', peerAvatar);
+    }
+    // If not, use SVG based on the email validity
+    else if (useAvatarSvg) {
         const avatarImgSize = isMobileDevice ? 128 : 256;
         const avatarImgSvg = isValidEmail(peerName) ? genGravatar(peerName) : genAvatarSvg(peerName, avatarImgSize);
         videoAvatarImageElement.setAttribute('src', avatarImgSvg);
-    } else {
+    }
+    // Default fallback avatar
+    else {
         videoAvatarImageElement.setAttribute('src', images.avatar);
     }
 }
@@ -3768,9 +3827,15 @@ function setPeerAvatarImgName(videoAvatarImageId, peerName) {
  * Set Chat avatar image by peer name
  * @param {string} avatar position left/right
  * @param {string} peerName me or peer name
+ * @param {string} peerAvatar me or peer avatar
  */
-function setPeerChatAvatarImgName(avatar, peerName) {
-    const avatarImg = isValidEmail(peerName) ? genGravatar(peerName) : genAvatarSvg(peerName, 32);
+function setPeerChatAvatarImgName(avatar, peerName, peerAvatar) {
+    const avatarImg =
+        peerAvatar && isImageURL(peerAvatar)
+            ? peerAvatar
+            : isValidEmail(peerName)
+              ? genGravatar(peerName)
+              : genAvatarSvg(peerName, 32);
 
     switch (avatar) {
         case 'left':
@@ -4454,6 +4519,14 @@ function manageButtons() {
 function setShareRoomBtn() {
     shareRoomBtn.addEventListener('click', async (e) => {
         shareRoomUrl();
+    });
+    shareRoomBtn.addEventListener('mouseenter', () => {
+        if (isMobileDevice || !buttons.main.showShareQr) return;
+        elemDisplay(qrRoomPopupContainer, true);
+    });
+    shareRoomBtn.addEventListener('mouseleave', () => {
+        if (isMobileDevice || !buttons.main.showShareQr) return;
+        elemDisplay(qrRoomPopupContainer, false);
     });
 }
 
@@ -5906,22 +5979,14 @@ function setupVideoUrlPlayer() {
  * Handle Camera mirror logic
  */
 async function handleLocalCameraMirror() {
-    if (isDesktopDevice) {
-        // Desktop devices...
-        if (!initVideo.classList.contains('mirror')) {
-            initVideo.classList.toggle('mirror');
-        }
-        if (!myVideo.classList.contains('mirror')) {
-            myVideo.classList.toggle('mirror');
-        }
+    if (camera === 'environment') {
+        // Back camera → No mirror
+        initVideo.classList.remove('mirror');
+        myVideo.classList.remove('mirror');
     } else {
-        // Mobile, Tablet, IPad devices...
-        if (initVideo.classList.contains('mirror')) {
-            initVideo.classList.remove('mirror');
-        }
-        if (myVideo.classList.contains('mirror')) {
-            myVideo.classList.remove('mirror');
-        }
+        // Disable mirror for rear camera
+        initVideo.classList.add('mirror');
+        myVideo.classList.add('mirror');
     }
 }
 
@@ -6305,8 +6370,21 @@ function shareRoomMeetingURL(checkScreen = false) {
  * https://github.com/neocotic/qrious
  */
 function makeRoomQR() {
-    let qr = new QRious({
+    const qr = new QRious({
         element: getId('qrRoom'),
+        value: window.location.href,
+    });
+    qr.set({
+        size: 256,
+    });
+}
+
+/**
+ * Make Room Popup QR
+ */
+function makeRoomPopupQR() {
+    const qr = new QRious({
+        element: document.getElementById('qrRoomPopup'),
         value: window.location.href,
     });
     qr.set({
@@ -6626,7 +6704,9 @@ async function toggleScreenSharing(init = false) {
                 isScreenStreaming ? elemDisplay(myPrivacyBtn, false) : elemDisplay(myPrivacyBtn, true);
             }
 
-            if (isScreenStreaming || isVideoPinned) myVideoPinBtn.click();
+            if ((isScreenStreaming && thereArePeerConnections()) || isVideoPinned) {
+                myVideoPinBtn.click();
+            }
         }
     } catch (err) {
         err.name === 'NotAllowedError'
@@ -7169,12 +7249,14 @@ function getAudioStreamFromAudioElements() {
  * Notify me if someone start to recording they camera/screen/window + audio
  * @param {string} fromId peer_id
  * @param {string} from peer_name
+ * @param {string} fromAvatar peer_avatar
  * @param {string} action recording action
  */
-function notifyRecording(fromId, from, action) {
+function notifyRecording(fromId, from, fromAvatar, action) {
     const msg = '🔴 ' + action + ' conference recording';
     const chatMessage = {
         from: from,
+        fromAvatar: fromAvatar,
         fromId: fromId,
         to: myPeerName,
         msg: msg,
@@ -7251,7 +7333,7 @@ function handleMediaRecorderStop(event) {
         });
         isRecScreenStream = false;
     }
-    recordStreamBtn.style.setProperty('color', '#000');
+    recordStreamBtn.style.setProperty('color', '#ffffff');
     downloadRecordedStream();
     setTippy(recordStreamBtn, 'Start recording', placement);
     if (isMobileDevice) elemDisplay(swapCameraBtn, true, 'block');
@@ -7783,7 +7865,7 @@ async function sendChatMessage() {
         return cleanMessageInput();
     }
 
-    isChatGPTOn ? await getChatGPTmessage(msg) : emitMsg(myPeerName, 'toAll', msg, false, myPeerId);
+    isChatGPTOn ? await getChatGPTmessage(msg) : emitMsg(myPeerName, myPeerAvatar, 'toAll', msg, false, myPeerId);
     appendMessage(myPeerName, rightChatAvatar, 'right', msg, false);
     cleanMessageInput();
 }
@@ -7797,6 +7879,7 @@ function handleDataChannelChat(dataMessage) {
 
     // sanitize all params
     const msgFrom = filterXSS(dataMessage.from);
+    const msgFromAvatar = filterXSS(dataMessage.fromAvatar);
     const msgFromId = filterXSS(dataMessage.fromId);
     const msgTo = filterXSS(dataMessage.to);
     const msg = filterXSS(dataMessage.msg);
@@ -7825,8 +7908,8 @@ function handleDataChannelChat(dataMessage) {
         userLog('toast', `New message from: ${msgFrom}`);
     }
 
-    setPeerChatAvatarImgName('left', msgFrom);
-    appendMessage(msgFrom, leftChatAvatar, 'left', msg, msgPrivate, msgId);
+    setPeerChatAvatarImgName('left', msgFrom, msgFromAvatar);
+    appendMessage(msgFrom, leftChatAvatar, 'left', msg, msgPrivate, msgId, msgFrom);
     speechInMessages ? speechMessage(true, msgFrom, msg) : playSound('chatMessage');
 }
 
@@ -7872,11 +7955,18 @@ function handleSpeechTranscript(config) {
 
     config.text_data = filterXSS(config.text_data);
     config.peer_name = filterXSS(config.peer_name);
+    config.peer_avatar = filterXSS(config.peer_avatar);
 
-    const { peer_name, text_data } = config;
+    const { peer_name, peer_avatar, text_data } = config;
 
     const time_stamp = getFormatDate(new Date());
-    const avatar_image = isValidEmail(peer_name) ? genGravatar(peer_name) : genAvatarSvg(peer_name, 32);
+
+    const avatar_image =
+        peer_avatar && isImageURL(peer_avatar)
+            ? peer_avatar
+            : isValidEmail(peer_name)
+              ? genGravatar(peer_name)
+              : genAvatarSvg(peer_name, 32);
 
     if (!isCaptionBoxVisible) showCaptionDraggable();
 
@@ -7917,17 +8007,21 @@ function escapeSpecialChars(regex) {
  * @param {string} msg message to append
  * @param {boolean} privateMsg if is private message
  * @param {string} msgId peer id
+ * @param {string} to peer name
  */
-function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
+function appendMessage(from, img, side, msg, privateMsg, msgId = null, to = '') {
     let time = getFormatDate(new Date());
 
     // sanitize all params
     const getFrom = filterXSS(from);
+    const getTo = filterXSS(to);
     const getSide = filterXSS(side);
     const getImg = isChatGPTOn && getSide === 'left' ? images.chatgpt : filterXSS(img);
     const getMsg = filterXSS(msg);
     const getPrivateMsg = filterXSS(privateMsg);
     const getMsgId = filterXSS(msgId);
+
+    const isChatGPT = getFrom === 'ChatGPT';
 
     // collect chat messages to save it later
     chatMessages.push({
@@ -7956,13 +8050,20 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
     `;
     // add btn direct reply to private message
     if (isValidPrivateMessage) {
-        msgHTML += `
+        const privateMessageTag =
+            getSide === 'left' ? `Private message from ${getFrom}` : `Private message to ${getTo}`;
+
+        msgHTML += `<p class="b-yellow">${privateMessageTag}</p>`;
+
+        if (!isChatGPT && getSide === 'left') {
+            msgHTML += `
                 <button 
-                    class="${className.msgPrivate}"
+                    class="${className.msgPrivate} b-yellow"
                     id="msg-private-reply-${chatMessagesId}"
                     style="color:#fff; border:none; background:transparent;"
                     onclick="sendPrivateMsgToPeer('${myPeerId}','${getFrom}')"
                 ></button>`;
+        }
     }
     msgHTML += `
                 <button
@@ -8012,7 +8113,7 @@ function appendMessage(from, img, side, msg, privateMsg, msgId = null) {
         setTippy(getId('msg-copy-' + chatMessagesId), 'Copy', 'top');
         setTippy(getId('msg-speech-' + chatMessagesId), 'Speech', 'top');
         if (isValidPrivateMessage) {
-            setTippy(getId('msg-private-reply-' + chatMessagesId), 'Reply', 'top');
+            setTippy(getId('msg-private-reply-' + chatMessagesId), 'Reply to ' + getTo, 'top');
         }
     }
     chatMessagesId++;
@@ -8160,16 +8261,24 @@ async function msgerAddPeers(peers) {
     // add all current Participants
     for (const peer_id in peers) {
         const peer_name = peers[peer_id]['peer_name'];
+        const peer_avatar = peers[peer_id]['peer_avatar'];
         // bypass insert to myself in the list :)
         if (peer_id != myPeerId && peer_name) {
             const exsistMsgerPrivateDiv = getId(peer_id + '_pMsgDiv');
             // if there isn't add it....
             if (!exsistMsgerPrivateDiv) {
-                const avatarSvg = isValidEmail(peer_name) ? genGravatar(peer_name) : genAvatarSvg(peer_name, 24);
+                //
+                const chatAvatar =
+                    peer_avatar && isImageURL(peer_avatar)
+                        ? peer_avatar
+                        : isValidEmail(peer_name)
+                          ? genGravatar(peer_name)
+                          : genAvatarSvg(peer_name, 24);
+
                 const msgerPrivateDiv = `
                 <div id="${peer_id}_pMsgDiv" class="msger-peer-inputarea">
                 <span style="display: none">${peer_name}</span>
-                <img id="${peer_id}_pMsgAvatar" class="peer-img" src="${avatarSvg}"> 
+                <img id="${peer_id}_pMsgAvatar" class="peer-img" src="${chatAvatar}"> 
                     <textarea
                         rows="1"
                         cols="1"
@@ -8266,8 +8375,8 @@ function addMsgerPrivateBtn(msgerPrivateBtn, msgerPrivateMsgInput, peerId) {
         }
 
         const toPeerName = msgerPrivateBtn.value;
-        emitMsg(myPeerName, toPeerName, pMsg, true, peerId);
-        appendMessage(myPeerName, rightChatAvatar, 'right', pMsg + '<hr>Private message to ' + toPeerName, true);
+        emitMsg(myPeerName, myPeerAvatar, toPeerName, pMsg, true, peerId);
+        appendMessage(myPeerName, rightChatAvatar, 'right', pMsg, true, null, toPeerName);
         msgerPrivateMsgInput.value = '';
         elemDisplay(msgerCP, false);
     }
@@ -8347,8 +8456,14 @@ function isValidHttpURL(input) {
  * @param {string} url to check
  * @returns {boolean} true/false
  */
-function isImageURL(url) {
-    return url.match(/\.(jpeg|jpg|gif|png|tiff|bmp)$/) != null;
+async function isImageURL(url) {
+    try {
+        const response = await fetch(url, { method: 'HEAD' });
+        const contentType = response.headers.get('content-type');
+        return contentType && contentType.startsWith('image/');
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -8458,16 +8573,18 @@ function getFormatDate(date) {
 /**
  * Send message over Secure dataChannels
  * @param {string} from peer name
+ * @param {string} fromAvatar peer avatar
  * @param {string} to peer name
  * @param {string} msg message to send
  * @param {boolean} privateMsg if is a private message
  * @param {string} id peer_id
  */
-function emitMsg(from, to, msg, privateMsg, id) {
+function emitMsg(from, fromAvatar, to, msg, privateMsg, id) {
     if (!msg) return;
 
     // sanitize all params
     const getFrom = filterXSS(from);
+    const getFromAvatar = filterXSS(fromAvatar);
     const getFromId = filterXSS(myPeerId);
     const getTo = filterXSS(to);
     const getMsg = filterXSS(msg);
@@ -8477,6 +8594,7 @@ function emitMsg(from, to, msg, privateMsg, id) {
     const chatMessage = {
         type: 'chat',
         from: getFrom,
+        fromAvatar: getFromAvatar,
         fromId: getFromId,
         id: getId,
         to: getTo,
@@ -8647,6 +8765,7 @@ async function updateMyPeerName() {
         room_id: roomId,
         peer_name_old: myOldPeerName,
         peer_name_new: myPeerName,
+        peer_avatar: myPeerAvatar,
     });
 
     myPeerNameSet.value = '';
@@ -8654,9 +8773,9 @@ async function updateMyPeerName() {
 
     window.localStorage.peer_name = myPeerName;
 
-    setPeerAvatarImgName('myVideoAvatarImage', myPeerName);
-    setPeerAvatarImgName('myProfileAvatar', myPeerName);
-    setPeerChatAvatarImgName('right', myPeerName);
+    setPeerAvatarImgName('myVideoAvatarImage', myPeerName, myPeerAvatar);
+    setPeerAvatarImgName('myProfileAvatar', myPeerName, myPeerAvatar);
+    setPeerChatAvatarImgName('right', myPeerName, myPeerAvatar);
     userLog('toast', 'My name changed to ' + myPeerName);
 }
 
@@ -8665,18 +8784,25 @@ async function updateMyPeerName() {
  * @param {object} config data
  */
 function handlePeerName(config) {
-    const { peer_id, peer_name } = config;
+    const { peer_id, peer_name, peer_avatar } = config;
     const videoName = getId(peer_id + '_name');
     if (videoName) videoName.innerText = peer_name;
     // change also avatar and btn value - name on chat lists....
     const msgerPeerName = getId(peer_id + '_pMsgBtn');
     const msgerPeerAvatar = getId(peer_id + '_pMsgAvatar');
     if (msgerPeerName) msgerPeerName.value = peer_name;
+
     if (msgerPeerAvatar) {
-        msgerPeerAvatar.src = isValidEmail(peer_name) ? genGravatar(peer_name) : genAvatarSvg(peer_name, 32);
+        msgerPeerAvatar.src =
+            peer_avatar && isImageURL(peer_avatar)
+                ? peer_avatar
+                : isValidEmail(peer_name)
+                  ? genGravatar(peer_name)
+                  : genAvatarSvg(peer_name, 32);
     }
+
     // refresh also peer video avatar name
-    setPeerAvatarImgName(peer_id + '_avatar', peer_name);
+    setPeerAvatarImgName(peer_id + '_avatar', peer_name, peer_avatar);
 }
 
 /**
@@ -8935,14 +9061,8 @@ function sendPrivateMsgToPeer(toPeerId, toPeerName) {
                 isChatPasteTxt = false;
                 return;
             }
-            emitMsg(myPeerName, toPeerName, pMsg, true, toPeerId);
-            appendMessage(
-                myPeerName,
-                rightChatAvatar,
-                'right',
-                pMsg + '<br/><hr>Private message to ' + toPeerName,
-                true,
-            );
+            emitMsg(myPeerName, myPeerAvatar, toPeerName, pMsg, true, toPeerId);
+            appendMessage(myPeerName, rightChatAvatar, 'right', pMsg, true, null, toPeerName);
             userLog('toast', 'Message sent to ' + toPeerName + ' 👍');
         }
     });
@@ -9008,6 +9128,7 @@ async function emitPeersAction(peerAction) {
     sendToServer('peerAction', {
         room_id: roomId,
         peer_name: myPeerName,
+        peer_avatar: myPeerAvatar,
         peer_id: myPeerId,
         peer_uuid: myPeerUUID,
         peer_use_video: useVideo,
@@ -9027,6 +9148,7 @@ async function emitPeerAction(peer_id, peerAction) {
     sendToServer('peerAction', {
         room_id: roomId,
         peer_id: peer_id,
+        peer_avatar: myPeerAvatar,
         peer_use_video: useVideo,
         peer_name: myPeerName,
         peer_action: peerAction,
@@ -9040,7 +9162,7 @@ async function emitPeerAction(peer_id, peerAction) {
  */
 function handlePeerAction(config) {
     console.log('Handle peer action: ', config);
-    const { peer_id, peer_name, peer_use_video, peer_action } = config;
+    const { peer_id, peer_name, peer_avatar, peer_use_video, peer_action } = config;
 
     switch (peer_action) {
         case 'muteAudio':
@@ -9050,10 +9172,10 @@ function handlePeerAction(config) {
             setMyVideoOff(peer_name);
             break;
         case 'recStart':
-            notifyRecording(peer_id, peer_name, 'Start');
+            notifyRecording(peer_id, peer_name, peer_avatar, 'Start');
             break;
         case 'recStop':
-            notifyRecording(peer_id, peer_name, 'Stop');
+            notifyRecording(peer_id, peer_name, peer_avatar, 'Stop');
             break;
         case 'screenStart':
             handleScreenStart(peer_id);
@@ -10523,6 +10645,7 @@ function sendFileInformations(file, peer_id, broadcast = false) {
             room_id: roomId,
             broadcast: broadcast,
             peer_name: myPeerName,
+            peer_avatar: myPeerAvatar,
             peer_id: peer_id,
             file: {
                 fileName: fileToSend.name,
@@ -10589,7 +10712,7 @@ function handleFileInfo(config) {
         incomingFileInfo.file.fileType;
     console.log(fileToReceiveInfo);
     // generate chat avatar by peer_name
-    setPeerChatAvatarImgName('left', incomingFileInfo.peer_name);
+    setPeerChatAvatarImgName('left', incomingFileInfo.peer_name, incomingFileInfo.peer_avatar);
     // keep track of received file on chat
     appendMessage(
         incomingFileInfo.peer_name,
@@ -11034,7 +11157,7 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: brand.about?.title && brand.about.title.trim() !== '' ? brand.about.title : 'WebRTC P2P v1.4.85',
+        title: brand.about?.title && brand.about.title.trim() !== '' ? brand.about.title : 'WebRTC P2P v1.5.02',
         imageUrl: brand.about?.imageUrl && brand.about.imageUrl.trim() !== '' ? brand.about.imageUrl : images.about,
         customClass: { image: 'img-about' },
         html: `

@@ -53,7 +53,7 @@ docker-compose up -d
 Check logs to verify the server:
 
 ```bash
-docker-compose logs -f
+docker-compose logs -f <service_name>
 ```
 
 ---
