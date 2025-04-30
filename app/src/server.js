@@ -44,7 +44,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.5.02
+ * @version 1.5.05
  *
  */
 
@@ -66,7 +66,7 @@ const app = express();
 const fs = require('fs');
 const checkXSS = require('./xss.js');
 const ServerApi = require('./api');
-const mattermostCli = require('./mattermost');
+const MattermostController = require('./mattermost');
 const Validate = require('./validate');
 const HtmlInjector = require('./htmlInjector');
 const Host = require('./host');
@@ -264,16 +264,6 @@ if (configChatGPT.enabled) {
     }
 }
 
-// Mattermost config
-const mattermostCfg = {
-    enabled: getEnvBoolean(process.env.MATTERMOST_ENABLED),
-    server_url: process.env.MATTERMOST_SERVER_URL,
-    username: process.env.MATTERMOST_USERNAME,
-    password: process.env.MATTERMOST_PASSWORD,
-    token: process.env.MATTERMOST_TOKEN,
-    api_disabled: api_disabled,
-};
-
 // IP Whitelist
 const ipWhitelist = {
     enabled: getEnvBoolean(process.env.IP_WHITELIST_ENABLED),
@@ -347,6 +337,19 @@ function OIDCAuth(req, res, next) {
     }
 }
 
+// Mattermost config
+const mattermostCfg = {
+    enabled: getEnvBoolean(process.env.MATTERMOST_ENABLED),
+    server_url: process.env.MATTERMOST_SERVER_URL,
+    username: process.env.MATTERMOST_USERNAME,
+    password: process.env.MATTERMOST_PASSWORD,
+    token: process.env.MATTERMOST_TOKEN,
+    roomTokenExpire: process.env.MATTERMOST_ROOM_TOKEN_EXPIRE,
+    encryptionKey: process.env.JWT_KEY,
+    security: (hostCfg.protected || OIDC.enabled),
+    api_disabled: api_disabled,
+};
+
 // stats configuration
 const statsData = {
     enabled: process.env.STATS_ENABLED ? getEnvBoolean(process.env.STATS_ENABLED) : false,
@@ -383,15 +386,20 @@ app.set('trust proxy', trustProxy); // Enables trust for proxy headers (e.g., X-
 app.use(helmet.noSniff()); // Enable content type sniffing prevention
 
 // Use all static files from the public folder
-app.use(
-    express.static(dir.public, {
-        setHeaders: (res, filePath) => {
-            if (filePath.endsWith('.js')) {
-                res.setHeader('Content-Type', 'application/javascript');
-            } //...
-        },
-    }),
-);
+const staticOptions = {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+        // Add other headers if needed...
+    },
+};
+
+// Serve static files from root (/)
+app.use(express.static(dir.public, staticOptions));
+
+// Also serve the same files under /mattermost
+app.use('/mattermost', express.static(dir.public, staticOptions));
 
 app.use(cors(corsOptions)); // Enable CORS with options
 app.use(compression()); // Compress all HTTP responses using GZip
@@ -425,7 +433,7 @@ app.use((req, res, next) => {
 });
 
 // Mattermost
-const mattermost = new mattermostCli(app, mattermostCfg);
+const mattermost = new MattermostController(app, mattermostCfg, htmlInjector, views.client);
 
 // Remove trailing slashes in url handle bad requests
 app.use((err, req, res, next) => {
