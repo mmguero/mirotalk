@@ -93,6 +93,13 @@ access to use this app.
             </pre>
         </div>
 
+        <!-- Scan to Join -->
+
+        <div id="qrRoomPopupContainer" class="top-center fadein">
+            <canvas id="qrRoomPopup"></canvas>
+            <div id="qrText">Scan to join the room</div>
+        </div>
+
         <!-- init user devices -->
 
         <div id="initUser" class="init-user hidden">
@@ -271,7 +278,7 @@ access to use this app.
                                 id="searchPeerBarName"
                                 type="text"
                                 placeholder=" 🔍 Search peer by name..."
-                                maxlength="32"
+                                maxlength="254"
                                 name="search"
                             />
                         </div>
@@ -524,7 +531,7 @@ access to use this app.
                         <div class="dropdown" id="dropDownMicOptions">
                             <button class="buttons" id="micOptionsBtn" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-screwdriver-wrench"></i>
-                                <p>Advance options</p>
+                                <p>Advanced options</p>
                                 <i class="fas fa-caret-down"></i>
                             </button>
                             <br /><br /><br /><br />
@@ -849,7 +856,7 @@ access to use this app.
                             </div>
                             <br /><br />
                             <div>
-                                <input id="myPeerNameSet" type="text" placeholder="Change name..." maxlength="32" />
+                                <input id="myPeerNameSet" type="text" placeholder="Change name..." maxlength="254" />
                                 <button id="myPeerNameSetBtn"><i class="fas fa-user-edit"></i>&nbsp;Change name</button>
                             </div>
                         </div>
@@ -1101,7 +1108,7 @@ access to use this app.
                 <button id="videoAudioCloseBtn" class="fas fa-times"></button>
             </div>
             <br />
-            <video id="videoAudioUrlElement" src="" autoplay controls></video>
+            <video id="videoAudioUrlElement" src="" autoplay playsinline controls></video>
         </div>
 
         <!-- End Video - Audio player -->
@@ -1165,6 +1172,7 @@ access to use this app.
         <script defer src="../js/common.js"></script>
         <script defer src="../js/brand.js"></script>
         <script defer src="../js/buttons.js"></script>
+        <script defer src="../js/geoLocation.js"></script>
         <script defer src="../js/client.js"></script>
         <script defer src="../js/detectSpeaking.js"></script>
         <script defer src="../js/speechRecognition.js"></script>

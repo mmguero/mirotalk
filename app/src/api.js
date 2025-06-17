@@ -39,9 +39,6 @@ module.exports = class ServerApi {
         const meetings = {};
         for (const room_id in peers) {
             const meeting = peers[room_id];
-            if (!meetings) {
-                meetings = {};
-            }
             meetings[room_id] = meeting;
         }
         return meetings;
@@ -53,10 +50,11 @@ module.exports = class ServerApi {
 
     getJoinURL(data) {
         // Get data
-        const { room, name, audio, video, screen, notify, hide, token } = data;
+        const { room, name, avatar, audio, video, screen, notify, hide, token } = data;
 
         const roomValue = room || uuidV4();
         const nameValue = name || 'User-' + this.getRandomNumber();
+        const avatarValue = avatar || false;
         const audioValue = audio || false;
         const videoValue = video || false;
         const screenValue = screen || false;
@@ -70,6 +68,7 @@ module.exports = class ServerApi {
             '/join?' +
             `room=${roomValue}` +
             `&name=${encodeURIComponent(nameValue)}` +
+            `&avatar=${encodeURIComponent(avatarValue)}` +
             `&audio=${audioValue}` +
             `&video=${videoValue}` +
             `&screen=${screenValue}` +

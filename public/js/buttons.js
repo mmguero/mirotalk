@@ -7,6 +7,7 @@
  */
 let buttons = {
     main: {
+        showShareQr: true,
         showShareRoomBtn: true, // For guests
         showHideMeBtn: true,
         showAudioBtn: true,
@@ -61,6 +62,7 @@ let buttons = {
         showSnapShotBtn: true,
         showFileShareBtn: true,
         showShareVideoAudioBtn: true,
+        showGeoLocationBtn: true,
         showPrivateMessageBtn: true,
         showZoomInOutBtn: false,
         showVideoFocusBtn: true,

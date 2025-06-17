@@ -112,6 +112,7 @@ if (speechRecognition) {
                 type: 'speech',
                 room_id: roomId,
                 peer_name: myPeerName,
+                peer_avatar: myPeerAvatar,
                 text_data: transcript,
                 time_stamp: new Date(),
             };
@@ -155,7 +156,7 @@ if (speechRecognition) {
     console.info('00. Browser supports webkitSpeechRecognition');
 } else {
     console.warn(
-        'This browser not supports webkitSpeechRecognition, check out supported browsers: https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility',
+        'This browser not supports webkitSpeechRecognition, check out supported browsers: https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API#browser_compatibility'
     );
 }
 

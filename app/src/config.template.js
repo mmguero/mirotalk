@@ -8,7 +8,7 @@ module.exports = {
         app: {
             language: 'en', // https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
             name: 'MiroTalk',
-            title: 'MiroTalk<br />Free browser based Real-time video calls.<br />Simple, Secure, Fast.',
+            title: '<h1>MiroTalk</h1>Free browser based Real-time video calls.<br />Simple, Secure, Fast.',
             description:
                 'Start your next video call with a single click. No download, plug-in, or login is required. Just get straight to talking, messaging, and sharing your screen.',
             joinDescription: 'Pick a room name.<br />How about this one?',
@@ -66,6 +66,7 @@ module.exports = {
      */
     buttons: {
         main: {
+            showShareQr: true,
             showShareRoomBtn: true, // For guests
             showHideMeBtn: true,
             showAudioBtn: true,
@@ -120,6 +121,7 @@ module.exports = {
             showSnapShotBtn: true,
             showFileShareBtn: true,
             showShareVideoAudioBtn: true,
+            showGeoLocationBtn: true,
             showPrivateMessageBtn: true,
             showZoomInOutBtn: false,
             showVideoFocusBtn: true,
