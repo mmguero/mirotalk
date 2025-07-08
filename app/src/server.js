@@ -44,7 +44,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.5.19
+ * @version 1.5.26
  *
  */
 
@@ -216,7 +216,7 @@ const redirectURL = process.env.REDIRECT_URL || '/newcall';
 const Sentry = require('@sentry/node');
 const sentryEnabled = getEnvBoolean(process.env.SENTRY_ENABLED);
 const sentryDSN = process.env.SENTRY_DSN;
-const sentryTracesSampleRate = process.env.SENTRY_TRACES_SAMPLE_RATE;
+const sentryTracesSampleRate = parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '0.0');
 
 // Slack API
 const CryptoJS = require('crypto-js');
@@ -225,20 +225,38 @@ const slackEnabled = getEnvBoolean(process.env.SLACK_ENABLED);
 const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
 
 // Setup sentry client
-if (sentryEnabled) {
+if (sentryEnabled && typeof sentryDSN === 'string' && sentryDSN.trim()) {
+    log.info('Sentry monitoring started...');
+
     Sentry.init({
         dsn: sentryDSN,
-        integrations: [
-            Sentry.captureConsoleIntegration({
-                // ['log', 'info', 'warn', 'error', 'debug', 'assert']
-                levels: ['warn', 'error'],
-            }),
-        ],
-        // Set tracesSampleRate to 1.0 to capture 100%
-        // of transactions for performance monitoring.
-        // We recommend adjusting this value in production
         tracesSampleRate: sentryTracesSampleRate,
     });
+
+    const logLevels = process.env.SENTRY_LOG_LEVELS
+        ? process.env.SENTRY_LOG_LEVELS.split(',').map((level) => level.trim())
+        : ['error'];
+
+    const originalConsole = {};
+    logLevels.forEach((level) => {
+        originalConsole[level] = console[level];
+        console[level] = function (...args) {
+            switch (level) {
+                case 'warn':
+                    Sentry.captureMessage(args.join(' '), 'warning');
+                    break;
+                case 'error':
+                    args[0] instanceof Error
+                        ? Sentry.captureException(args[0])
+                        : Sentry.captureException(new Error(args.join(' ')));
+                    break;
+            }
+            originalConsole[level].apply(console, args);
+        };
+    });
+
+    // log.error('Sentry error', { foo: 'bar' });
+    // log.warn('Sentry warning');
 }
 
 // OpenAI/ChatGPT
@@ -457,16 +475,12 @@ app.use((err, req, res, next) => {
 if (OIDC.enabled) {
     const getDynamicConfig = (host, protocol) => {
         const baseURL = `${protocol}://${host}`;
-
         const config = OIDC.baseUrlDynamic
             ? {
                   ...OIDC.config,
                   baseURL,
               }
             : OIDC.config;
-
-        log.debug('OIDC baseURL', config.baseURL);
-
         return config;
     };
 
@@ -698,12 +712,16 @@ app.get(['/login'], (req, res) => {
 
 // Logged
 app.get('/logged', (req, res) => {
-    const ip = getIP(req);
-    if (allowedIP(ip)) {
-        res.redirect('/');
+    if (!OIDC.enabled && hostCfg.protected) {
+        const ip = getIP(req);
+        if (allowedIP(ip)) {
+            res.redirect('/');
+        } else {
+            hostCfg.authenticated = false;
+            res.redirect('/login');
+        }
     } else {
-        hostCfg.authenticated = false;
-        res.redirect('/login');
+        res.redirect('/');
     }
 });
 
@@ -721,7 +739,6 @@ app.post('/login', (req, res) => {
 
     // Peer valid going to auth as host
     if (hostCfg.protected && isPeerValid && !hostCfg.authenticated) {
-        const ip = getIP(req);
         hostCfg.authenticated = true;
         authHost.setAuthorizedIP(ip, true);
         log.debug('HOST LOGIN OK', {
