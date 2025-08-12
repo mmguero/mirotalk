@@ -44,7 +44,7 @@ dependencies: {
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.5.41
+ * @version 1.5.57
  *
  */
 
@@ -151,6 +151,7 @@ const hostCfg = {
     user_auth: userAuth,
     users: hostUsers,
     authenticated: !hostProtected,
+    maxRoomParticipants: parseInt(process.env.ROOM_MAX_PARTICIPANTS) || 1000,
 };
 
 // JWT config
@@ -391,6 +392,9 @@ const views = {
     stunTurn: path.join(__dirname, '../../', 'public/views/testStunTurn.html'),
 };
 
+// Branding configuration
+const brandHtmlInjection = config?.brand?.htmlInjection ?? true;
+
 // File to cache and inject custom HTML data like OG tags and any other elements.
 const filesPath = [views.landing, views.newCall, views.client, views.login];
 const htmlInjector = new HtmlInjector(filesPath, config?.brand || null);
@@ -589,16 +593,29 @@ app.get(['/icetest'], (req, res) => {
     res.sendFile(views.stunTurn);
 });
 
+// Check if room active (exists)
+app.post('/isRoomActive', (req, res) => {
+    const { roomId } = checkXSS(req.body);
+
+    if (roomId && (hostCfg.protected || hostCfg.user_auth || OIDC.enabled)) {
+        const roomActive = Object.prototype.hasOwnProperty.call(peers, roomId);
+        if (roomActive) log.debug('isRoomActive', { roomId, roomActive });
+        res.status(200).json({ message: roomActive });
+    } else {
+        res.status(400).json({ message: 'Unauthorized' });
+    }
+});
+
 // Handle Direct join room with params
 app.get('/join/', async (req, res) => {
     if (Object.keys(req.query).length > 0) {
         log.debug('Request Query', req.query);
         /* 
-            http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=0
-            https://p2p.mirotalk.com/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=0
-            https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=0&notify=0&hide=0
+            http://localhost:3000/join?room=test&name=mirotalk&audio=1&video=1&screen=0&chat=1&notify=0&hide=0
+            https://p2p.mirotalk.com/join?room=test&name=mirotalk&audio=1&video=1&screen=0&chat=1&notify=0&hide=0
+            https://mirotalk.up.railway.app/join?room=test&name=mirotalk&audio=1&video=1&screen=0&chat=1&notify=0&hide=0
         */
-        const { room, name, audio, video, screen, notify, hide, token } = checkXSS(req.query);
+        const { room, name, audio, video, screen, chat, notify, hide, token } = checkXSS(req.query);
 
         if (!room) {
             log.warn('/join/params room empty', room);
@@ -768,7 +785,7 @@ app.get('/buttons', (req, res) => {
 
 // UI brand configuration
 app.get('/brand', (req, res) => {
-    res.status(200).json({ message: config && config.brand ? config.brand : false });
+    res.status(200).json({ message: config && config.brand && brandHtmlInjection ? config.brand : false });
 });
 
 // Join roomId redirect to /join?room=roomId
@@ -1382,6 +1399,7 @@ io.sockets.on('connect', async (socket) => {
                 active: redirectEnabled,
                 url: redirectURL,
             },
+            maxRoomParticipants: hostCfg.maxRoomParticipants,
             //...
         });
 
