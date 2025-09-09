@@ -14,7 +14,7 @@
  * @license For commercial use or closed source, contact us at license.mirotalk@gmail.com or purchase directly from CodeCanyon
  * @license CodeCanyon: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
  * @author  Miroslav Pejic - miroslav.pejic.85@gmail.com
- * @version 1.5.58
+ * @version 1.5.72
  *
  */
 
@@ -634,7 +634,7 @@ let recScreenStream; // screen media to recording
 let recTimer;
 let recCodecs;
 let recElapsedTime;
-let recPrioritizeH264 = false;
+let recStartTs = null;
 let isStreamRecording = false;
 let isStreamRecordingPaused = false;
 let isRecScreenStream = false;
@@ -5165,6 +5165,14 @@ function setChatEmojiBtn() {
     };
     const emojiPicker = new EmojiMart.Picker(pickerOptions);
     msgerEmojiPicker.appendChild(emojiPicker);
+
+    handleClickOutside(emojiPicker, msgerEmojiBtn, () => {
+        if (isChatEmojiVisible) {
+            elemDisplay(msgerEmojiPicker, false);
+            setColor(msgerEmojiBtn, '#FFFFFF');
+            isChatEmojiVisible = false;
+        }
+    });
 }
 
 /**
@@ -5597,14 +5605,6 @@ function setMySettingsBtn() {
     // make chat room draggable for desktop
     if (!isMobileDevice) dragElement(mySettings, mySettingsHeader);
 
-    // recording codecs
-    switchH264Recording.addEventListener('change', (e) => {
-        recPrioritizeH264 = e.currentTarget.checked;
-        lsSettings.rec_prioritize_h264 = recPrioritizeH264;
-        lS.setSettings(lsSettings);
-        userLog('toast', `${icons.codecs} Recording prioritize h.264 ` + (recPrioritizeH264 ? 'ON' : 'OFF'));
-        playSound('switch');
-    });
     // Recording pause/resume
     pauseRecBtn.addEventListener('click', (e) => {
         pauseRecording();
@@ -6005,13 +6005,11 @@ function loadSettingsFromLocalStorage() {
     notifyBySound = lsSettings.sounds;
     isKeepButtonsVisible = lsSettings.keep_buttons_visible;
     isAudioPitchBar = lsSettings.pitch_bar;
-    recPrioritizeH264 = lsSettings.rec_prioritize_h264;
     isShortcutsEnabled = lsSettings.keyboard_shortcuts;
     switchSounds.checked = notifyBySound;
     switchShare.checked = notify;
     switchKeepButtonsVisible.checked = isKeepButtonsVisible;
     switchAudioPitchBar.checked = isAudioPitchBar;
-    switchH264Recording.checked = recPrioritizeH264;
     switchShortcuts.checked = isShortcutsEnabled;
 
     themeCustom.check.checked = themeCustom.keep;
@@ -6099,6 +6097,12 @@ function handleUsernameEmojiPicker() {
         getId('usernameInput').value += data.native;
         toggleUsernameEmoji();
     }
+
+    handleClickOutside(emojiUsernamePicker, initUsernameEmojiButton, () => {
+        if (usernameEmoji && !usernameEmoji.classList.contains('hidden')) {
+            usernameEmoji.classList.add('hidden');
+        }
+    });
 }
 
 /**
@@ -6199,8 +6203,7 @@ async function getVideoConstraints(videoQuality) {
  * @returns {object} audio constraints
  */
 function getAudioConstraints(deviceId = null) {
-    let audioConstraints = {};
-    deviceId ? (audioConstraints.deviceId = deviceId) : (audioConstraints = true);
+    const audioConstraints = deviceId ? { deviceId: { exact: deviceId } } : true;
     return {
         audio: audioConstraints,
     };
@@ -6278,31 +6281,75 @@ async function changeAudioDestination(audioElement = false) {
  * @param {string} sinkId uuid audio output device
  */
 async function attachSinkId(element, sinkId) {
-    if (typeof element.sinkId !== 'undefined') {
-        element
-            .setSinkId(sinkId)
-            .then(() => {
-                console.log(`Success, audio output device attached: ${sinkId}`);
-            })
-            .catch((err) => {
-                let errorMessage = err;
-                if (err.name === 'SecurityError') {
-                    errorMessage = 'SecurityError: You need to use HTTPS for selecting audio output device';
-                } else if (err.name === 'NotAllowedError') {
-                    errorMessage = 'NotAllowedError: Permission to use audio output device is not granted';
-                } else if (err.name === 'NotFoundError') {
-                    errorMessage = 'NotFoundError: The specified audio output device was not found';
-                } else {
-                    errorMessage = `Error: ${err}`;
-                }
-                console.error(errorMessage);
-                userLog('error', `attachSinkId: ${errorMessage}`);
-                // Jump back to first output device in the list as it's the default.
-                audioOutputSelect.selectedIndex = 0;
-            });
-    } else {
+    if (typeof element.sinkId === 'undefined') {
         console.warn('Browser does not support output device selection.');
+        return;
     }
+
+    // Helper to actually set the sinkId and handle errors uniformly
+    const doSetSinkId = async () => {
+        try {
+            await element.setSinkId(sinkId);
+            console.log(`Success, audio output device attached: ${sinkId}`);
+        } catch (err) {
+            let errorMessage = err;
+            if (err.name === 'SecurityError') {
+                errorMessage = 'SecurityError: You need to use HTTPS for selecting audio output device';
+            } else if (err.name === 'NotAllowedError') {
+                errorMessage = 'NotAllowedError: Permission to use audio output device is not granted';
+            } else if (err.name === 'NotFoundError') {
+                errorMessage = 'NotFoundError: The specified audio output device was not found';
+            } else if (err.message) {
+                errorMessage = `Error: ${err.message}`;
+            } else {
+                errorMessage = `Error: ${err}`;
+            }
+            console.error(`attachSinkId error: ${errorMessage}`);
+            // Jump back to first output device in the list as it's the default.
+            if (typeof audioOutputSelect !== 'undefined' && audioOutputSelect) {
+                audioOutputSelect.selectedIndex = 0;
+            }
+            throw err;
+        }
+    };
+
+    // If a user gesture is required (Chrome policy), defer until the next interaction
+    const needsUserGesture = !!(navigator.userActivation && !navigator.userActivation.isActive);
+    if (needsUserGesture) {
+        // Show a single notification prompting the user to click
+        if (!window.__sinkGestureNotified) {
+            window.__sinkGestureNotified = true;
+            userLog('toast', 'Click anywhere to apply the speaker change');
+        }
+
+        return new Promise((resolve) => {
+            const applyOnGesture = async () => {
+                try {
+                    await doSetSinkId();
+                    resolve(true);
+                } catch (e) {
+                    resolve(false);
+                } finally {
+                    window.removeEventListener('pointerdown', applyOnGesture);
+                    window.removeEventListener('keydown', applyOnGesture);
+                    window.removeEventListener('mousedown', applyOnGesture);
+                    window.removeEventListener('touchstart', applyOnGesture);
+                    window.removeEventListener('keydown', applyOnGesture);
+                    window.__sinkGestureNotified = false;
+                }
+            };
+            const opts = { once: true };
+            // Use pointerdown (covers mouse/touch/pen) and keydown as safe user gestures
+            window.addEventListener('pointerdown', applyOnGesture, opts);
+            window.addEventListener('keydown', applyOnGesture, opts);
+            window.addEventListener('mousedown', applyOnGesture, opts);
+            window.addEventListener('touchstart', applyOnGesture, opts);
+            window.addEventListener('keydown', applyOnGesture, opts);
+        });
+    }
+
+    // Otherwise, set immediately
+    return doSetSinkId();
 }
 
 /**
@@ -7109,7 +7156,7 @@ function startRecordingTimer() {
             recElapsedTime++;
             let recTimeElapsed = secondsToHms(recElapsedTime);
             myVideoParagraph.innerText = myPeerName + ' 🔴 REC ' + recTimeElapsed;
-            recordingTime.innerText = recTimeElapsed;
+            recordingTime.innerText = '🔴 REC ' + recTimeElapsed;
         }
     }, 1000);
 }
@@ -7124,7 +7171,6 @@ function stopRecordingTimer() {
  */
 function getSupportedMimeTypes() {
     const possibleTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/mp4'];
-    possibleTypes.splice(recPrioritizeH264 ? 0 : 2, 0, 'video/mp4;codecs=h264,aac', 'video/webm;codecs=h264,opus');
     console.log('POSSIBLE CODECS', possibleTypes);
     return possibleTypes.filter((mimeType) => {
         return MediaRecorder.isTypeSupported(mimeType);
@@ -7351,7 +7397,6 @@ function notifyRecording(fromId, from, fromAvatar, action) {
  * @param {boolean} disabled - If true, disable the tabs; otherwise, enable them
  */
 function toggleVideoAudioTabs(disabled = false) {
-    if (disabled) tabRoomBtn.click();
     tabVideoBtn.disabled = disabled;
     tabAudioBtn.disabled = disabled;
 }
@@ -7381,6 +7426,8 @@ function handleMediaRecorderStart(event) {
     recordStreamBtn.style.setProperty('color', '#ff4500');
     setTippy(recordStreamBtn, 'Stop recording', placement);
     if (isMobileDevice) elemDisplay(swapCameraBtn, false);
+    switchH264Recording.disabled = true;
+    recStartTs = performance.now();
     playSound('recStart');
 }
 
@@ -7416,6 +7463,7 @@ function handleMediaRecorderStop(event) {
     downloadRecordedStream();
     setTippy(recordStreamBtn, 'Start recording', placement);
     if (isMobileDevice) elemDisplay(swapCameraBtn, true, 'block');
+    switchH264Recording.disabled = false;
     playSound('recStop');
 }
 
@@ -7474,15 +7522,24 @@ function resumeRecording() {
 }
 
 /**
+ * Get WebM duration fixer function
+ * @returns {Function|null}
+ */
+function getWebmFixerFn() {
+    const fn = window.FixWebmDuration;
+    return typeof fn === 'function' ? fn : null;
+}
+
+/**
  * Download recorded stream
  */
-function downloadRecordedStream() {
+async function downloadRecordedStream() {
     try {
         const type = recordedBlobs[0].type.includes('mp4') ? 'mp4' : 'webm';
-        const blob = new Blob(recordedBlobs, { type: 'video/' + type });
+        const rawBlob = new Blob(recordedBlobs, { type: 'video/' + type });
         const recFileName = getDataTimeString() + '-REC.' + type;
         const currentDevice = isMobileDevice ? 'MOBILE' : 'PC';
-        const blobFileSize = bytesToSize(blob.size);
+        const blobFileSize = bytesToSize(rawBlob.size);
 
         const recordingInfo = `
         <br/>
@@ -7498,16 +7555,38 @@ function downloadRecordedStream() {
         lastRecordingInfo.innerHTML = `<br/>Last recording info: ${recordingInfo}`;
         recordingTime.innerText = '';
 
-        userLog(
-            'success-html',
+        msgHTML(
+            null,
+            null,
+            'Recording',
             `<div style="text-align: left;">
-                🔴 &nbsp; Recording Info: <br/>
+                🔴 &nbsp; Recording Info:
                 ${recordingInfo}
                 Please wait to be processed, then will be downloaded to your ${currentDevice} device.
-            </div>`
+            </div>`,
+            'top'
         );
 
-        saveBlobToFile(blob, recFileName);
+        // Fix WebM duration to make it seekable
+        const fixWebmDuration = async (blob) => {
+            if (type !== 'webm') return blob;
+            try {
+                const fix = getWebmFixerFn();
+                const durationMs = recStartTs ? performance.now() - recStartTs : undefined;
+                const fixed = await fix(blob, durationMs);
+                return fixed || blob;
+            } catch (e) {
+                console.warn('WEBM duration fix failed, saving original blob:', e);
+                return blob;
+            } finally {
+                recStartTs = null;
+            }
+        };
+
+        (async () => {
+            const finalBlob = await fixWebmDuration(rawBlob);
+            saveBlobToFile(finalBlob, recFileName);
+        })();
     } catch (err) {
         userLog('error', 'Recording save failed: ' + err);
     }
@@ -11272,7 +11351,7 @@ function showAbout() {
     Swal.fire({
         background: swBg,
         position: 'center',
-        title: brand.about?.title && brand.about.title.trim() !== '' ? brand.about.title : 'WebRTC P2P v1.5.58',
+        title: brand.about?.title && brand.about.title.trim() !== '' ? brand.about.title : 'WebRTC P2P v1.5.72',
         imageUrl: brand.about?.imageUrl && brand.about.imageUrl.trim() !== '' ? brand.about.imageUrl : images.about,
         customClass: { image: 'img-about' },
         html: `
@@ -11814,6 +11893,29 @@ function sanitizeXSS(src) {
  */
 function disable(elem, disabled) {
     elem.disabled = disabled;
+}
+
+/**
+ * Handle click outside of an element
+ * @param {object} targetElement
+ * @param {object} triggerElement
+ * @param {function} callback
+ * @param {number} minWidth
+ */
+function handleClickOutside(targetElement, triggerElement, callback, minWidth = 0) {
+    document.addEventListener('click', (e) => {
+        if (minWidth && window.innerWidth > minWidth) return;
+        let el = e.target;
+        let shouldExclude = false;
+        while (el) {
+            if (el instanceof HTMLElement && (el === targetElement || el === triggerElement)) {
+                shouldExclude = true;
+                break;
+            }
+            el = el.parentElement;
+        }
+        if (!shouldExclude) callback();
+    });
 }
 
 /**

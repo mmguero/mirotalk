@@ -24,6 +24,7 @@ const appJoinDescription = document.getElementById('appJoinDescription');
 const joinRoomBtn = document.getElementById('joinRoomButton');
 const appJoinLastRoom = document.getElementById('appJoinLastRoom');
 
+const topSponsors = document.getElementById('topSponsors');
 const features = document.getElementById('features');
 const browsers = document.getElementById('browsers');
 const teams = document.getElementById('teams');
@@ -37,6 +38,50 @@ const footer = document.getElementById('footer');
 // Brand customizations...
 
 let brand = {
+    app: {
+        language: 'en',
+        name: 'MiroTalk',
+        title: 'MiroTalk<br />Free browser based Real-time video calls.<br />Simple, Secure, Fast.',
+        description:
+            'Start your next video call with a single click. No download, plug-in, or login is required. Just get straight to talking, messaging, and sharing your screen.',
+        joinDescription: 'Pick a room name.<br />How about this one?',
+        joinButtonLabel: 'JOIN ROOM',
+        joinLastLabel: 'Your recent room:',
+    },
+    site: {
+        shortcutIcon: '../images/logo.svg',
+        appleTouchIcon: '../images/logo.svg',
+        landingTitle: 'MiroTalk a Free Secure Video Calls, Chat & Screen Sharing.',
+        newCallTitle: 'MiroTalk a Free Secure Video Calls, Chat & Screen Sharing.',
+        newCallRoomTitle: 'Pick name. <br />Share URL. <br />Start conference.',
+        newCallRoomDescription:
+            "Each room has its disposable URL. Just pick a room name and share your custom URL. It's that easy.",
+        loginTitle: 'MiroTalk - Host Protected login required.',
+        clientTitle: 'MiroTalk WebRTC Video call, Chat Room & Screen Sharing.',
+        privacyPolicyTitle: 'MiroTalk - privacy and policy.',
+        stunTurnTitle: 'Test Stun/Turn Servers.',
+        notFoundTitle: 'MiroTalk - 404 Page not found.',
+    },
+    html: {
+        topSponsors: true,
+        features: true,
+        browsers: true,
+        teams: true, // please keep me always true ;)
+        tryEasier: true,
+        poweredBy: true,
+        sponsors: true,
+        advertisers: true,
+        footer: true,
+    },
+    about: {
+        imageUrl: '../images/mirotalk-logo.gif',
+        title: 'WebRTC P2P v1.5.72',
+        html: `
+            <hr />
+            <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
+            <hr />
+        `,
+    },
     widget: {
         enabled: false,
         roomId: 'support-room',
@@ -59,11 +104,11 @@ let brand = {
             isOnline: true,
             customMessages: {
                 heading: 'Need Help?',
-                subheading: 'Get instant support from our expert team!',
-                connectText: 'connect in < 5 seconds',
+                subheading: '',
+                connectText: '',
                 onlineText: 'We are online',
                 offlineText: 'We are offline',
-                poweredBy: 'Powered by MiroTalk',
+                poweredBy: '',
             },
         },
     },
@@ -190,6 +235,7 @@ function handleBrand() {
     if (joinRoomBtn && brand.app?.joinButtonLabel) joinRoomBtn.innerText = brand.app.joinButtonLabel;
     if (appJoinLastRoom && brand.app?.joinLastLabel) appJoinLastRoom.innerText = brand.app.joinLastLabel;
 
+    !brand.html.topSponsors && elementDisplay(topSponsors, false);
     !brand.html.features && elementDisplay(features, false);
     !brand.html.browsers && elementDisplay(browsers, false);
     !brand.html.teams && elementDisplay(teams, false);
@@ -203,13 +249,18 @@ function handleBrand() {
 // WIDGET customize
 function handleWidget() {
     if (brand.widget?.enabled) {
+        const domain = window.location.host;
+        const roomId = brand.widget?.roomId || 'support-room';
+        const userName = 'guest-' + Math.floor(Math.random() * 10000);
         if (typeof MiroTalkWidget !== 'undefined') {
-            const domain = window.location.host;
-            const roomId = brand.widget?.roomId || 'support-room';
-            const userName = 'guest-' + Math.floor(Math.random() * 10000);
             new MiroTalkWidget(domain, roomId, userName, brand.widget);
         } else {
-            console.error('MiroTalkWidget is not defined. Please check Widget.js loading.');
+            console.warn('MiroTalkWidget is not defined. Please check widget.js loading.', {
+                domain,
+                roomId,
+                userName,
+                widget: brand.widget,
+            });
         }
     }
 }

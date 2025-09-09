@@ -2,12 +2,14 @@
 
 <br />
 
-<p align="center">Free WebRTC - P2P - Simple, Secure, Fast Real-Time Video Conferences with support for up to 8k resolution and 60fps. It's compatible with all major browsers and platforms.</p>
+<p align="center">
+<strong>MiroTalk P2P</strong> - Free WebRTC, Simple, Secure, Fast Real-Time Video Conferences with support for up to 8k resolution and 60fps. It's compatible with all major browsers and platforms.
+</p>
 
 <hr />
 
 <p align="center">
-<img src="public/images/mirotalk-header.gif">
+    <a href="https://p2p.mirotalk.com"><img src="public/images/mirotalk-header.gif"></a>
 </p>
 
 <hr />
