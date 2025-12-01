@@ -1,9 +1,17 @@
 'use strict';
 
+/**
+ * ==============================================
+ * MiroTalk P2P v.1.6.65 - Configuration File
+ * ==============================================
+ *
+ * Branding and customizations require a license:
+ * https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
+ */
+
 const packageJson = require('../../package.json');
 
 module.exports = {
-    // Branding and customizations require a license: https://codecanyon.net/item/mirotalk-p2p-webrtc-realtime-video-conferences/38376661
     brand: {
         htmlInjection: true,
         app: {
@@ -48,6 +56,7 @@ module.exports = {
             poweredBy: true,
             sponsors: true,
             advertisers: true,
+            supportUs: true,
             footer: true,
         },
         about: {
@@ -108,6 +117,7 @@ module.exports = {
             showScreenBtn: true, // autodetected
             showRecordStreamBtn: true,
             showChatRoomBtn: true,
+            showParticipantsBtn: true,
             showCaptionRoomBtn: true,
             showRoomEmojiPickerBtn: true,
             showMyHandBtn: true,
@@ -134,6 +144,7 @@ module.exports = {
             showMaxBtn: true,
         },
         settings: {
+            showActiveRoomsBtn: true,
             showMicOptionsBtn: true,
             showTabRoomPeerName: true,
             showTabRoomParticipants: true,
@@ -146,6 +157,7 @@ module.exports = {
             showLockRoomBtn: true,
             showUnlockRoomBtn: true,
             showShortcutsBtn: true,
+            customNoiseSuppression: true,
         },
         remote: {
             showAudioVolume: true,
@@ -166,6 +178,7 @@ module.exports = {
             showSnapShotBtn: true,
             showVideoCircleBtn: true,
             showZoomInOutBtn: false,
+            showVideoFocusBtn: true,
         },
         whiteboard: {
             whiteboardLockBtn: false,

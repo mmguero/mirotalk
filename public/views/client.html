@@ -155,6 +155,9 @@ access to use this app.
             <button id="screenShareBtn" class="fas fa-desktop"></button>
             <button id="myHandBtn" class="fas fa-hand-paper"></button>
             <button id="chatRoomBtn" class="fas fa-comment"></button>
+            <button id="participantsBtn" class="fas fa-users">
+                <span id="participantsCountBadge"></span>
+            </button>
             <button id="mySettingsBtn" class="fas fa-cogs"></button>
             <button id="leaveRoomBtn" class="fa-solid fa-phone-slash"></button>
         </div>
@@ -163,11 +166,7 @@ access to use this app.
 
         <!-- Start room emoji picker -->
 
-        <div id="emojiPickerContainer" class="roomEmoji fadein">
-            <div id="emojiPickerHeader" class="emojiPickerHeader">
-                <button id="closeEmojiPickerContainer" class="fas fa-times"></button>
-            </div>
-        </div>
+        <div id="emojiPickerContainer" class="roomEmoji fadein"></div>
         <div id="userEmoji" class="userEmoji"></div>
 
         <!-- End room emoji picker -->
@@ -231,7 +230,17 @@ access to use this app.
                     </div>
                 </header>
 
-                <main id="msgerChat" class="msger-chat"></main>
+                <main id="msgerChat" class="msger-chat">
+                    <!-- EMPTY CHAT ILLUSTRATION -->
+                    <div id="msgerEmptyNotice" class="empty-chat-notice">
+                        <img alt="Empty chat illustration" class="empty-chat-img" src="../svg/emptyChat.svg" />
+                        <h5 class="empty-chat-title">Start Conversation</h5>
+                        <p class="empty-chat-desc">
+                            There are no messages here yet. Start a conversation by sending a message.
+                        </p>
+                    </div>
+                    <!-- Chat messages will be appended here -->
+                </main>
 
                 <!-- Start emoji picker -->
 
@@ -267,7 +276,7 @@ access to use this app.
             <section id="msgerCP" class="center fadein">
                 <section id="msgerCPSec" class="msger">
                     <header id="msgerCPHeader" class="msger-private-header">
-                        <div class="msger-header-title"><i class="fas fa-comment-alt"></i> Send Private messages</div>
+                        <div class="msger-header-title"><i class="fas fa-users"></i> Participants</div>
                         <div class="msger-header-options">
                             <button id="msgerCPCloseBtn" class="fas fa-times"></button>
                         </div>
@@ -283,6 +292,16 @@ access to use this app.
                             />
                         </div>
                         <br />
+                        <!-- EMPTY PARTICIPANTS ILLUSTRATION -->
+                        <div id="msgerEmptyParticipantsNotice" class="empty-participants-notice">
+                            <img
+                                alt="Empty participants illustration"
+                                class="empty-participants-img"
+                                src="../svg/emptyParticipants.svg"
+                            />
+                            <h5 class="empty-participants-title">Participants</h5>
+                            <p class="empty-participants-desc">There are no participants here yet.</p>
+                        </div>
                         <div id="msgerCPList"></div>
                     </main>
                 </section>
@@ -312,7 +331,14 @@ access to use this app.
                     </div>
                 </header>
 
-                <main id="captionChat" class="caption-chat"></main>
+                <main id="captionChat" class="caption-chat">
+                    <!-- EMPTY CAPTION ILLUSTRATION -->
+                    <div id="captionEmptyNotice" class="empty-caption-notice">
+                        <img alt="Empty caption illustration" class="empty-caption-img" src="../svg/emptyCaption.svg" />
+                        <h5 class="empty-caption-title">Start Caption</h5>
+                        <p class="empty-caption-desc">No captions yet. Click "Start" to begin live captions.</p>
+                    </div>
+                </main>
                 <div id="captionFooter" class="caption-inputarea">
                     <select id="recognitionLanguage"></select>
                     <select id="recognitionDialect"></select>
@@ -379,6 +405,10 @@ access to use this app.
                                 </td>
                             </tr>
                         </table>
+                        <button id="activeRoomsBtn">
+                            <i class="fa-solid fa-circle-dot"></i>
+                            <p>Active rooms</p>
+                        </button>
                         <div id="tabRoomSecurity">
                             <button id="lockRoomBtn" class="orange">
                                 <i class="fas fa-lock-open orange"></i>&nbsp;Lock room
@@ -434,18 +464,29 @@ access to use this app.
                                 <td><input id="switchKeepButtonsVisible" class="toggle" type="checkbox" /></td>
                             </tr>
                         </table>
+                        <br />
+                        <table id="mySettingsTable">
+                            <tr>
+                                <td>
+                                    <div class="title">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <span id="mySessionTime">0s</span>
+                                </td>
+                            </tr>
+                        </table>
                     </div>
 
                     <div id="tabVideo" class="tabcontent">
-                        <div>
+                        <div id="videoSourceDiv">
                             <div class="title">
                                 <i class="fas fa-video"></i>
                                 <p>Video Source</p>
                             </div>
                             <br />
                             <select id="videoSource"></select>
+                            <br />
                         </div>
-                        <br />
                         <div class="title">
                             <i class="fas fa-palette"></i>
                             <p>Video Quality</p>
@@ -462,19 +503,21 @@ access to use this app.
                             <option value="6kVideo">6K</option>
                             <option value="8kVideo">8K</option>
                         </select>
-                        <br />
-                        <div class="title">
-                            <i class="fa-solid fa-film"></i>
-                            <p>Video fit</p>
+                        <div id="videoFitDiv">
+                            <br />
+                            <div class="title">
+                                <i class="fa-solid fa-film"></i>
+                                <p>Video fit</p>
+                            </div>
+                            <br />
+                            <select id="videoObjFitSelect">
+                                <option value="fill">Fill</option>
+                                <option value="contain">Contain</option>
+                                <option value="cover">Cover</option>
+                                <option value="scale-down">Scale-down</option>
+                                <option value="none">None</option>
+                            </select>
                         </div>
-                        <br />
-                        <select id="videoObjFitSelect">
-                            <option value="fill">Fill</option>
-                            <option value="contain">Contain</option>
-                            <option value="cover">Cover</option>
-                            <option value="scale-down">Scale-down</option>
-                            <option value="none">None</option>
-                        </select>
                         <div id="videoFpsDiv">
                             <br />
                             <div class="title">
@@ -601,6 +644,7 @@ access to use this app.
                         <div id="tabRoomParticipants">
                             <br />
                             <button id="captionEveryoneBtn"><i class="fas fa-play"></i>&nbsp;Start captions</button>
+                            <button id="captionEveryoneStopBtn"><i class="fas fa-stop"></i>&nbsp;Stop captions</button>
                             <button id="muteEveryoneBtn"><i class="fas fa-microphone"></i>&nbsp;Mute everyone</button>
                             <button id="hideEveryoneBtn"><i class="fas fa-video"></i>&nbsp;Hide everyone</button>
                             <button id="ejectEveryoneBtn">
@@ -777,7 +821,56 @@ access to use this app.
                                 <td><p id="networkTurn">🔴</p></td>
                             </tr>
                         </table>
-                        <!-- <hr class="hr" /> -->
+
+                        <hr class="hr" />
+
+                        <table id="mySettingsTable">
+                            <tr>
+                                <td>
+                                    <div class="title">
+                                        <i class="fa-solid fa-upload"></i>
+                                        <p>Sent</p>
+                                    </div>
+                                </td>
+                                <td><p id="networkSent"></p></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="title">
+                                        <i class="fa-solid fa-download"></i>
+                                        <p>Received</p>
+                                    </div>
+                                </td>
+                                <td><p id="networkReceived"></p></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="title">
+                                        <i class="fa-solid fa-circle-exclamation"></i>
+                                        <p>Packet Lost</p>
+                                    </div>
+                                </td>
+                                <td><p id="networkPacketLost"></p></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="title">
+                                        <i class="fa-solid fa-wave-square"></i>
+                                        <p>Jitter</p>
+                                    </div>
+                                </td>
+                                <td><p id="networkJitter"></p></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="title">
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
+                                        <p>RTT</p>
+                                    </div>
+                                </td>
+                                <td><p id="networkRtt"></p></td>
+                            </tr>
+                        </table>
                     </div>
 
                     <div id="tabStyling" class="tabcontent">
@@ -879,7 +972,7 @@ access to use this app.
                             data-bs-toggle="whiteboard-dropdown"
                             aria-expanded="false"
                         >
-                            <i class="fas fa-ellipsis-vertical"></i>
+                            <i class="fas fa-bars"></i>
                         </button>
                         <div
                             id="whiteboardDropdownMenu"
@@ -1039,7 +1132,9 @@ access to use this app.
         <script defer src="../js/videoGrid.js"></script>
         <script defer src="../js/translate.js"></script>
         <script defer src="../js/fixWebmDuration.js"></script>
+        <script defer src="../js/screenReader.js"></script>
         <script defer src="../js/client.js"></script>
+        <script defer src="../js/networkStats.js"></script>
         <script defer src="../js/speechRecognition.js"></script>
         <script defer src="../js/nodeProcessor.js"></script>
 

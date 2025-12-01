@@ -16,6 +16,7 @@ let buttons = {
         showScreenBtn: true, // autodetected
         showRecordStreamBtn: true,
         showChatRoomBtn: true,
+        showParticipantsBtn: true,
         showCaptionRoomBtn: true,
         showRoomEmojiPickerBtn: true,
         showMyHandBtn: true,
@@ -42,6 +43,7 @@ let buttons = {
         showMaxBtn: true,
     },
     settings: {
+        showActiveRoomsBtn: true,
         showMicOptionsBtn: true,
         showTabRoomPeerName: true,
         showTabRoomParticipants: true,
@@ -54,6 +56,7 @@ let buttons = {
         showLockRoomBtn: true,
         showUnlockRoomBtn: true,
         showShortcutsBtn: true,
+        customNoiseSuppression: true,
     },
     remote: {
         showAudioVolume: true,
@@ -74,6 +77,7 @@ let buttons = {
         showSnapShotBtn: true,
         showVideoCircleBtn: true,
         showZoomInOutBtn: false,
+        showVideoFocusBtn: true,
     },
     whiteboard: {
         whiteboardLockBtn: false,

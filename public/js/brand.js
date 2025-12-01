@@ -32,6 +32,7 @@ const tryEasier = document.getElementById('tryEasier');
 const poweredBy = document.getElementById('poweredBy');
 const sponsors = document.getElementById('sponsors');
 const advertisers = document.getElementById('advertisers');
+const supportUs = document.getElementById('supportUs');
 const footer = document.getElementById('footer');
 //...
 
@@ -71,11 +72,12 @@ let brand = {
         poweredBy: true,
         sponsors: true,
         advertisers: true,
+        supportUs: true,
         footer: true,
     },
     about: {
         imageUrl: '../images/mirotalk-logo.gif',
-        title: 'WebRTC P2P v1.5.72',
+        title: 'WebRTC P2P v1.6.65',
         html: `
             <hr />
             <span>&copy; 2025 MiroTalk P2P, all rights reserved</span>
@@ -204,8 +206,30 @@ async function getBrand() {
  * @param {object} data
  */
 function setBrand(data) {
-    brand = data;
+    brand = mergeBrand(brand, data);
     console.log('Set Brand done');
+}
+
+/**
+ * Deep merge two objects
+ * @param {object} target target object
+ * @param {object} source source object
+ * @returns {object} merged object
+ */
+function mergeBrand(target, source) {
+    if (typeof target !== 'object' || target === null) return source;
+    if (typeof source !== 'object' || source === null) return source;
+    const output = Array.isArray(target) ? target.slice() : { ...target };
+    for (const key of Object.keys(source)) {
+        const srcVal = source[key];
+        const tgtVal = output[key];
+        if (srcVal && typeof srcVal === 'object' && !Array.isArray(srcVal)) {
+            output[key] = mergeBrand(tgtVal || {}, srcVal);
+        } else {
+            output[key] = srcVal;
+        }
+    }
+    return output;
 }
 
 /**
@@ -235,15 +259,21 @@ function handleBrand() {
     if (joinRoomBtn && brand.app?.joinButtonLabel) joinRoomBtn.innerText = brand.app.joinButtonLabel;
     if (appJoinLastRoom && brand.app?.joinLastLabel) appJoinLastRoom.innerText = brand.app.joinLastLabel;
 
-    !brand.html.topSponsors && elementDisplay(topSponsors, false);
-    !brand.html.features && elementDisplay(features, false);
-    !brand.html.browsers && elementDisplay(browsers, false);
-    !brand.html.teams && elementDisplay(teams, false);
-    !brand.html.tryEasier && elementDisplay(tryEasier, false);
-    !brand.html.poweredBy && elementDisplay(poweredBy, false);
-    !brand.html.sponsors && elementDisplay(sponsors, false);
-    !brand.html.advertisers && elementDisplay(advertisers, false);
-    !brand.html.footer && elementDisplay(footer, false);
+    // helper to toggle multiple elements
+    const displayElements = (list) => list.forEach(([el, show]) => elementDisplay(el, !!show));
+
+    displayElements([
+        [topSponsors, brand.html?.topSponsors],
+        [features, brand.html?.features],
+        [browsers, brand.html?.browsers],
+        [teams, brand.html?.teams],
+        [tryEasier, brand.html?.tryEasier],
+        [poweredBy, brand.html?.poweredBy],
+        [sponsors, brand.html?.sponsors],
+        [advertisers, brand.html?.advertisers],
+        [supportUs, brand.html?.supportUs],
+        [footer, brand.html?.footer],
+    ]);
 }
 
 // WIDGET customize
