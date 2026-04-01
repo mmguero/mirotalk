@@ -84,9 +84,12 @@
 
         <!-- show this before to join -->
 
-        <div id="loadingDiv" class="center pulsate">
+        <div id="loadingDiv" class="center">
+            <div class="loading-spinner">
+                <div class="spinner-ring"></div>
+                <img class="spinner-logo" src="../images/logo.svg" alt="logo" />
+            </div>
             <h1>Loading</h1>
-            <img class="loading-img" src="../images/loading.gif" />
             <pre>
 Please allow the camera or microphone
 access to use this app.
@@ -105,13 +108,13 @@ access to use this app.
         <div id="initUser" class="init-user hidden">
             <!-- <p>Please allow the camera & microphone access to use this app.</p> -->
             <div id="initVideoContainer" class="init-video-container">
-                <video
-                    id="initVideo"
-                    playsinline="true"
-                    autoplay=""
-                    class="mirror"
-                    poster="../images/loader.gif"
-                ></video>
+                <div id="initVideoLoader" class="init-video-loader">
+                    <div class="loading-spinner">
+                        <div class="spinner-ring"></div>
+                        <img class="spinner-logo" src="../images/logo.svg" alt="logo" />
+                    </div>
+                </div>
+                <video id="initVideo" playsinline="true" autoplay="" class="mirror"></video>
             </div>
             <div class="initComands">
                 <button id="initVideoBtn" class="fas fa-video"></button>
@@ -119,6 +122,7 @@ access to use this app.
                 <button id="initScreenShareBtn" class="fas fa-desktop"></button>
                 <button id="initVideoMirrorBtn" class="fas fa-arrow-right-arrow-left"></button>
                 <button id="initUsernameEmojiButton" class="fas fa-smile"></button>
+                <button id="initExitBtn" class="fas fa-sign-out-alt red"></button>
                 <select id="initVideoSelect" class="form-select text-light bg-dark"></select>
                 <select id="initMicrophoneSelect" class="form-select text-light bg-dark"></select>
                 <select id="initSpeakerSelect" class="form-select text-light bg-dark"></select>
@@ -129,28 +133,49 @@ access to use this app.
 
         <div id="usernameEmoji" class="usernameEmoji fadein center hidden"></div>
 
-        <!-- Start buttons bar https://fontawesome.com/icons?d=gallery -->
-
-        <div id="buttonsBar" class="fadein">
-            <button id="shareRoomBtn" class="fas fa-share-alt"></button>
-            <button id="hideMeBtn" class="fas fa-user"></button>
-            <button id="recordStreamBtn" class="fas fa-record-vinyl"></button>
-            <button id="fullScreenBtn" class="fas fa-expand-alt"></button>
-            <button id="roomEmojiPickerBtn" class="fas fa-face-smile"></button>
-            <button id="captionBtn" class="fas fa-closed-captioning"></button>
-            <button id="whiteboardBtn" class="fas fa-chalkboard-teacher"></button>
-            <button id="snapshotRoomBtn" class="fas fas fa-camera-retro"></button>
-            <button id="fileShareBtn" class="fas fa-folder-open"></button>
-            <button id="documentPiPBtn" class="fas fa-images"></button>
-            <button id="aboutBtn" class="fas fa-question"></button>
-        </div>
-        <!-- End left buttons -->
-
         <!-- Start bottom buttons -->
         <div id="bottomButtons" class="fadein">
-            <button id="toggleExtraBtn" class="fas fa-chevron-down"></button>
-            <button id="audioBtn" class="fas fa-microphone"></button>
-            <button id="videoBtn" class="fas fa-video"></button>
+            <div id="audioSplit" class="split-btn">
+                <button id="audioBtn" class="fas fa-microphone"></button>
+                <div id="audioDropdown" class="dropdown dropup hidden">
+                    <button
+                        id="audioToggle"
+                        class="dropdown-toggle device-dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        aria-label="Select microphone"
+                    >
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <div
+                        id="audioMenu"
+                        class="dropdown-menu text-start app-dropdown-menu"
+                        aria-labelledby="audioToggle"
+                    ></div>
+                </div>
+            </div>
+            <div id="videoSplit" class="split-btn">
+                <button id="videoBtn" class="fas fa-video"></button>
+                <div id="videoDropdown" class="dropdown dropup hidden">
+                    <button
+                        id="videoToggle"
+                        class="dropdown-toggle device-dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        aria-label="Select camera"
+                    >
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <div
+                        id="videoMenu"
+                        class="dropdown-menu text-start app-dropdown-menu"
+                        aria-labelledby="videoToggle"
+                    ></div>
+                </div>
+            </div>
+
             <button id="swapCameraBtn" class="fas fa-camera-rotate"></button>
             <button id="screenShareBtn" class="fas fa-desktop"></button>
             <button id="myHandBtn" class="fas fa-hand-paper"></button>
@@ -158,7 +183,89 @@ access to use this app.
             <button id="participantsBtn" class="fas fa-users">
                 <span id="participantsCountBadge"></span>
             </button>
-            <button id="mySettingsBtn" class="fas fa-cogs"></button>
+
+            <div id="settingsSplit" class="split-btn">
+                <button id="mySettingsBtn" class="fas fa-cogs"></button>
+                <div id="settingsExtraDropdown" class="dropdown dropup">
+                    <button
+                        id="settingsExtraToggle"
+                        class="dropdown-toggle device-dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        aria-label="Settings menu"
+                    >
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                    <div
+                        id="settingsExtraMenu"
+                        class="dropdown-menu text-start hidden app-dropdown-menu"
+                        aria-labelledby="settingsExtraToggle"
+                    >
+                        <!-- SHARING -->
+                        <div class="device-menu-header extra-menu-group" data-buttons="shareRoomBtn,fileShareBtn">
+                            SHARING
+                        </div>
+                        <button id="shareRoomBtn" class="app-dropdown-action">
+                            <i class="fas fa-share-alt"></i> Share Room
+                        </button>
+                        <button id="fileShareBtn" class="app-dropdown-action">
+                            <i class="fas fa-folder-open"></i> File sharing
+                        </button>
+
+                        <div class="device-menu-divider extra-menu-divider" data-group="sharing"></div>
+
+                        <!-- RECORDING & CAPTURE -->
+                        <div class="device-menu-header extra-menu-group" data-buttons="recordStreamBtn,snapshotRoomBtn">
+                            RECORDING & CAPTURE
+                        </div>
+                        <button id="recordStreamBtn" class="app-dropdown-action">
+                            <i class="fas fa-record-vinyl"></i> Start Recording
+                        </button>
+                        <button id="snapshotRoomBtn" class="app-dropdown-action">
+                            <i class="fas fa-camera-retro"></i> Snapshot
+                        </button>
+
+                        <div class="device-menu-divider extra-menu-divider" data-group="recording"></div>
+
+                        <!-- TOOLS -->
+                        <div
+                            class="device-menu-header extra-menu-group"
+                            data-buttons="captionBtn,whiteboardBtn,documentPiPBtn,roomEmojiPickerBtn"
+                        >
+                            TOOLS
+                        </div>
+                        <button id="captionBtn" class="app-dropdown-action">
+                            <i class="fas fa-closed-captioning"></i> Transcription
+                        </button>
+                        <button id="whiteboardBtn" class="app-dropdown-action">
+                            <i class="fas fa-chalkboard-teacher"></i> Whiteboard
+                        </button>
+                        <button id="documentPiPBtn" class="app-dropdown-action">
+                            <i class="fas fa-images"></i> Document PiP
+                        </button>
+                        <button id="roomEmojiPickerBtn" class="app-dropdown-action">
+                            <i class="fas fa-face-smile"></i> Room Emoji
+                        </button>
+
+                        <div class="device-menu-divider extra-menu-divider" data-group="tools"></div>
+
+                        <!-- VIEW & SETTINGS -->
+                        <div
+                            class="device-menu-header extra-menu-group"
+                            data-buttons="hideMeBtn,fullScreenBtn,aboutBtn"
+                        >
+                            VIEW & SETTINGS
+                        </div>
+                        <button id="hideMeBtn" class="app-dropdown-action"><i class="fas fa-user"></i> Hide Me</button>
+                        <button id="fullScreenBtn" class="app-dropdown-action">
+                            <i class="fas fa-expand-alt"></i> Full Screen
+                        </button>
+                        <button id="aboutBtn" class="app-dropdown-action"><i class="fas fa-question"></i> About</button>
+                    </div>
+                </div>
+            </div>
+
             <button id="leaveRoomBtn" class="fa-solid fa-phone-slash"></button>
         </div>
 
@@ -179,7 +286,12 @@ access to use this app.
         <section id="msgerDraggable" class="msger-draggable fadein">
             <section id="msger" class="msger">
                 <header id="msgerHeader" class="msger-header">
-                    <div class="msger-header-title"></div>
+                    <div class="msger-header-title">
+                        <div class="msger-panel-heading msger-panel-heading-compact">
+                            <span class="msger-sidebar-label">Chat</span>
+                            <h3>Messages</h3>
+                        </div>
+                    </div>
                     <div class="msger-header-options">
                         <button id="msgerTogglePin" class="fas fa-map-pin"></button>
                         <button id="msgerTheme" class="fas fa-ghost"></button>
@@ -193,36 +305,65 @@ access to use this app.
                                 data-bs-toggle="dropdown-custom"
                                 aria-expanded="false"
                             >
-                                <i class="fas fa-bars"></i>
+                                <i class="fas fa-ellipsis-v"></i>
                             </button>
                             <ul
                                 id="msgerDropDownContent"
-                                class="dropdown-menu-custom"
+                                class="dropdown-menu-custom app-dropdown-menu"
                                 aria-labelledby="msgerDropDownMenuBtn"
                             >
                                 <li>
-                                    <hr />
-                                    <div id="msgerShowChatOnMsgDiv" class="title ml-10">
-                                        <i class="fa-solid fa-eye"></i>
-                                        <label class="switch ml-10">
+                                    <div id="msgerShowChatOnMsgDiv" class="msger-menu-toggle-row">
+                                        <span class="msger-menu-toggle-icon">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </span>
+                                        <span class="msger-menu-toggle-copy">
+                                            <strong>Open chat on new message</strong>
+                                            <small>Bring the chat panel forward when a new message arrives</small>
+                                        </span>
+                                        <label class="switch">
                                             <input id="msgerShowChatOnMsg" type="checkbox" checked />
                                             <span class="slider round"></span>
                                         </label>
                                     </div>
-                                    <div id="msgerSpeechMsgDiv" class="title">
-                                        <i class="fas fa-volume-high ml-10"></i>
-                                        <label class="switch ml-10">
+                                    <div id="msgerSpeechMsgDiv" class="msger-menu-toggle-row">
+                                        <span class="msger-menu-toggle-icon">
+                                            <i class="fas fa-volume-high"></i>
+                                        </span>
+                                        <span class="msger-menu-toggle-copy">
+                                            <strong>Speak incoming messages</strong>
+                                            <small>Read new chat messages aloud</small>
+                                        </span>
+                                        <label class="switch">
                                             <input id="msgerSpeechMsg" type="checkbox" />
                                             <span class="slider round"></span>
                                         </label>
                                     </div>
                                     <hr />
                                 </li>
-                                <li>
-                                    <button id="msgerSaveBtn"><i class="fas fa-save"></i> Save messages</button>
+                                <li class="msger-menu-action-row">
+                                    <button
+                                        id="msgerSaveBtn"
+                                        class="app-dropdown-action msger-menu-action"
+                                        type="button"
+                                    >
+                                        <span class="msger-menu-action-icon">
+                                            <i class="fas fa-save"></i>
+                                        </span>
+                                        <span class="msger-menu-action-label">Save All messages</span>
+                                    </button>
                                 </li>
-                                <li>
-                                    <button id="msgerClean"><i class="fas fa-trash"></i> Clean messages</button>
+                                <li class="msger-menu-action-row">
+                                    <button
+                                        id="msgerClean"
+                                        class="app-dropdown-action msger-menu-action msger-menu-action-danger"
+                                        type="button"
+                                    >
+                                        <span class="msger-menu-action-icon">
+                                            <i class="fas fa-trash"></i>
+                                        </span>
+                                        <span class="msger-menu-action-label">Clean All messages</span>
+                                    </button>
                                 </li>
                             </ul>
                         </div>
@@ -230,84 +371,166 @@ access to use this app.
                     </div>
                 </header>
 
-                <main id="msgerChat" class="msger-chat">
-                    <!-- EMPTY CHAT ILLUSTRATION -->
-                    <div id="msgerEmptyNotice" class="empty-chat-notice">
-                        <img alt="Empty chat illustration" class="empty-chat-img" src="../svg/emptyChat.svg" />
-                        <h5 class="empty-chat-title">Start Conversation</h5>
-                        <p class="empty-chat-desc">
-                            There are no messages here yet. Start a conversation by sending a message.
-                        </p>
-                    </div>
-                    <!-- Chat messages will be appended here -->
-                </main>
+                <div class="msger-layout">
+                    <aside class="msger-sidebar">
+                        <div class="msger-sidebar-header">
+                            <div class="msger-panel-heading">
+                                <h3>Participants</h3>
+                            </div>
+                            <div class="msger-header-options msger-sidebar-header-options">
+                                <div class="dropdown-custom">
+                                    <button
+                                        class="dropdown-toggle-custom"
+                                        type="button"
+                                        id="msgerSidebarDropDownMenuBtn"
+                                        data-bs-toggle="dropdown-custom"
+                                        aria-expanded="false"
+                                    >
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul
+                                        id="msgerSidebarDropDownContent"
+                                        class="dropdown-menu-custom app-dropdown-menu msger-participant-dropdown-menu msger-room-actions-menu"
+                                        aria-labelledby="msgerSidebarDropDownMenuBtn"
+                                    ></ul>
+                                </div>
+                                <button id="msgerSidebarCloseBtn" class="fas fa-times"></button>
+                            </div>
+                        </div>
 
-                <!-- Start emoji picker -->
+                        <section class="msger-sidebar-section">
+                            <span class="msger-sidebar-label">Room chat</span>
+                            <div class="msger-chat-list">
+                                <button id="msgerRoomChatItem" class="msger-chat-item active" type="button">
+                                    <span class="msger-chat-item-icon"><i class="fas fa-comments"></i></span>
+                                    <span class="msger-chat-item-copy">
+                                        <strong>Room chat</strong>
+                                        <small>Message everyone</small>
+                                    </span>
+                                    <span id="msgerRoomChatBadge" class="msger-chat-unread-badge hidden">0</span>
+                                </button>
+                            </div>
+                        </section>
 
-                <section id="msgerEmojiPicker" class="hidden fadein chatEmojiPicker"></section>
+                        <section class="msger-sidebar-section">
+                            <div class="msger-sidebar-row">
+                                <span class="msger-sidebar-label">Participants</span>
+                            </div>
+                            <div class="search-container search-container-sidebar">
+                                <label class="msger-search-field" for="searchPeerBarName">
+                                    <span class="msger-search-icon"><i class="fas fa-search"></i></span>
+                                    <span class="msger-search-copy">
+                                        <input
+                                            id="searchPeerBarName"
+                                            type="text"
+                                            placeholder="Filter participants"
+                                            maxlength="254"
+                                            name="search"
+                                        />
+                                    </span>
+                                </label>
+                            </div>
+                            <div id="msgerPrivateChatsEmpty" class="msger-sidebar-empty">
+                                Participants will appear here when other people join the room.
+                            </div>
+                            <div id="msgerCPList" class="msger-chat-list msger-private-chat-list"></div>
+                        </section>
+                    </aside>
 
-                <!-- End emoji picker -->
+                    <section class="msger-main">
+                        <div class="msger-conversation-banner">
+                            <div class="msger-panel-heading msger-panel-heading-compact">
+                                <span id="msgerConversationLabel" class="msger-sidebar-label">Current view</span>
+                                <h3 id="msgerConversationTitle">All messages</h3>
+                            </div>
+                            <p id="msgerConversationMeta" class="msger-conversation-meta">
+                                Public messages and direct replies appear here.
+                            </p>
+                        </div>
 
-                <div class="msger-inputarea">
-                    <textarea
-                        rows="1"
-                        cols="1"
-                        id="msgerInput"
-                        class="msger-input"
-                        placeholder="Write a message..."
-                    ></textarea>
-                </div>
+                        <main id="msgerChat" class="msger-chat">
+                            <!-- EMPTY CHAT ILLUSTRATION -->
+                            <div id="msgerEmptyNotice" class="empty-chat-notice">
+                                <img alt="Empty chat illustration" class="empty-chat-img" src="../svg/emptyChat.svg" />
+                                <h5 class="empty-chat-title">Start Conversation</h5>
+                                <p class="empty-chat-desc">
+                                    There are no messages here yet. Start a conversation by sending a message.
+                                </p>
+                            </div>
+                            <!-- Chat messages will be appended here -->
+                        </main>
 
-                <div class="msger-input-buttons">
-                    <button id="msgerEmojiBtn" class="fas fa-smile"></button>
-                    <button id="msgerMarkdownBtn" class="fab fa-markdown"></button>
-                    <button id="msgerGPTBtn" class="fas fa-robot"></button>
-                    <button id="msgerShareFileBtn" class="fas fa-paperclip"></button>
-                    <button id="msgerVideoUrlBtn" class="fab fa-youtube"></button>
-                    <button id="msgerCPBtn" class="fas fa-users"></button>
-                    <button id="msgerCleanTextBtn" class="fas fa-trash"></button>
-                    <button id="msgerPasteBtn" class="fas fa-paste"></button>
-                    <button id="msgerSendBtn" class="fas fa-paper-plane"></button>
+                        <div class="msger-composer">
+                            <section id="msgerEmojiPicker" class="hidden fadein chatEmojiPicker"></section>
+
+                            <div class="msger-inputarea">
+                                <textarea
+                                    rows="1"
+                                    cols="1"
+                                    id="msgerInput"
+                                    class="msger-input"
+                                    placeholder="Write a message..."
+                                ></textarea>
+                            </div>
+
+                            <div class="msger-input-buttons">
+                                <button id="msgerEmojiBtn" class="fas fa-smile"></button>
+                                <button id="msgerMarkdownBtn" class="fab fa-markdown"></button>
+                                <button id="msgerShareFileBtn" class="fas fa-paperclip"></button>
+                                <button id="msgerVideoUrlBtn" class="fab fa-youtube"></button>
+                                <button id="msgerCPBtn" class="fas fa-users"></button>
+                                <button id="msgerCleanTextBtn" class="fas fa-trash"></button>
+                                <button id="msgerPasteBtn" class="fas fa-paste"></button>
+                                <button id="msgerSendBtn" class="fas fa-paper-plane"></button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="msgerCP" class="fadein" aria-hidden="true">
+                        <header id="msgerCPHeader" class="msger-private-header">
+                            <div class="msger-panel-heading msger-panel-heading-compact">
+                                <span class="msger-sidebar-label">Participants</span>
+                                <h3>People here</h3>
+                            </div>
+                            <div class="msger-header-options">
+                                <!-- More options -->
+                                <div id="tabRoomParticipants" class="dropdown-custom">
+                                    <button
+                                        class="dropdown-toggle-custom"
+                                        type="button"
+                                        id="msgerCPDropDownMenuBtn"
+                                        data-bs-toggle="dropdown-custom"
+                                        aria-expanded="false"
+                                    >
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul
+                                        id="msgerCPDropDownContent"
+                                        class="dropdown-menu-custom app-dropdown-menu msger-participant-dropdown-menu msger-room-actions-menu"
+                                        aria-labelledby="msgerCPDropDownMenuBtn"
+                                    ></ul>
+                                </div>
+                                <button id="msgerCPCloseBtn" class="fas fa-times"></button>
+                            </div>
+                        </header>
+                        <main id="msgerCPChat" class="msger-chat">
+                            <!-- EMPTY PARTICIPANTS ILLUSTRATION -->
+                            <div id="msgerEmptyParticipantsNotice" class="empty-participants-notice">
+                                <img
+                                    alt="Empty participants illustration"
+                                    class="empty-participants-img"
+                                    src="../svg/emptyParticipants.svg"
+                                />
+                                <h5 class="empty-participants-title">Participants</h5>
+                                <p class="empty-participants-desc">There are no participants here yet.</p>
+                            </div>
+                            <div id="msgerParticipantsList" class="msger-participants-list"></div>
+                        </main>
+                    </section>
+
+                    <!-- End private msg -->
                 </div>
             </section>
-
-            <!-- Start private msg -->
-
-            <section id="msgerCP" class="center fadein">
-                <section id="msgerCPSec" class="msger">
-                    <header id="msgerCPHeader" class="msger-private-header">
-                        <div class="msger-header-title"><i class="fas fa-users"></i> Participants</div>
-                        <div class="msger-header-options">
-                            <button id="msgerCPCloseBtn" class="fas fa-times"></button>
-                        </div>
-                    </header>
-                    <main id="msgerCPChat" class="msger-chat">
-                        <div class="search-container">
-                            <input
-                                id="searchPeerBarName"
-                                type="text"
-                                placeholder=" 🔍 Search peer by name..."
-                                maxlength="254"
-                                name="search"
-                            />
-                        </div>
-                        <br />
-                        <!-- EMPTY PARTICIPANTS ILLUSTRATION -->
-                        <div id="msgerEmptyParticipantsNotice" class="empty-participants-notice">
-                            <img
-                                alt="Empty participants illustration"
-                                class="empty-participants-img"
-                                src="../svg/emptyParticipants.svg"
-                            />
-                            <h5 class="empty-participants-title">Participants</h5>
-                            <p class="empty-participants-desc">There are no participants here yet.</p>
-                        </div>
-                        <div id="msgerCPList"></div>
-                    </main>
-                </section>
-            </section>
-
-            <!-- End private msg -->
         </section>
 
         <!-- End chat room -->
@@ -342,8 +565,8 @@ access to use this app.
                 <div id="captionFooter" class="caption-inputarea">
                     <select id="recognitionLanguage"></select>
                     <select id="recognitionDialect"></select>
-                    <button id="speechRecognitionStart"><i class="fas fa-play"></i> Start</button>
-                    <button id="speechRecognitionStop"><i class="fas fa-stop"></i> Stop</button>
+                    <button id="speechRecognitionStart"><i class="fas fa-play"></i></button>
+                    <button id="speechRecognitionStop"><i class="fas fa-stop"></i></button>
                 </div>
             </section>
         </section>
@@ -372,9 +595,6 @@ access to use this app.
                     </button>
                     <button id="tabVideoShareBtn" class="fab fa-youtube tablinks">
                         <p class="tabButtonText">Media</p>
-                    </button>
-                    <button id="tabParticipantsBtn" class="fa-solid fa-users tablinks">
-                        <p class="tabButtonText">Participants</p>
                     </button>
                     <button id="tabProfileBtn" class="fa-solid fa-user tablinks">
                         <p class="tabButtonText">Profile</p>
@@ -428,7 +648,7 @@ access to use this app.
                         <br />
                         <table id="mySettingsTable">
                             <tr>
-                                <td>
+                                <td class="w-80">
                                     <div class="title">
                                         <i class="fas fa-microphone-lines"></i>
                                         <p>Volume bar</p>
@@ -437,7 +657,7 @@ access to use this app.
                                 <td><input id="switchAudioPitchBar" class="toggle" type="checkbox" checked /></td>
                             </tr>
                             <tr>
-                                <td>
+                                <td class="w-80">
                                     <div class="title">
                                         <i class="fas fa-music"></i>
                                         <p>Sounds</p>
@@ -446,7 +666,7 @@ access to use this app.
                                 <td><input id="switchSounds" class="toggle" type="checkbox" checked /></td>
                             </tr>
                             <tr id="shareOnJoinButton">
-                                <td>
+                                <td class="w-80">
                                     <div class="title">
                                         <i class="fas fa-share-alt"></i>
                                         <p>Share</p>
@@ -455,13 +675,40 @@ access to use this app.
                                 <td><input id="switchShare" class="toggle" type="checkbox" checked /></td>
                             </tr>
                             <tr id="keepButtonsVisibleButton">
-                                <td>
+                                <td class="w-80">
                                     <div class="title">
                                         <i class="fas fa-eye"></i>
                                         <p>Buttons</p>
                                     </div>
                                 </td>
                                 <td><input id="switchKeepButtonsVisible" class="toggle" type="checkbox" /></td>
+                            </tr>
+                            <tr id="keepAwakeButton">
+                                <td class="w-80">
+                                    <div class="title">
+                                        <i class="fa-solid fa-mobile-screen"></i>
+                                        <p>Keep awake</p>
+                                    </div>
+                                </td>
+                                <td><input id="switchKeepAwake" class="toggle" type="checkbox" /></td>
+                            </tr>
+                            <tr id="pinChatByDefaultRow">
+                                <td class="w-80">
+                                    <div class="title">
+                                        <i class="fas fa-comments"></i>
+                                        <p>Pin chat</p>
+                                    </div>
+                                </td>
+                                <td><input id="switchPinChatByDefault" class="toggle" type="checkbox" /></td>
+                            </tr>
+                            <tr id="pinCaptionByDefaultRow">
+                                <td class="w-80">
+                                    <div class="title">
+                                        <i class="fas fa-closed-captioning"></i>
+                                        <p>Pin transcription</p>
+                                    </div>
+                                </td>
+                                <td><input id="switchPinCaptionByDefault" class="toggle" type="checkbox" /></td>
                             </tr>
                         </table>
                         <br />
@@ -494,14 +741,14 @@ access to use this app.
                         <br />
                         <select id="videoQuality">
                             <option value="default">Default</option>
-                            <option value="qvgaVideo">QVGA</option>
-                            <option value="vgaVideo">VGA</option>
-                            <option value="hdVideo">HD</option>
-                            <option value="fhdVideo">FULL HD</option>
-                            <option value="2kVideo">2k</option>
-                            <option value="4kVideo">4K</option>
-                            <option value="6kVideo">6K</option>
-                            <option value="8kVideo">8K</option>
+                            <option value="qvga">QVGA</option>
+                            <option value="vga">VGA</option>
+                            <option value="hd">HD</option>
+                            <option value="fhd">FULL HD</option>
+                            <option value="2k">2k</option>
+                            <option value="4k">4K</option>
+                            <option value="6k">6K</option>
+                            <option value="8k">8K</option>
                         </select>
                         <div id="videoFitDiv">
                             <br />
@@ -574,7 +821,7 @@ access to use this app.
                         <div id="micOptionsDiv">
                             <table id="mySettingsTable">
                                 <tr id="noiseSuppressionBtn">
-                                    <td>
+                                    <td class="w-80">
                                         <div class="title">
                                             <i class="fas fa-ear-listen"></i>
                                             <p id="labelNoiseSuppression">Noise Suppression</p>
@@ -600,7 +847,7 @@ access to use this app.
                         </div>
                         <table id="mySettingsTable">
                             <tr id="pushToTalkDiv">
-                                <td>
+                                <td class="w-80">
                                     <div class="title">
                                         <i class="fa-solid fa-hand-pointer"></i>
                                         <p>Push to talk</p>
@@ -639,17 +886,6 @@ access to use this app.
                         <div class="title">
                             <i class="fa-solid fa-users"></i>
                             <p id="peersCount"></p>
-                        </div>
-                        <br />
-                        <div id="tabRoomParticipants">
-                            <br />
-                            <button id="captionEveryoneBtn"><i class="fas fa-play"></i>&nbsp;Start captions</button>
-                            <button id="captionEveryoneStopBtn"><i class="fas fa-stop"></i>&nbsp;Stop captions</button>
-                            <button id="muteEveryoneBtn"><i class="fas fa-microphone"></i>&nbsp;Mute everyone</button>
-                            <button id="hideEveryoneBtn"><i class="fas fa-video"></i>&nbsp;Hide everyone</button>
-                            <button id="ejectEveryoneBtn">
-                                <i class="fas fa-right-from-bracket"></i>&nbsp;Eject everyone
-                            </button>
                         </div>
                     </div>
 
@@ -952,16 +1188,18 @@ access to use this app.
         <section id="whiteboard" class="hidden">
             <header id="whiteboardHeader" class="whiteboard-header">
                 <div id="whiteboardTitle" class="whiteboard-header-title">
-                    <button id="whiteboardCloseBtn" class="fas fa-times"></button>
                     <button id="whiteboardLockBtn" class="fa-solid fa-lock-open"></button>
                     <button id="whiteboardUnlockBtn" class="fa-solid fa-lock"></button>
                 </div>
                 <div id="whiteboardOptions" class="whiteboard-header-options">
                     <button id="whiteboardGhostButton" class="fas fa-circle-half-stroke"></button>
+                    <button id="whiteboardGridBtn" class="fas fa-table-cells-large hidden"></button>
                     <input id="wbBackgroundColorEl" class="whiteboardColorPicker" type="color" value="#000000" />
                     <input id="wbDrawingColorEl" class="whiteboardColorPicker" type="color" value="#FFFFFF" />
                     <button id="whiteboardPencilBtn" class="fas fa-pencil-alt"></button>
+                    <button id="whiteboardVanishingBtn" class="fas fa-highlighter"></button>
                     <button id="whiteboardObjectBtn" class="fas fa-mouse-pointer"></button>
+                    <button id="whiteboardEraserBtn" class="fas fa-eraser"></button>
                     <button id="whiteboardUndoBtn" class="fas fa-undo"></button>
                     <button id="whiteboardRedoBtn" class="fas fa-redo"></button>
                     <div class="whiteboard-dropdown">
@@ -972,20 +1210,35 @@ access to use this app.
                             data-bs-toggle="whiteboard-dropdown"
                             aria-expanded="false"
                         >
-                            <i class="fas fa-bars"></i>
+                            <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <div
                             id="whiteboardDropdownMenu"
-                            class="whiteboard-dropdown-menu"
+                            class="whiteboard-dropdown-menu app-dropdown-menu"
                             aria-labelledby="whiteboardDropDownMenu"
                         >
-                            <button id="whiteboardImgFileBtn"><i class="far fa-image"></i> Add image file</button>
-                            <button id="whiteboardImgUrlBtn"><i class="fas fa-link"></i> Add image URL</button>
-                            <button id="whiteboardPdfFileBtn"><i class="far fa-file-pdf"></i> Add pdf file</button>
-                            <button id="whiteboardTextBtn"><i class="fas fa-spell-check"></i> Add text</button>
-                            <button id="whiteboardLineBtn"><i class="fas fa-slash"></i> Add line</button>
-                            <button id="whiteboardRectBtn"><i class="far fa-square"></i> Add rectangle</button>
-                            <button id="whiteboardTriangleBtn">
+                            <button id="whiteboardImgFileBtn" class="app-dropdown-action">
+                                <i class="far fa-image"></i> Add image file
+                            </button>
+                            <button id="whiteboardImgUrlBtn" class="app-dropdown-action">
+                                <i class="fas fa-link"></i> Add image URL
+                            </button>
+                            <button id="whiteboardPdfFileBtn" class="app-dropdown-action">
+                                <i class="far fa-file-pdf"></i> Add pdf file
+                            </button>
+                            <button id="whiteboardTextBtn" class="app-dropdown-action">
+                                <i class="fas fa-spell-check"></i> Add text
+                            </button>
+                            <button id="whiteboardStickyNoteBtn" class="app-dropdown-action">
+                                <i class="fas fa-sticky-note"></i> Add sticky note
+                            </button>
+                            <button id="whiteboardLineBtn" class="app-dropdown-action">
+                                <i class="fas fa-slash"></i> Add line
+                            </button>
+                            <button id="whiteboardRectBtn" class="app-dropdown-action">
+                                <i class="far fa-square"></i> Add rectangle
+                            </button>
+                            <button id="whiteboardTriangleBtn" class="app-dropdown-action">
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     width="1em"
@@ -997,16 +1250,67 @@ access to use this app.
                                 </svg>
                                 Add triangle
                             </button>
-                            <button id="whiteboardCircleBtn"><i class="far fa-circle"></i> Add circle</button>
-                            <button id="whiteboardSaveBtn"><i class="fas fa-save"></i> Save</button>
-                            <button id="whiteboardEraserBtn"><i class="fas fa-eraser"></i> Eraser</button>
-                            <button id="whiteboardCleanBtn"><i class="fas fa-trash"></i> Clean</button>
+                            <button id="whiteboardCircleBtn" class="app-dropdown-action">
+                                <i class="far fa-circle"></i> Add circle
+                            </button>
+                            <button id="whiteboardSaveBtn" class="app-dropdown-action">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                            <button id="whiteboardCleanBtn" class="app-dropdown-action">
+                                <i class="fas fa-trash"></i> Clean
+                            </button>
+                            <button id="whiteboardShortcutsBtn" class="app-dropdown-action">
+                                <i class="fas fa-keyboard"></i> Shortcuts
+                            </button>
                         </div>
                     </div>
+                    <button id="whiteboardCloseBtn" class="fas fa-times"></button>
                 </div>
             </header>
             <main>
                 <canvas id="wbCanvas"></canvas>
+                <div id="whiteboardShortcutsContent">
+                    <div class="wb-shortcuts-container">
+                        <h3 class="wb-shortcuts-title"><i class="fas fa-keyboard"></i> General Shortcuts</h3>
+                        <ul class="wb-shortcuts-list">
+                            <li><strong>Clone:</strong> <span class="wb-shortcut-key">⌘/Ctrl + C</span></li>
+                            <li><strong>Erase:</strong> <span class="wb-shortcut-key">⌘/Ctrl + X</span></li>
+                            <li><strong>Undo:</strong> <span class="wb-shortcut-key">⌘/Ctrl + Z</span></li>
+                            <li>
+                                <strong>Redo:</strong> <span class="wb-shortcut-key">⌘/Ctrl + Shift + Z</span> or
+                                <span class="wb-shortcut-key">⌘/Ctrl + Y</span>
+                            </li>
+                            <li>
+                                <strong>Delete/Remove:</strong> <span class="wb-shortcut-key">Delete</span> or
+                                <span class="wb-shortcut-key">Backspace</span>
+                            </li>
+                        </ul>
+
+                        <h3 class="wb-shortcuts-title"><i class="fas fa-pencil-alt"></i> Create Objects</h3>
+                        <div class="wb-shortcuts-subsection">
+                            <ul class="wb-shortcuts-list">
+                                <li><strong>Hold:</strong> <span class="wb-shortcut-key">Alt + Cmd (Mac)</span></li>
+                                <li>
+                                    <strong>Hold:</strong> <span class="wb-shortcut-key">Alt + Ctrl (Win/Linux)</span>
+                                </li>
+                            </ul>
+                            <h3 class="wb-shortcuts-title">Then press</h3>
+                            <ul class="wb-shortcuts-list">
+                                <li><span class="wb-shortcut-key">T</span> = Text</li>
+                                <li><span class="wb-shortcut-key">L</span> = Line</li>
+                                <li><span class="wb-shortcut-key">C</span> = Circle</li>
+                                <li><span class="wb-shortcut-key">R</span> = Rectangle</li>
+                                <li><span class="wb-shortcut-key">G</span> = Triangle</li>
+                                <li><span class="wb-shortcut-key">N</span> = Sticky Note</li>
+                                <li><span class="wb-shortcut-key">U</span> = Image URL</li>
+                                <li><span class="wb-shortcut-key">I</span> = Image</li>
+                                <li><span class="wb-shortcut-key">P</span> = PDF</li>
+                                <li><span class="wb-shortcut-key">V</span> = Vanishing Pen</li>
+                                <li><span class="wb-shortcut-key">Q</span> = Clear all</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </main>
         </section>
 
@@ -1133,6 +1437,7 @@ access to use this app.
         <script defer src="../js/translate.js"></script>
         <script defer src="../js/fixWebmDuration.js"></script>
         <script defer src="../js/screenReader.js"></script>
+        <script defer src="../js/wakeLock.js"></script>
         <script defer src="../js/client.js"></script>
         <script defer src="../js/networkStats.js"></script>
         <script defer src="../js/speechRecognition.js"></script>

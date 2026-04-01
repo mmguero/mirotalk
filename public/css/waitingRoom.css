@@ -1,0 +1,198 @@
+/* Waiting Room Card */
+.waiting-card {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 48px 36px 40px;
+    background:
+        radial-gradient(900px circle at 20% 15%, rgba(70, 120, 249, 0.12) 0%, rgba(70, 120, 249, 0) 55%),
+        radial-gradient(700px circle at 80% 85%, rgba(70, 120, 249, 0.08) 0%, rgba(70, 120, 249, 0) 52%),
+        linear-gradient(135deg, rgba(0, 0, 0, 0.95) 60%, rgba(70, 120, 249, 0.15) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    text-align: center;
+}
+
+/* Icon */
+.waiting-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(70, 120, 249, 0.2), rgba(70, 120, 249, 0.05));
+    border: 1px solid rgba(70, 120, 249, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: iconPulse 3s ease-in-out infinite;
+}
+.waiting-icon i {
+    font-size: 24px;
+    color: #4678f9;
+}
+@keyframes iconPulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(70, 120, 249, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 0 12px rgba(70, 120, 249, 0);
+    }
+}
+
+/* Title */
+.waiting-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #f9faff;
+    margin: 0 0 8px;
+}
+
+/* Description */
+.waiting-description {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 400px;
+}
+
+/* Spinner */
+.waiting-spinner {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 0 20px;
+}
+.waiting-spinner-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #4678f9;
+    border-radius: 50%;
+    animation: bounce 1.4s ease-in-out infinite both;
+}
+.waiting-spinner-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+.waiting-spinner-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+@keyframes bounce {
+    0%,
+    80%,
+    100% {
+        transform: scale(0.4);
+        opacity: 0.4;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Status */
+.waiting-status {
+    color: #6b7a85;
+    font-size: 13px;
+    margin: 0 0 6px;
+    min-height: 20px;
+    transition: color 0.3s ease;
+}
+.waiting-status.ready {
+    color: #2dce89;
+}
+.waiting-status.checking {
+    color: #ffc107;
+}
+
+/* Room name */
+.waiting-room-name {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    margin: 0 0 20px;
+}
+.waiting-room-name i {
+    margin-right: 6px;
+}
+
+/* Elapsed */
+.waiting-elapsed {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 12px;
+    margin: 4px 0 0;
+}
+.waiting-elapsed i {
+    margin-right: 5px;
+}
+
+/* Audio player */
+.waiting-audio-player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 8px 14px;
+    margin: 0 0 20px;
+}
+.waiting-audio-btn {
+    background: none;
+    border: none;
+    color: #4678f9;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s ease;
+    flex-shrink: 0;
+}
+.waiting-audio-btn:hover {
+    color: #5a8aff;
+}
+.waiting-audio-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.waiting-audio-progress {
+    height: 100%;
+    width: 0;
+    background: #4678f9;
+    border-radius: 4px;
+    transition: width 0.3s linear;
+}
+
+/* Divider */
+.waiting-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin: 24px 0 20px;
+}
+
+/* Host link */
+.host-login-link {
+    color: #6b7a85;
+    font-size: 13px;
+    margin: 0;
+}
+.host-login-link a {
+    color: #4678f9;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+.host-login-link a:hover {
+    color: #5a8aff;
+    text-decoration: underline;
+}
+
+/* Layout */
+@media (min-width: 641px) {
+    .hero .split-wrap .split-item {
+        min-height: 492px;
+    }
+}

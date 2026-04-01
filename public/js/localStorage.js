@@ -17,6 +17,8 @@ class LocalStorage {
             share_on_join: true,
             show_chat_on_msg: true,
             speech_in_msg: false,
+            pin_chat_by_default: false,
+            pin_caption_by_default: true,
             mic_noise_suppression: true, // Noise suppression using RNNoise
             video_fps: 1, // default 30fps
             screen_fps: 1, // default 30fps

@@ -7,12 +7,14 @@
     position: fixed;
     margin: auto;
     padding: 10px;
+    max-width: 100vw;
+    max-height: 100vh;
     width: var(--wb-width);
     height: var(--wb-height);
     background: var(--wb-bg);
     border: var(--border);
     box-shadow: var(--box-shadow);
-    border-radius: 10px;
+    border-radius: 12px;
     /* center */
     top: 50%;
     left: 50%;
@@ -27,20 +29,52 @@
     -webkit-animation-duration: 1s;
     -moz-animation-duration: 1s;
     animation-duration: 1s;
-    overflow: hidden;
+    overflow: visible;
+    box-sizing: border-box;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    #whiteboard {
+        padding: 5px;
+        border-radius: 8px;
+    }
+
+    .whiteboard-header {
+        padding: 2px;
+    }
+
+    .whiteboard-header-title button,
+    .whiteboard-header-options button {
+        padding: 5px;
+        font-size: 0.75rem;
+        min-width: 28px;
+        height: 28px;
+    }
+
+    .whiteboardColorPicker {
+        width: 16px;
+        height: 12px;
+        margin: 1px;
+    }
 }
 
 .whiteboard-header {
     display: flex;
     justify-content: space-between;
     padding: 5px;
-    border-radius: 10px;
+    border-radius: 12px;
     background: rgba(0, 0, 0, 0.2);
     color: #ffffff;
     cursor: move;
 }
 
 .whiteboard-header-title {
+    display: flex;
+    align-items: center;
+}
+
+.whiteboard-header-options {
     display: flex;
     align-items: center;
 }
@@ -59,7 +93,7 @@
     background: transparent;
     color: #fff;
     border: none !important;
-    border-radius: 5px;
+    border-radius: 8px;
     transition: all 0.3s ease-in-out;
     transition: background 0.23s;
 }
@@ -75,44 +109,53 @@
     appearance: none;
     padding: 0;
     width: 20px;
-    height: 15px;
+    height: 20px;
     margin: 2px;
-    border-radius: 20px;
-    border: solid 0.5px #afadad38;
+    border-radius: 50%;
+    border: 2px solid #afadad38;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    background: transparent;
     cursor: pointer;
+    transition:
+        box-shadow 0.2s,
+        border 0.2s,
+        transform 0.2s;
+    display: inline-block;
+    vertical-align: middle;
 }
 .whiteboardColorPicker:hover {
-    transform: var(--btns-hover-scale);
-    transition: all 0.3s ease-in-out;
+    box-shadow: 0 0 0 2px rgba(102, 190, 255, 0.18);
+    border: 2px solid #66beff;
+    transform: scale(1.12);
 }
 .whiteboardColorPicker::-webkit-color-swatch {
     border: none;
-    border-radius: 20px;
+    border-radius: 50%;
     padding: 0;
 }
 .whiteboardColorPicker::-webkit-color-swatch-wrapper {
     border: none;
-    border-radius: 20px;
+    border-radius: 50%;
     padding: 0;
 }
 .whiteboardColorPicker::-moz-color-swatch {
     border: none;
-    border-radius: 20px;
+    border-radius: 50%;
     padding: 0;
 }
 .whiteboardColorPicker::-moz-color-swatch-wrapper {
     border: none;
-    border-radius: 20px;
+    border-radius: 50%;
     padding: 0;
 }
 .whiteboardColorPicker::color-swatch {
     border: none;
-    border-radius: 20px;
+    border-radius: 50%;
     padding: 0;
 }
 .whiteboardColorPicker::color-swatch-wrapper {
     border: none;
-    border-radius: 20px;
+    border-radius: 50%;
     padding: 0;
 }
 
@@ -139,50 +182,226 @@
     top: 100%;
     right: 0;
     display: none;
-    border-radius: 5px;
-    background: var(--body-bg);
-    border: none;
+    min-width: 200px;
     overflow-y: auto;
     overflow-x: hidden;
-    max-height: calc(var(--wb-height) * 1px) !important;
+    max-height: var(--wb-height) !important;
 }
 
 /* Styles for dropdown menu items */
-.whiteboard-dropdown-menu button {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 160px;
+.whiteboard-dropdown-menu .app-dropdown-action {
+    width: 100%;
     font-size: 0.8em;
-    text-align: left;
     padding: 10px;
-    border: none;
-    background: none;
-    cursor: pointer;
 }
 
-.whiteboard-dropdown-menu button:hover {
-    background: var(--select-bg) !important;
+.whiteboard-dropdown-menu .app-dropdown-action:hover {
     color: #ffffff;
 }
 
 /* Styles for icons and SVGs inside buttons */
-.whiteboard-dropdown-menu button i,
-.whiteboard-dropdown-menu button svg {
-    margin-right: 8px;
+.whiteboard-dropdown-menu .app-dropdown-action i,
+.whiteboard-dropdown-menu .app-dropdown-action svg {
+    width: 18px;
+    min-width: 18px;
+    text-align: center;
+    flex: 0 0 18px;
+    margin-right: 0;
 }
 
-/* Styles for list items */
-.whiteboard-dropdown-menu li {
-    padding: 8px 16px;
+/* Whiteboard Shortcuts Styles */
+#whiteboardShortcutsContent {
+    display: none;
 }
 
-.whiteboard-dropdown-menu li:hover {
+.wb-shortcuts-container {
+    text-align: left;
+    font-family: 'Segoe UI', Arial, sans-serif;
     background: var(--body-bg);
+    padding: 0.5rem 0.7rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    max-width: 340px;
+    margin: 0 auto;
+    font-size: 0.85em;
+    max-height: 70vh;
 }
 
-/* Ensuring dropdown buttons within list items have transparent background */
-.whiteboard-dropdown-menu li button {
-    background: transparent;
-    padding: 0;
+.wb-shortcuts-title {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.wb-shortcuts-title:first-child {
+    margin-top: 0;
+}
+
+.wb-shortcuts-title i {
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.wb-shortcuts-code {
+    background: var(--body-bg);
+    padding: 0.5rem 0.5rem;
+    border-radius: 6px;
+    white-space: pre;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--text-color);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.13);
+    filter: brightness(0.92);
+}
+
+.wb-shortcuts-text {
+    color: #66beff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, rgba(102, 190, 255, 0.11), rgba(102, 190, 255, 0.06));
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+    box-shadow: 0 1px 4px rgba(102, 190, 255, 0.07);
+}
+
+.wb-shortcuts-list {
+    list-style: none;
+    padding-left: 0;
+    background: var(--body-bg);
+    border-radius: 6px;
+    padding: 0.3rem 0.2rem;
+    filter: brightness(0.97);
+}
+
+.wb-shortcuts-list li {
+    margin: 0.3rem 0;
+    padding: 0.3rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.wb-shortcuts-list li:hover {
+    background: rgba(0, 0, 0, 0.04);
+    border-left: 2px solid var(--border-color, #e0e0e0);
+}
+
+/* Sticky Note Dialog Styles */
+.sticky-note-form {
+    display: flex;
+    background: var(--body-bg);
+    flex-direction: column;
+    gap: 1.2rem;
+    padding: 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 215, 0, 0.18);
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.sticky-note-colors-row {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.sticky-note-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 10px;
+    background: rgba(255, 235, 59, 0.07);
+    color: var(--text-color, #ffffff);
+    font-size: 1rem;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    resize: vertical;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.08);
+    box-sizing: border-box;
+}
+
+.sticky-note-color-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 120px;
+}
+
+.sticky-note-color-label {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-color, #ffffff);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sticky-note-color-input {
+    width: 100%;
+    height: 50px;
+    border: none !important;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 4px rgba(255, 215, 0, 0.07);
+}
+
+.sticky-note-color-input:hover {
+    transform: scale(1.01);
+}
+
+.sticky-note-color-input::-webkit-color-swatch-wrapper {
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.sticky-note-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+.sticky-note-color-input::-moz-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+/* Responsive styles for small screens */
+@media (max-width: 600px) {
+    .sticky-note-form {
+        padding: 0.7rem;
+        border-radius: 8px;
+        gap: 0.7rem;
+    }
+    .sticky-note-colors-row {
+        flex-direction: column;
+        gap: 0.7rem;
+    }
+    .sticky-note-color-group {
+        min-width: 0;
+    }
+    .sticky-note-textarea {
+        font-size: 0.95rem;
+        padding: 8px;
+    }
+    .sticky-note-color-input {
+        height: 38px;
+        border-radius: 8px;
+    }
 }

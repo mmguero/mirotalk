@@ -105,6 +105,25 @@ class RNNoiseProcessor {
         this.initializeDependencies();
     }
 
+    /**
+     * Check if AudioWorklet and WebAssembly are supported.
+     * Mobile browsers may lack AudioWorklet or restrict synchronous WASM compilation.
+     * @returns {boolean}
+     */
+    static isSupported() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            const hasAudioWorklet = AudioCtx && 'audioWorklet' in AudioCtx.prototype;
+            const hasWebAssembly =
+                typeof WebAssembly === 'object' &&
+                typeof WebAssembly.Module === 'function' &&
+                typeof WebAssembly.Instance === 'function';
+            return !!(hasAudioWorklet && hasWebAssembly);
+        } catch (e) {
+            return false;
+        }
+    }
+
     initializeUI() {
         this.elements = {
             labelNoiseSuppression: document.getElementById('labelNoiseSuppression'),
@@ -129,9 +148,26 @@ class RNNoiseProcessor {
         try {
             this.uiManager.updateStatus('🎤 Starting audio processing...', 'info');
 
-            this.audioContext = new AudioContext();
+            if (!RNNoiseProcessor.isSupported()) {
+                this.uiManager.updateStatus(
+                    '⚠️ AudioWorklet or WebAssembly not supported, skipping RNNoise',
+                    'warning'
+                );
+                return null;
+            }
+
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
             const sampleRate = this.audioContext.sampleRate;
             this.uiManager.updateStatus(`🎵 Audio context created with sample rate: ${sampleRate}Hz`, 'info');
+
+            if (this.audioContext.state === 'suspended') {
+                try {
+                    await this.audioContext.resume();
+                    this.uiManager.updateStatus('🎵 AudioContext resumed after suspend', 'info');
+                } catch (e) {
+                    this.uiManager.updateStatus('⚠️ AudioContext could not be resumed: ' + e.message, 'warning');
+                }
+            }
 
             this.mediaStream = mediaStream;
             if (!this.mediaStream.getAudioTracks().length) {
@@ -162,10 +198,30 @@ class RNNoiseProcessor {
             return this.destinationNode.stream;
         } catch (error) {
             this.uiManager.updateStatus('❌ Error: ' + error.message, 'error');
+            console.error('RNNoise startProcessing error:', error);
+            this.stopProcessing();
+            return null;
         }
     }
 
     stopProcessing() {
+        this.mediaStream = null;
+
+        // Signal the worklet to free WASM memory before disconnecting
+        try {
+            this.workletNode?.port?.postMessage({ type: 'destroy' });
+        } catch (e) {}
+
+        try {
+            this.sourceNode?.disconnect();
+        } catch (e) {}
+        try {
+            this.workletNode?.disconnect();
+        } catch (e) {}
+        try {
+            this.destinationNode?.stream?.getTracks?.().forEach((t) => t.stop());
+        } catch (e) {}
+
         if (this.audioContext && this.audioContext.state !== 'closed') {
             this.audioContext.close();
             this.audioContext = null;

@@ -1,0 +1,308 @@
+/* Login Card */
+.login-card {
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 48px 36px 40px;
+    background:
+        radial-gradient(900px circle at 20% 15%, rgba(70, 120, 249, 0.12) 0%, rgba(70, 120, 249, 0) 55%),
+        radial-gradient(700px circle at 80% 85%, rgba(70, 120, 249, 0.08) 0%, rgba(70, 120, 249, 0) 52%),
+        linear-gradient(135deg, rgba(0, 0, 0, 0.95) 60%, rgba(70, 120, 249, 0.15) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    text-align: center;
+}
+
+/* Join Room Section hidden by default */
+#joinRoomForm {
+    display: none;
+}
+
+/* Ensure joinRoomForm is fully visible (not affected by ScrollReveal) */
+#joinRoomForm.login-card {
+    opacity: 1 !important;
+    transform: none !important;
+    visibility: visible !important;
+    background:
+        radial-gradient(900px circle at 20% 15%, rgba(70, 120, 249, 0.12) 0%, rgba(70, 120, 249, 0) 55%),
+        radial-gradient(700px circle at 80% 85%, rgba(70, 120, 249, 0.08) 0%, rgba(70, 120, 249, 0) 52%),
+        linear-gradient(135deg, #000 60%, rgba(70, 120, 249, 0.15) 100%);
+    background-color: #000;
+}
+
+/* Icon */
+.login-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(70, 120, 249, 0.2), rgba(70, 120, 249, 0.05));
+    border: 1px solid rgba(70, 120, 249, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.login-icon i {
+    font-size: 24px;
+    color: #4678f9;
+}
+
+/* Title */
+.login-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #f9faff;
+    margin: 0 0 8px;
+}
+
+/* Description */
+.login-description {
+    font-size: 15px;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.7;
+    margin-bottom: 32px;
+    max-width: 400px;
+}
+
+/* Form inputs inside card */
+.login-card .form-input {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f9faff;
+    border-radius: 8px !important;
+    padding: 12px 16px;
+    height: 48px;
+    font-size: 15px;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+.login-card .form-input:hover {
+    border-color: rgba(70, 120, 249, 0.4);
+    background-color: rgba(255, 255, 255, 0.08);
+}
+.login-card .form-input:focus {
+    border-color: #4678f9;
+    background-color: rgba(255, 255, 255, 0.08);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(70, 120, 249, 0.15);
+}
+.login-card .form-input::placeholder {
+    color: #6b7a85;
+}
+
+/* Input group with icon */
+.login-input-group {
+    position: relative;
+    margin-bottom: 16px;
+}
+.login-input-group i:not(.toggle-password) {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7a85;
+    font-size: 14px;
+    pointer-events: none;
+    transition: color 0.2s ease;
+}
+.login-input-group .form-input {
+    padding-left: 42px;
+}
+.login-input-group:focus-within i:not(.toggle-password) {
+    color: #4678f9;
+}
+
+/* Toggle password visibility */
+.login-input-group .toggle-password {
+    position: absolute;
+    right: 14px;
+    left: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7a85;
+    font-size: 14px;
+    cursor: pointer;
+    pointer-events: all;
+    z-index: 2;
+    transition: color 0.2s ease;
+}
+.toggle-password:hover {
+    color: #4678f9;
+}
+.login-input-group .form-input:has(~ .toggle-password) {
+    padding-right: 42px;
+}
+
+/* Login button */
+.login-card .login-btn {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #f9faff;
+    background: linear-gradient(135deg, #4678f9 0%, #376df9 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+    box-shadow: 0 4px 15px rgba(70, 120, 249, 0.3);
+    margin-top: 8px;
+}
+.login-card .login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(70, 120, 249, 0.4);
+    filter: brightness(1.05);
+}
+.login-card .login-btn:active {
+    transform: translateY(0);
+}
+
+/* Divider */
+.login-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin: 24px 0 20px;
+}
+
+/* Join room section inside card */
+.login-card .join-room-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #f9faff;
+    margin: 0 0 24px;
+    line-height: 1.4;
+}
+
+/* Icon success variant */
+.login-icon-success {
+    background: linear-gradient(135deg, rgba(46, 206, 137, 0.2), rgba(46, 206, 137, 0.05)) !important;
+    border-color: rgba(46, 206, 137, 0.25) !important;
+}
+.login-icon-success i {
+    color: #2ece89 !important;
+}
+
+/* Room input row: input + random button side by side */
+.room-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+    margin-bottom: 16px;
+}
+.room-input-row .login-input-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.login-card .random-room-btn {
+    padding: 0 14px;
+    font-size: 16px;
+    color: #f9faff;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+.login-card .random-room-btn:hover {
+    border-color: rgba(70, 120, 249, 0.4);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.login-card .share-room-btn {
+    padding: 0 14px;
+    font-size: 16px;
+    color: #f9faff;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease;
+}
+.login-card .share-room-btn:hover {
+    border-color: rgba(70, 120, 249, 0.4);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.login-card .join-room-btn {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #f9faff;
+    background: linear-gradient(135deg, #4678f9 0%, #376df9 100%);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+    box-shadow: 0 4px 15px rgba(70, 120, 249, 0.3);
+}
+.login-card .join-room-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(70, 120, 249, 0.4);
+    filter: brightness(1.05);
+}
+
+/* Layout */
+@media (min-width: 641px) {
+    .hero .split-wrap .split-item {
+        min-height: 492px;
+    }
+}
+
+/* Input error highlight */
+.form-input.input-error {
+    border-color: #f5365c !important;
+    box-shadow: 0 0 0 3px rgba(245, 54, 92, 0.18) !important;
+}
+
+/* Inline login error message */
+.login-error {
+    color: #f5365c;
+    font-size: 13px;
+    margin: 0 0 8px;
+    text-align: center;
+}
+
+/* Select inputs */
+.login-input-group select.form-input {
+    appearance: none;
+    -webkit-appearance: none;
+    background: rgba(255, 255, 255, 0.06)
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ffffff50' d='M6 8L1 3h10z'/%3E%3C/svg%3E")
+        no-repeat right 4px center;
+    padding-right: 24px;
+    cursor: pointer;
+    color: #fff;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+.login-input-group select.form-input:hover {
+    border-color: rgba(70, 120, 249, 0.4);
+}
+.login-input-group select.form-input:focus {
+    border-color: #4678f9;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(70, 120, 249, 0.15);
+}
+.login-input-group select.form-input option {
+    background: #1a1a2e;
+    color: #fff;
+}

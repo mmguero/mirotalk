@@ -51,11 +51,11 @@ body {
 }
 #joinRoomForm #randomRoomButton {
     flex: 0 0 auto;
-    border-radius: 5px;
+    border-radius: 8px;
 }
 #joinRoomForm #joinSelectRoomButton {
     flex: 1 1 auto;
-    border-radius: 5px;
+    border-radius: 8px;
 }
 
 article,
@@ -406,7 +406,7 @@ dd {
 }
 
 img {
-    border-radius: 2px;
+    border-radius: 8px;
 }
 
 img,
@@ -884,7 +884,7 @@ strong {
     border-width: 1px;
     border-style: solid;
     border-color: rgba(0, 0, 0, 0);
-    border-radius: 2px;
+    border-radius: 8px;
     cursor: pointer;
     justify-content: center;
     text-align: center;
@@ -969,6 +969,31 @@ strong {
 
 .button-primary.is-loading::after {
     border-color: #f9faff;
+}
+
+.button-custom-room {
+    background:
+        radial-gradient(900px circle at 20% 15%, rgba(70, 120, 249, 0.22) 0%, rgba(70, 120, 249, 0) 55%),
+        radial-gradient(700px circle at 80% 85%, rgba(70, 120, 249, 0.14) 0%, rgba(70, 120, 249, 0) 52%),
+        linear-gradient(135deg, rgba(0, 0, 0, 0.95) 60%, rgba(70, 120, 249, 0.25) 100%);
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border: none;
+    color: rgba(255, 255, 255, 0.88) !important;
+    border-radius: 8px;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        transform 0.12s ease,
+        filter 0.2s ease;
+}
+
+.button-custom-room:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    filter: brightness(1.03) saturate(1.05);
+    transform: translateY(-2px);
 }
 
 .button-custom {
@@ -1136,7 +1161,7 @@ fieldset {
     letter-spacing: -0.1px;
     padding: 11px 15px;
     height: 48px;
-    border-radius: 6px !important;
+    border-radius: 8px !important;
     color: #16171b;
     box-shadow: none;
     max-width: 100%;
@@ -1274,7 +1299,7 @@ textarea.form-input {
 }
 
 .form-checkbox input {
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 .form-checkbox input:checked {
@@ -1421,9 +1446,76 @@ textarea.form-input {
     margin-top: 8px;
 }
 
+.room-input-wrap {
+    position: relative;
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.room-input-wrap .form-input {
+    padding-right: 44px;
+}
+
+.room-gen-btn {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #000000;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition:
+        color 0.2s ease,
+        background 0.2s ease;
+}
+
+.room-gen-btn:hover {
+    color: #4678f9;
+    background: rgba(70, 120, 249, 0.1);
+}
+
+.room-gen-btn:focus-visible {
+    outline: none;
+    color: #4678f9;
+    background: rgba(70, 120, 249, 0.1);
+}
+
+.room-gen-btn:active {
+    color: #376df9;
+}
+
+.room-gen-btn.spin {
+    animation: roomGenSpin 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #4678f9;
+}
+
+@keyframes roomGenSpin {
+    0% {
+        transform: translateY(-50%) rotate(0deg) scale(1);
+    }
+    50% {
+        transform: translateY(-50%) rotate(180deg) scale(1.25);
+    }
+    100% {
+        transform: translateY(-50%) rotate(360deg) scale(1);
+    }
+}
+
 @media (max-width: 640px) {
     .form-group-desktop .form-input {
         margin-bottom: 12px;
+    }
+
+    .form-group-desktop .room-input-wrap {
+        margin-bottom: 12px;
+    }
+
+    .form-group-desktop .room-input-wrap .form-input {
+        margin-bottom: 0;
     }
 
     .form-group-desktop .button {
@@ -1440,6 +1532,14 @@ textarea.form-input {
         flex-grow: 1;
         flex-shrink: 1;
         margin-right: 12px;
+    }
+
+    .form-group-desktop .room-input-wrap {
+        margin-right: 12px;
+    }
+
+    .form-group-desktop .room-input-wrap .form-input {
+        margin-right: 0;
     }
 
     .form-group-desktop .button {
@@ -2741,9 +2841,17 @@ ul.pricing-item-features-list li {
     width: 100%;
 }
 
+.sponsor-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
 #topSponsors .clients-logo {
     display: flex;
-    cursor: pointer;
     justify-content: center;
     align-items: center;
     padding: 0.625rem 1.125rem;
@@ -3147,7 +3255,7 @@ ul.pricing-item-features-list li.is-checked::after {
 
 .cta .form-input {
     border-color: transparent;
-    border-radius: 2px;
+    border-radius: 8px;
 }
 
 .cta-inner {
@@ -3287,7 +3395,7 @@ ul.pricing-item-features-list li.is-checked::after {
 }
 
 img.has-shadow {
-    border-radius: 2px;
+    border-radius: 8px;
 }
 
 .has-top-divider {
@@ -3711,8 +3819,9 @@ img.has-shadow {
     border-radius: 18px;
 }
 
+.br-20,
 .br-24 {
-    border-radius: 24px;
+    border-radius: 20px;
 }
 
 .w-300 {
@@ -3849,6 +3958,12 @@ img.has-shadow {
 # Webkit-Scrollbar Styles
 --------------------------------------------------------------*/
 
+html,
+body {
+    scrollbar-width: thin;
+    scrollbar-color: #4678f9 #1a1b1f;
+}
+
 /* Target the scrollbar track */
 ::-webkit-scrollbar {
     background: #1a1b1f;
@@ -3858,7 +3973,7 @@ img.has-shadow {
 /* Target the scrollbar thumb (the draggable part) */
 ::-webkit-scrollbar-thumb {
     background: #4678f9;
-    border-radius: 5px; /* rounded corners for the thumb */
+    border-radius: 8px; /* rounded corners for the thumb */
     cursor: pointer;
 }
 
@@ -3906,7 +4021,7 @@ img.has-shadow {
     text-decoration: none;
     line-height: 16px;
     padding: 8px 8px;
-    border-radius: 5px;
+    border-radius: 8px;
     margin: 4px;
 }
 
@@ -4009,10 +4124,10 @@ img.has-shadow {
     overflow-wrap: break-word;
 }
 
-/* #roomName {
+#roomName {
     text-align: center;
     justify-content: center;
-} */
+}
 
 /*--------------------------------------------------------------
 # Support Section

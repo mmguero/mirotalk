@@ -53,6 +53,7 @@
 - Push-to-talk functionality, similar to a walkie-talkie.
 - Advanced collaborative whiteboard for teachers.
 - Real-time sharing of YouTube embed videos, video files (MP4, WebM, OGG), and audio files (MP3).
+- Meeting Duration (HH:MM:SS): Set the meeting time in hours, minutes, and seconds for precise duration control.
 - Full-screen mode with one-click video element zooming and pin/unpin.
 - Customizable UI themes.
 - Right-click options on video elements for additional controls.
@@ -93,21 +94,22 @@
 <br/>
 
 - You can `directly join a room` by using links like:
-- https://p2p.mirotalk.com/join?room=test&name=mirotalk&avatar=0&audio=0&video=0&screen=0&chat=0&hide=0&notify=0
-- https://mirotalk.up.railway.app/join?room=test&name=mirotalk&avatar=0&audio=0&video=0&screen=0&chat=0&hide=0&notify=0
+- https://p2p.mirotalk.com/join?room=test&name=random&avatar=0&audio=0&video=0&screen=0&chat=0&hide=0&notify=0&duration=unlimited
+- https://mirotalk.up.railway.app/join?room=test&name=random&avatar=0&audio=0&video=0&screen=0&chat=0&hide=0&notify=0&duration=unlimited
 
-    | Params | Type    | Description     |
-    | ------ | ------- | --------------- |
-    | room   | string  | Room Id         |
-    | name   | string  | User name       |
-    | avatar | Mixed   | User avatar     |
-    | audio  | boolean | Audio stream    |
-    | video  | boolean | Video stream    |
-    | screen | boolean | Screen stream   |
-    | chat.  | boolean | Chat            |
-    | hide   | boolean | Hide myself     |
-    | notify | boolean | Welcome message |
-    | token  | string  | jwt token       |
+    | Params   | Type    | Description               |
+    | -------- | ------- | ------------------------- |
+    | room     | string  | Room Id                   |
+    | name     | string  | User name                 |
+    | avatar   | Mixed   | User avatar               |
+    | audio    | boolean | Audio stream              |
+    | video    | boolean | Video stream              |
+    | screen   | boolean | Screen stream             |
+    | chat.    | boolean | Chat                      |
+    | hide     | boolean | Hide myself               |
+    | notify   | boolean | Welcome message           |
+    | duration | string  | Meeting duration HH:MM:SS |
+    | token    | string  | jwt token                 |
 
 > **Note**
 >
@@ -144,7 +146,9 @@ $ git clone https://github.com/mmguero/mirotalk.git
 $ cd mirotalk
 # copy .env.template to .env (edit it according to your needs)
 $ cp .env.template .env
-# Copy app/src/config.template.js in app/src/config.js (edit it according to your needs)
+# Setup configuration: copy the template and edit config.js to match your environment.
+# config.js is the central configuration file — it reads environment variables
+# and also contains branding, button visibility, and webhook settings.
 $ cp app/src/config.template.js app/src/config.js
 # install dependencies
 $ npm install
@@ -175,7 +179,7 @@ $ git clone https://github.com/miroslavpejic85/mirotalk.git
 $ cd mirotalk
 # copy .env.template to .env (edit it according to your needs)
 $ cp .env.template .env
-# Copy app/src/config.template.js in app/src/config.js (edit it according to your needs)
+# Copy app/src/config.template.js in app/src/config.js (central configuration file)
 $ cp app/src/config.template.js app/src/config.js
 # Copy docker-compose.template.yml in docker-compose.yml (edit it according to your needs)
 $ cp docker-compose.template.yml docker-compose.yml
@@ -192,6 +196,48 @@ $ docker-compose down
 </details>
 
 <details open>
+<summary>Self-Hosting</summary>
+
+</br>
+
+![setup](/public/images/self-hosting.png)
+
+## **Requirements**
+
+- A `clean server` running **Ubuntu 22.04 or 24.04 LTS**
+- **Root access** to the Server
+- A **domain or subdomain** pointing to your server’s public IPv4
+
+---
+
+## Note
+
+When **prompted**, simply **enter your domain or subdomain**. Then wait for the installation to complete.
+
+```bash
+# Install MiroTalk P2P
+wget -qO p2p-install.sh https://docs.mirotalk.com/scripts/p2p/p2p-install.sh \
+  && chmod +x p2p-install.sh \
+  && ./p2p-install.sh
+```
+
+```bash
+# Uninstall MiroTalk P2P
+wget -qO p2p-uninstall.sh https://docs.mirotalk.com/scripts/p2p/p2p-uninstall.sh \
+  && chmod +x p2p-uninstall.sh \
+  && ./p2p-uninstall.sh
+```
+
+```bash
+# Update MiroTalk P2P
+wget -qO p2p-update.sh https://docs.mirotalk.com/scripts/p2p/p2p-update.sh \
+  && chmod +x p2p-update.sh \
+  && ./p2p-update.sh
+```
+
+</details>
+
+<details open>
 <summary>Embed a meeting</summary>
 
 <br/>
@@ -202,7 +248,7 @@ To embed a meeting within `your service or app` using an iframe, you can use the
 
 ```html
 <iframe
-    allow="camera; microphone; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay"
+    allow="camera; microphone; speaker-selection; display-capture; fullscreen; clipboard-read; clipboard-write; web-share; autoplay; picture-in-picture"
     src="https://p2p.mirotalk.com/newcall"
     style="height: 100vh; width: 100vw; border: 0px;"
 ></iframe>
@@ -286,17 +332,17 @@ curl -X POST "https://mirotalk.up.railway.app/api/v1/meeting" -H "authorization:
 ### 4. Join Meeting (Basic)
 
 ```bash
-curl -X POST "http://localhost:3000/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"mirotalk","avatar":false,"audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true}'
-curl -X POST "https://p2p.mirotalk.com/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"mirotalk","avatar":false,"audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true}'
-curl -X POST "https://mirotalk.up.railway.app/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"mirotalk","avatar":false,"audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true}'
+curl -X POST "http://localhost:3000/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"random","avatar":false,"audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"duration":"unlimited"}'
+curl -X POST "https://p2p.mirotalk.com/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"random","avatar":false,"audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"duration":"unlimited"}'
+curl -X POST "https://mirotalk.up.railway.app/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"random","avatar":false,"audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"duration":"unlimited"}'
 ```
 
 ### 5. Join Meeting with Token
 
 ```bash
-curl -X POST "http://localhost:3000/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"mirotalk","audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"token":{"username":"username","password":"password","presenter":true,"expire":"1h"}}'
-curl -X POST "https://p2p.mirotalk.com/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"mirotalk","audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"token":{"username":"username","password":"password","presenter":true,"expire":"1h"}}'
-curl -X POST "https://mirotalk.up.railway.app/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"mirotalk","audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"token":{"username":"username","password":"password","presenter":true,"expire":"1h"}}'
+curl -X POST "http://localhost:3000/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"random","audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"token":{"username":"username","password":"password","presenter":true,"expire":"1h"}}'
+curl -X POST "https://p2p.mirotalk.com/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"random","audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"token":{"username":"username","password":"password","presenter":true,"expire":"1h"}}'
+curl -X POST "https://mirotalk.up.railway.app/api/v1/join" -H "authorization: mirotalkp2p_default_secret" -H "Content-Type: application/json" --data '{"room":"test","name":"random","audio":true,"video":true,"screen":false,"chat":false,"hide":false,"notify":true,"token":{"username":"username","password":"password","presenter":true,"expire":"1h"}}'
 ```
 
 ### 6. Generate Token

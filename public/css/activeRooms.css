@@ -41,7 +41,7 @@ h1 {
 
 .search-input {
     padding: 10px 16px;
-    border-radius: 6px 0 0 6px;
+    border-radius: 8px 0 0 8px;
     border: none;
     font-size: 1.1em;
     background: #23262e;
@@ -52,7 +52,7 @@ h1 {
 
 .search-btn {
     padding: 10px 20px;
-    border-radius: 0 6px 6px 0;
+    border-radius: 0 8px 8px 0;
     border: none;
     background: var(--accent);
     color: #fff;
@@ -137,7 +137,7 @@ h1 {
     background: var(--accent2);
     color: #fff;
     border: none;
-    border-radius: 7px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 1.1em;
     font-weight: bold;
@@ -160,7 +160,7 @@ h1 {
     padding: 10px 24px;
     background: var(--accent2);
     color: #fff;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 1em;
     font-weight: bold;
     text-decoration: none;

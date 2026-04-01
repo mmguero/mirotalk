@@ -5,8 +5,9 @@ const CryptoJS = require('crypto-js');
 
 const { v4: uuidV4 } = require('uuid');
 
-const JWT_KEY = process.env.JWT_KEY || 'mirotalk_jwt_secret';
-const JWT_EXP = process.env.JWT_EXP || '1h';
+const config = require('./config');
+const JWT_KEY = config.jwt.key;
+const JWT_EXP = config.jwt.exp;
 module.exports = class ServerApi {
     constructor(host = null, authorization = null, api_key_secret = null) {
         this._host = host;
@@ -20,12 +21,13 @@ module.exports = class ServerApi {
     }
 
     getStats(peers, timestamp = new Date().toISOString()) {
+        const metaKeys = new Set(['lock', 'password']);
         let totalRooms = 0;
         let totalPeers = 0;
 
         for (const room_id in peers) {
             totalRooms++; // Increment room count
-            totalPeers += Object.keys(peers[room_id]).length; // Count the number of peers in the room
+            totalPeers += Object.keys(peers[room_id]).filter((k) => !metaKeys.has(k)).length;
         }
 
         return {
@@ -36,9 +38,10 @@ module.exports = class ServerApi {
     }
 
     getActiveRooms(roomList) {
+        const metaKeys = new Set(['lock', 'password']);
         return Object.entries(roomList).map(([roomId, room]) => ({
             id: roomId,
-            peers: room && typeof room === 'object' ? Object.keys(room).length : 0,
+            peers: room && typeof room === 'object' ? Object.keys(room).filter((k) => !metaKeys.has(k)).length : 0,
             join: this.getProtocol() + this._host + '/' + roomId,
         }));
     }
@@ -58,7 +61,7 @@ module.exports = class ServerApi {
 
     getJoinURL(data) {
         // Get data
-        const { room, name, avatar, audio, video, screen, chat, notify, hide, token } = data;
+        const { room, name, avatar, audio, video, screen, chat, notify, hide, duration, token } = data;
 
         const roomValue = room || uuidV4();
         const nameValue = name || 'User-' + this.getRandomNumber();
@@ -69,6 +72,7 @@ module.exports = class ServerApi {
         const chatValue = chat || false;
         const hideValue = hide || false;
         const notifyValue = notify || false;
+        const durationValue = duration || 'unlimited';
         const jwtToken = token ? '&token=' + this.getToken(token) : '';
 
         const joinURL =
@@ -84,6 +88,7 @@ module.exports = class ServerApi {
             `&chat=${chatValue}` +
             `&hide=${hideValue}` +
             `&notify=${notifyValue}` +
+            `&duration=${durationValue}` +
             jwtToken;
 
         return joinURL;
